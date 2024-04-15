@@ -1,0 +1,30 @@
+name: Test Zimtohrli
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Uninstall old clang
+      run: sudo apt remove clang-14
+    - name: Install modern clang
+      run: (curl -O https://apt.llvm.org/llvm.sh && sudo bash llvm.sh 16 all)
+    - name: Set default clang
+      run: ( sudo ln -f -s /usr/bin/clang++-16 /usr/bin/clang++ && sudo ln -f -s /usr/bin/clang-16 /usr/bin/clang && sudo ln -f -s /usr/bin/clang-tidy-16 /usr/bin/clang-tidy )
+    - name: Install dependencies
+      run: sudo apt install -y libogg-dev libvorbis-dev libflac-dev cmake ninja-build libasound2-dev libglfw3-dev libopus-dev python3-numpy
+    - name: Check out code
+      uses: actions/checkout@v3
+    - name: Configure
+      run: ./configure.sh
+    - name: Build
+      run: (cd build && env CC=clang ninja)
+    - name: Test
+      run: (cd build && env CC=clang ctest --output-on-failure)
