@@ -1,3 +1,5 @@
+[![Tests](https://github.com/google/zimtohrli/workflows/Test%20Zimtohrli/badge.svg)](https://github.com/google/zimtohrli/actions)
+
 # Zimtohrli: A New Psychoacoustic Perceptual Metric for Audio Compression
 
 Zimtohrli is a psychoacoustic perceptual metric that quantifies the human
@@ -14,3 +16,87 @@ audio (and video containing audio) compression, and also be able to plug in the
 resulting psychoacoustic similarity measure into audio related machine learning
 models.
 
+The canonical source for this project is google3/third_party - the code is
+placed here in anticipation of future open sourcing.
+
+For more details about how Zimtohrli works, see zimtohrli.ipynb.
+
+## Compatibility
+
+Zimtohrli is a project under development, and is built and tested in a Debian-like environment.
+
+## Build
+
+Many dependencies for Zimtohrli are downloaded and managed by the build script, but a few
+need to be installed beforehand:
+
+- cmake
+- ninja-build
+- clang
+- clang-tidy
+
+To build the compare tool, a few more dependencies are necessary:
+
+- libogg-dev
+- libvorbis-dev
+- libflac-dev
+- libopus-dev
+- libasound2-dev
+- libglfw3-dev
+
+Finally, to run the Python and Go wrappers, the following dependencies are necessary:
+
+- golang-go
+- python3
+- python3-numpy
+
+To install these in a Debian-like system:
+
+```
+sudo apt install -y cmake ninja-build clang clang-tidy libogg-dev libvorbis-dev libflac-dev libopus-dev libasound2-dev libglfw3-dev golang-go python3 python3-numpy
+```
+
+Once they are installed, configure the project:
+
+```
+./configure.sh
+```
+
+Build the project:
+```
+(cd build && ninja)
+```
+
+### Address sanitizer build
+
+To build with address sanitizer, configure a new build directory with asan configured:
+
+
+```
+./configure.sh asan
+```
+
+Build the project:
+```
+(cd asan_build && ninja)
+```
+
+### Debug build
+
+To build with debug symbols, configure a new build directory with debugging configured:
+
+
+```
+./configure.sh debug
+```
+
+Build the project:
+```
+(cd debug_build && ninja)
+```
+
+### Testing
+
+```
+(cd build && ninja && ninja test)
+```
