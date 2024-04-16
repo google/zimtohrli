@@ -164,6 +164,9 @@ set_target_properties(zimtohrli_compare PROPERTIES
     OUTPUT_NAME compare
     SUFFIX ""
 )
+
+option(BUILD_ZIMTOHRLI_TESTS "Build Zimtohrli test binaries." ON)
+if (BUILD_ZIMTOHRLI_TESTS)
 add_executable(zimtohrli_test
     cpp/zimt/audio_test.cc
     cpp/zimt/cam_test.cc
@@ -200,3 +203,5 @@ add_executable(zimtohrli_benchmark
     cpp/zimt/zimtohrli_test.cc
 )
 target_link_libraries(zimtohrli_benchmark zimtohrli_base gtest gmock benchmark_main)
+endif()
+
