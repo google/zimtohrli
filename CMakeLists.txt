@@ -21,6 +21,7 @@ set(HWY_ENABLE_TESTS OFF CACHE INTERNAL "")
 set(BUILD_TESTING OFF CACHE INTERNAL "")
 FetchContent_MakeAvailable(highway)
 
+if (NOT TARGET absl::base)
 FetchContent_Declare(abseil-cpp
     EXCLUDE_FROM_ALL
     GIT_REPOSITORY https://github.com/abseil/abseil-cpp.git
@@ -28,6 +29,7 @@ FetchContent_Declare(abseil-cpp
 )
 set(ABSL_PROPAGATE_CXX_STD ON)
 FetchContent_MakeAvailable(abseil-cpp)
+endif()
 
 FetchContent_Declare(libsndfile
     EXCLUDE_FROM_ALL
@@ -70,7 +72,7 @@ FetchContent_MakeAvailable(imgui)
 enable_testing()
 include(GoogleTest)
 
-add_library(zimtohrli STATIC
+add_library(zimtohrli_base STATIC
     cpp/zimt/audio.cc
     cpp/zimt/audio.h
     cpp/zimt/cam.cc
@@ -88,50 +90,50 @@ add_library(zimtohrli STATIC
     cpp/zimt/zimtohrli.cc
     cpp/zimt/zimtohrli.h
 )
-target_include_directories(zimtohrli PUBLIC cpp)
-target_link_libraries(zimtohrli PRIVATE absl::check)
-target_link_libraries(zimtohrli PUBLIC hwy portaudio absl::statusor sndfile)
+target_include_directories(zimtohrli_base PUBLIC cpp)
+target_link_libraries(zimtohrli_base PRIVATE absl::check)
+target_link_libraries(zimtohrli_base PUBLIC hwy portaudio absl::statusor sndfile)
 
 find_package(Python3 COMPONENTS Interpreter Development)
-add_library(pyohrli SHARED
+add_library(zimtohrli_pyohrli SHARED
     cpp/zimt/pyohrli.cc
 )
-set_target_properties(pyohrli PROPERTIES
+set_target_properties(zimtohrli_pyohrli PROPERTIES
     PREFIX ""
     OUTPUT_NAME _pyohrli.so
     SUFFIX ""
 )
-target_link_libraries(pyohrli zimtohrli Python3::Python absl::check)
+target_link_libraries(zimtohrli_pyohrli zimtohrli_base Python3::Python absl::check)
 
-add_library(goohrli_glue STATIC
+add_library(zimtohrli_goohrli_glue STATIC
     cpp/zimt/goohrli.cc
     go/goohrli/goohrli.h
 )
-target_include_directories(goohrli_glue PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/go/goohrli)
-target_link_libraries(goohrli_glue zimtohrli)
+target_include_directories(zimtohrli_goohrli_glue PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/go/goohrli)
+target_link_libraries(zimtohrli_goohrli_glue zimtohrli_base)
 
 set(goohrli_object ${CMAKE_CURRENT_BINARY_DIR}/goohrli.o)
 set(goohrli_archive ${CMAKE_CURRENT_SOURCE_DIR}/go/goohrli/goohrli.a)
 add_custom_command(
     OUTPUT ${goohrli_archive}
     COMMAND ${CMAKE_LINKER} -r
-        $$\(find ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/goohrli_glue.dir/ -name \"*.o\"\)
-        $$\(find ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/zimtohrli.dir/ -name \"*.o\"\)
+        $$\(find ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/zimtohrli_goohrli_glue.dir/ -name \"*.o\"\)
+        $$\(find ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/zimtohrli_base.dir/ -name \"*.o\"\)
         $$\(find ${portaudio_BINARY_DIR} -name \"*.o\"\)
         $$\(find ${absl_BINARY_DIR} -name \"*.o\"\)
         $$\(find ${hwy_BINARY_DIR} -name \"*.o\"\)
         $$\(find ${libsndfile_BINARY_DIR}/CMakeFiles/sndfile.dir/ -name \"*.o\"\)
         -o ${goohrli_object}
     COMMAND ${CMAKE_AR} rcs ${goohrli_archive} ${goohrli_object}
-    DEPENDS goohrli_glue
+    DEPENDS zimtohrli_goohrli_glue
 )
-add_custom_target(goohrli ALL DEPENDS ${goohrli_archive})
+add_custom_target(zimtohrli_goohrli ALL DEPENDS ${goohrli_archive})
 
 find_package(glfw3 REQUIRED)
 find_package(OpenGL REQUIRED)
 pkg_check_modules(gles QUIET glesv2)
 FetchContent_GetProperties(imgui)
-add_library(ux STATIC
+add_library(zimtohrli_ux STATIC
     cpp/zimt/ux.cc
     cpp/zimt/ux.h
     ${imgui_SOURCE_DIR}/imconfig.h
@@ -149,15 +151,19 @@ add_library(ux STATIC
     ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
     ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3_loader.h
 )
-target_include_directories(ux PRIVATE ${imgui_SOURCE_DIR}/backends ${gles_INCLUDE_DIRS})
-target_include_directories(ux PUBLIC ${imgui_SOURCE_DIR})
-target_link_libraries(ux zimtohrli glfw OpenGL::GL)
+target_include_directories(zimtohrli_ux PRIVATE ${imgui_SOURCE_DIR}/backends ${gles_INCLUDE_DIRS})
+target_include_directories(zimtohrli_ux PUBLIC ${imgui_SOURCE_DIR})
+target_link_libraries(zimtohrli_ux zimtohrli_base glfw OpenGL::GL)
 
-add_executable(compare
+add_executable(zimtohrli_compare
     cpp/zimt/compare.cc
 )
-target_link_libraries(compare ux zimtohrli absl::flags_parse)
-
+target_link_libraries(zimtohrli_compare zimtohrli_ux zimtohrli_base absl::flags_parse)
+set_target_properties(zimtohrli_compare PROPERTIES
+    PREFIX ""
+    OUTPUT_NAME compare
+    SUFFIX ""
+)
 add_executable(zimtohrli_test
     cpp/zimt/audio_test.cc
     cpp/zimt/cam_test.cc
@@ -169,18 +175,18 @@ add_executable(zimtohrli_test
     cpp/zimt/zimtohrli_test.cc
     cpp/zimt/test_file_paths.cc
 )
-target_link_libraries(zimtohrli_test zimtohrli gtest gmock_main benchmark)
+target_link_libraries(zimtohrli_test zimtohrli_base gtest gmock_main benchmark)
 target_compile_definitions(zimtohrli_test PRIVATE CMAKE_CURRENT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR})
 gtest_discover_tests(zimtohrli_test)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cpp/zimt/pyohrli.py ${CMAKE_CURRENT_BINARY_DIR}/pyohrli.py COPYONLY)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cpp/zimt/pyohrli_test.py ${CMAKE_CURRENT_BINARY_DIR}/pyohrli_test.py COPYONLY)
-add_test(NAME pyohrli_test
+add_test(NAME zimtohrli_pyohrli_test
     COMMAND ${Python3_EXECUTABLE} pyohrli_test.py
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 )
 
-add_test(NAME go_test
+add_test(NAME zimtohrli_go_test
     COMMAND go test ./...
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
@@ -193,4 +199,4 @@ add_executable(zimtohrli_benchmark
     cpp/zimt/masking_test.cc
     cpp/zimt/zimtohrli_test.cc
 )
-target_link_libraries(zimtohrli_benchmark zimtohrli gtest gmock benchmark_main)
+target_link_libraries(zimtohrli_benchmark zimtohrli_base gtest gmock benchmark_main)
