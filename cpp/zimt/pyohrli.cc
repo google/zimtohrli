@@ -75,9 +75,13 @@ int Pyohrli_init(PyohrliObject* self, PyObject* args, PyObject* kwds) {
     return -1;
   }
   try {
+    const zimtohrli::Cam default_cam;
     self->zimtohrli = new zimtohrli::Zimtohrli{
         .cam_filterbank =
-            zimtohrli::Cam{.minimum_bandwidth_hz = frequency_resolution}
+            zimtohrli::Cam{
+                .high_threshold_hz =
+                    std::min(sample_rate * 0.5f, default_cam.high_threshold_hz),
+                .minimum_bandwidth_hz = frequency_resolution}
                 .CreateFilterbank(sample_rate)};
     self->perceptual_sample_rate = 100;
     self->unwarp_window = 2.0f;

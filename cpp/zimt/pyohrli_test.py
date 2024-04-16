@@ -97,6 +97,17 @@ class PyohrliTest(unittest.TestCase):
     distance = metric.distance(signal_a, signal_b)
     self.assertLess(abs(distance - kwargs['distance']), 1e-4)
 
+  def test_nyquist_threshold(self):
+    sample_rate = 12000.0
+    frequency_resolution = 4.0
+    metric = pyohrli.Pyohrli(sample_rate, frequency_resolution)
+    signal = np.sin(
+        np.linspace(0.0, np.pi * 2 * 440.0, int(sample_rate))
+    )
+    # This would crash the program if pyohrli.cc didn't limit the upper
+    # threshold to half the sample rate.
+    metric.analyze(signal)
+     
 
 if __name__ == '__main__':
   unittest.main()
