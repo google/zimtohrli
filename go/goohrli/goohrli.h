@@ -36,7 +36,7 @@ Zimtohrli CreateZimtohrli(float sample_rate, float frequency_resolution);
 // Deletes a zimtohrli::Zimtohrli.
 void FreeZimtohrli(Zimtohrli z);
 
-// void* represntation of zimtohrli::Analysis.
+// void* representation of zimtohrli::Analysis.
 typedef void* Analysis;
 
 // Returns a zimtohrli::Analysis produced by the provided zimtohrli::Zimtohrli
