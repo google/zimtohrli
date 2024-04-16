@@ -16,9 +16,6 @@ audio (and video containing audio) compression, and also be able to plug in the
 resulting psychoacoustic similarity measure into audio related machine learning
 models.
 
-The canonical source for this project is google3/third_party - the code is
-placed here in anticipation of future open sourcing.
-
 For more details about how Zimtohrli works, see zimtohrli.ipynb.
 
 ## Compatibility

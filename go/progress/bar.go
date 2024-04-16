@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package paints a very simple progress bar on the screen
+// Package progress paints a very simple progress bar on the screen
 package progress
 
 import (
