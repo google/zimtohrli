@@ -19,110 +19,103 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import scipy.signal
-from google3.third_party.zimtohrli.python import elliptic
-from google3.third_party.zimtohrli.python import signal
+import elliptic
+import audio_signal
 
 
 @jax.tree_util.register_pytree_node_class
 @dataclasses.dataclass
 class Cam:
-  """Handles converting between Hz and Cam.
+    """Handles converting between Hz and Cam.
 
-  Also provides utility method to filter a signal into evenly (in Cam-space)
-  distributed channels.
+    Also provides utility method to filter a signal into evenly (in Cam-space)
+    distributed channels.
 
-  Cam is defined in
-  https://en.wikipedia.org/wiki/Equivalent_rectangular_bandwidth.
+    Cam is defined in
+    https://en.wikipedia.org/wiki/Equivalent_rectangular_bandwidth.
 
-  Attributes:
-    erbs_scale_1: The first scale parameter for the ERBS computation.
-    erbs_scale_2: The second scale parameter for the ERBS computation.
-    erbs_offset: The offset parameter for the ERBS computation.
-    minimum_channel_lower_bound_hz: The minimum frequency human hearing can
-      detect.
-    minimum_channel_width_hz: The frequency resolution of human hearing in the
-      lowest detectable frequency.
-    maximum_channel_upper_bound: The maximum frequency human hearing can detect.
-    elliptic_order: Order of the elliptic band pass filter when running filter
-      bank.
-    elliptic_ripple_pass: Max ripple dB in the pass band of the filter.
-    elliptic_ripple_stop: Max ripple dB in the stop band of the filter. Ignored
-      for filter order 1.
-  """
+    Attributes:
+      erbs_scale_1: The first scale parameter for the ERBS computation.
+      erbs_scale_2: The second scale parameter for the ERBS computation.
+      erbs_offset: The offset parameter for the ERBS computation.
+      minimum_channel_lower_bound_hz: The minimum frequency human hearing can
+        detect.
+      minimum_channel_width_hz: The frequency resolution of human hearing in the
+        lowest detectable frequency.
+      maximum_channel_upper_bound: The maximum frequency human hearing can detect.
+      elliptic_order: Order of the elliptic band pass filter when running filter
+        bank.
+      elliptic_ripple_pass: Max ripple dB in the pass band of the filter.
+      elliptic_ripple_stop: Max ripple dB in the stop band of the filter. Ignored
+        for filter order 1.
+    """
 
-  erbs_scale_1: signal.Numerical = 21.4
-  erbs_scale_2: signal.Numerical = 0.00437
-  erbs_offset: signal.Numerical = 1.0
-  minimum_channel_lower_bound_hz: signal.Numerical = 20.0
-  minimum_channel_width_hz: signal.Numerical = 1.0
-  maximum_channel_upper_bound: signal.Numerical = 20000.0
-  elliptic_order: signal.Numerical = 1
-  elliptic_ripple_pass: signal.Numerical = 3
-  elliptic_ripple_stop: signal.Numerical = 80
+    erbs_scale_1: audio_signal.Numerical = 21.4
+    erbs_scale_2: audio_signal.Numerical = 0.00437
+    erbs_offset: audio_signal.Numerical = 1.0
+    minimum_channel_lower_bound_hz: audio_signal.Numerical = 20.0
+    minimum_channel_width_hz: audio_signal.Numerical = 1.0
+    maximum_channel_upper_bound: audio_signal.Numerical = 20000.0
+    elliptic_order: audio_signal.Numerical = 1
+    elliptic_ripple_pass: audio_signal.Numerical = 3
+    elliptic_ripple_stop: audio_signal.Numerical = 80
 
-  _hz_freqs: Optional[signal.Numerical] = None
+    _hz_freqs: Optional[audio_signal.Numerical] = None
 
-  def tree_flatten(self):
-    return (dataclasses.astuple(self), None)
+    def tree_flatten(self):
+        return (dataclasses.astuple(self), None)
 
-  @classmethod
-  def tree_unflatten(cls, _, children):
-    return cls(*children)
+    @classmethod
+    def tree_unflatten(cls, _, children):
+        return cls(*children)
 
-  def __post_init__(self):
-    """Initializes the Cam-equidistant frequency array of filters if missing."""
-    if self._hz_freqs is None:
-      start_cam = self.cam_from_hz(self.minimum_channel_lower_bound_hz)
-      cam_step = (
-          self.cam_from_hz(
-              self.minimum_channel_lower_bound_hz
-              + self.minimum_channel_width_hz
-          )
-          - start_cam
-      )
-      stop_cam = self.cam_from_hz(self.maximum_channel_upper_bound)
-      self._hz_freqs = self.hz_from_cam(
-          jnp.arange(start_cam, stop_cam, cam_step)
-      )
+    def __post_init__(self):
+        """Initializes the Cam-equidistant frequency array of filters if missing."""
+        if self._hz_freqs is None:
+            start_cam = self.cam_from_hz(self.minimum_channel_lower_bound_hz)
+            cam_step = (
+                self.cam_from_hz(
+                    self.minimum_channel_lower_bound_hz + self.minimum_channel_width_hz
+                )
+                - start_cam
+            )
+            stop_cam = self.cam_from_hz(self.maximum_channel_upper_bound)
+            self._hz_freqs = self.hz_from_cam(jnp.arange(start_cam, stop_cam, cam_step))
 
-  def hz_from_cam(self, cam: signal.Numerical) -> signal.Numerical:
-    """Returns the Hz frequency for the provided Cam frequency."""
-    return (
-        10 ** (cam / self.erbs_scale_1) - self.erbs_offset
-    ) / self.erbs_scale_2
+    def hz_from_cam(self, cam: audio_signal.Numerical) -> audio_signal.Numerical:
+        """Returns the Hz frequency for the provided Cam frequency."""
+        return (10 ** (cam / self.erbs_scale_1) - self.erbs_offset) / self.erbs_scale_2
 
-  def cam_from_hz(self, hz: signal.Numerical) -> signal.Numerical:
-    """Returns the Cam frequency for the provided Hz frequency."""
-    return self.erbs_scale_1 * jnp.log10(
-        self.erbs_offset + self.erbs_scale_2 * hz
-    )
+    def cam_from_hz(self, hz: audio_signal.Numerical) -> audio_signal.Numerical:
+        """Returns the Cam frequency for the provided Hz frequency."""
+        return self.erbs_scale_1 * jnp.log10(self.erbs_offset + self.erbs_scale_2 * hz)
 
-  def channel_filter(self, sig: signal.Signal) -> signal.Channels:
-    """Returns the signal filtered through a filter bank."""
-    freqs = []
-    filters = []
-    for idx in range(np.asarray(self._hz_freqs).shape[0] - 1):
-      bandpass = [self._hz_freqs[idx], self._hz_freqs[idx + 1]]
-      freqs.append(bandpass)
-      filters.append(
-          scipy.signal.ellip(
-              N=self.elliptic_order,
-              rp=self.elliptic_ripple_pass,
-              rs=self.elliptic_ripple_stop,
-              Wn=bandpass,
-              btype='bandpass',
-              output='sos',
-              fs=sig.sample_rate,
-          )
-      )
+    def channel_filter(self, sig: audio_signal.Signal) -> audio_signal.Channels:
+        """Returns the signal filtered through a filter bank."""
+        freqs = []
+        filters = []
+        for idx in range(np.asarray(self._hz_freqs).shape[0] - 1):
+            bandpass = [self._hz_freqs[idx], self._hz_freqs[idx + 1]]
+            freqs.append(bandpass)
+            filters.append(
+                scipy.signal.ellip(
+                    N=self.elliptic_order,
+                    rp=self.elliptic_ripple_pass,
+                    rs=self.elliptic_ripple_stop,
+                    Wn=bandpass,
+                    btype="bandpass",
+                    output="sos",
+                    fs=sig.sample_rate,
+                )
+            )
 
-    freqs_ary = jnp.asarray(freqs)
+        freqs_ary = jnp.asarray(freqs)
 
-    return signal.Channels(
-        sample_rate=sig.sample_rate,
-        freqs=freqs_ary,
-        samples=elliptic.iirfilter(
-            jnp.asarray(filters),
-            sig.samples,
-        ),
-    )
+        return audio_signal.Channels(
+            sample_rate=sig.sample_rate,
+            freqs=freqs_ary,
+            samples=elliptic.iirfilter(
+                jnp.asarray(filters),
+                sig.samples,
+            ),
+        )

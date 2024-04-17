@@ -13,26 +13,28 @@
 # limitations under the License.
 """Tests for google3.third_party.zimtohrli.python.zimtohrli."""
 
-from google3.testing.pybase import googletest
-from google3.third_party.zimtohrli.python import signal
-from google3.third_party.zimtohrli.python import zimtohrli
+import unittest
+import numpy as np
+import audio_signal
+import zimtohrli
 
 
-class ZimtohrliTest(googletest.TestCase):
+class ZimtohrliTest(unittest.TestCase):
 
-  def test_zimtohrli_spectrogram_and_distance(self):
-    sample_rate = 48000.0
-    signal_a = np.zeros((int(sample_rate) // 100,))
-    signal_a[0] = 1.0
-    signal_b = np.zeros((int(sample_rate) // 100,))
-    signal_b[0:1] = 0.9
-    sound_a = signal.Signal(sample_rate=sample_rate, samples=signal_a)
-    sound_b = signal.Signal(sample_rate=sample_rate, samples=signal_b)
-    spectrogram_a = zimtohrli.spectrogram(sound_a)
-    spectrogram_b = zimtohrli.spectrogram(sound_b)
-    distance = zimtohrli.distance(spectrogram_a, spectrogram_b)
-    self.assertGreater(distance, 0)
+    def test_zimtohrli_spectrogram_and_distance(self):
+        sample_rate = 48000.0
+        signal_a = np.zeros((int(sample_rate) // 100,))
+        signal_a[0] = 1.0
+        signal_b = np.zeros((int(sample_rate) // 100,))
+        signal_b[0:1] = 0.9
+        sound_a = audio_signal.Signal(sample_rate=sample_rate, samples=signal_a)
+        sound_b = audio_signal.Signal(sample_rate=sample_rate, samples=signal_b)
+        z = zimtohrli.Zimtohrli()
+        spectrogram_a = z.spectrogram(sound_a)
+        spectrogram_b = z.spectrogram(sound_b)
+        distance = z.distance(spectrogram_a, spectrogram_b)
+        self.assertGreater(distance, 0)
 
 
 if __name__ == "__main__":
-  googletest.main()
+    unittest.main()

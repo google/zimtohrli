@@ -15,52 +15,52 @@
 """Tests for zimtohrli.python.tf.zimtohrli.loudness."""
 
 import numpy as np
-from google3.testing.pybase import googletest
-from google3.testing.pybase import parameterized
-from google3.third_party.zimtohrli.python import loudness
+import unittest
+import parameterized
+import loudness
 
 
-class LoudnessTest(parameterized.TestCase):
-  loudness_scale = loudness.Loudness()
+class LoudnessTest(unittest.TestCase):
+    loudness_scale = loudness.Loudness()
 
-  @parameterized.parameters(
-      (250.0, 20.0, 32.21215),
-      (250.0, 40.0, 50.71194),
-      (250.0, 60.0, 67.82744),
-      (1000.0, 20.0, 19.89019),
-      (1000.0, 40.0, 40.31903),
-      (1000.0, 60.0, 60.705994),
-      (1500.0, 20.0, 20.86898),
-      (1500.0, 40.0, 41.29622),
-      (1500.0, 60.0, 61.80821),
-  )
-  def testSPLFromPhons(self, hz: float, phons: float, spl: float):
-    np.testing.assert_allclose(
-        self.loudness_scale.spl_from_phons(phons=phons, freq=hz),
-        spl,
-        rtol=1e-5,
-        atol=0,
+    @parameterized.parameterize(
+        dict(hz=250.0, phons=20.0, spl=31.643906),
+        dict(hz=250.0, phons=40.0, spl=50.082615),
+        dict(hz=250.0, phons=60.0, spl=67.254036),
+        dict(hz=1000.0, phons=20.0, spl=20.237755),
+        dict(hz=1000.0, phons=40.0, spl=40.344223),
+        dict(hz=1000.0, phons=60.0, spl=60.403873),
+        dict(hz=1500.0, phons=20.0, spl=22.166199),
+        dict(hz=1500.0, phons=40.0, spl=43.04581),
+        dict(hz=1500.0, phons=60.0, spl=63.532944),
     )
+    def testSPLFromPhons(self, hz: float, phons: float, spl: float):
+        np.testing.assert_allclose(
+            self.loudness_scale.spl_from_phons(phons=phons, freq=hz),
+            spl,
+            rtol=1e-5,
+            atol=0,
+        )
 
-  @parameterized.parameters(
-      (250.0, 20.815575, 33.0),
-      (250.0, 40.362747, 51.0),
-      (250.0, 59.05414, 67.0),
-      (1000.0, 20.132996, 20.0),
-      (1000.0, 39.717552, 40.0),
-      (1000.0, 59.33892, 60.0),
-      (1500.0, 21.137794, 22.0),
-      (1500.0, 40.717434, 42.0),
-      (1500.0, 61.1927, 63.0),
-  )
-  def testPhonsFromSPL(self, hz: float, phons: float, spl: float):
-    np.testing.assert_allclose(
-        self.loudness_scale.phons_from_spl(spl=spl, freq=hz),
-        phons,
-        rtol=1e-5,
-        atol=0,
+    @parameterized.parameterize(
+        dict(hz=250.0, phons=21.403091, spl=33.0),
+        dict(hz=250.0, phons=41.081264, spl=51.0),
+        dict(hz=250.0, phons=59.735756, spl=67.0),
+        dict(hz=1000.0, phons=19.789963, spl=20.0),
+        dict(hz=1000.0, phons=39.687717, spl=40.0),
+        dict(hz=1000.0, phons=59.629295, spl=60.0),
+        dict(hz=1500.0, phons=19.868698, spl=22.0),
+        dict(hz=1500.0, phons=39.01555, spl=42.0),
+        dict(hz=1500.0, phons=59.50945, spl=63.0),
     )
+    def testPhonsFromSPL(self, hz: float, phons: float, spl: float):
+        np.testing.assert_allclose(
+            self.loudness_scale.phons_from_spl(spl=spl, freq=hz),
+            phons,
+            rtol=1e-5,
+            atol=0,
+        )
 
 
-if __name__ == '__main__':
-  googletest.main()
+if __name__ == "__main__":
+    unittest.main()

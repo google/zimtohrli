@@ -16,44 +16,42 @@
 import jax.numpy as jnp
 import numpy as np
 import scipy
-from google3.testing.pybase import googletest
-from google3.testing.pybase import parameterized
-from google3.third_party.zimtohrli.python import elliptic
+import unittest
+import parameterized
+import elliptic
 
 
-class EllipticTest(parameterized.TestCase):
+class EllipticTest(unittest.TestCase):
 
-  @parameterized.parameters(
-      (4, 1, 80, (100, 200)),
-      (3, 3, 30, (100, 200)),
-      (2, 10, 60, (20, 21)),
-      (4, 0.1, 30, (20, 21)),
-      (1, 3, 0, (1000, 1200)),
-      (2, 3, 3, (10000, 10200)),
-  )
-  def test_filter(self, order, rp, rs, passband):
-    fs = 48000
-    sig = scipy.signal.chirp(
-        np.linspace(0, 1, fs), 20, 1, 20000, method="linear"
+    @parameterized.parameterize(
+        dict(order=4, rp=1, rs=80, passband=(100, 200)),
+        dict(order=3, rp=3, rs=30, passband=(100, 200)),
+        dict(order=2, rp=10, rs=60, passband=(20, 21)),
+        dict(order=4, rp=0.1, rs=30, passband=(20, 21)),
+        dict(order=1, rp=3, rs=0, passband=(1000, 1200)),
+        dict(order=2, rp=3, rs=3, passband=(10000, 10200)),
     )
-    coeffs = scipy.signal.ellip(
-        N=order,
-        rp=rp,
-        rs=rs,
-        Wn=passband,
-        btype="bandpass",
-        output="sos",
-        fs=fs,
-    )
-    got_filt = elliptic.iirfilter(
-        jnp.asarray(
-            [coeffs],
-        ),
-        sig,
-    )[0, :]
-    want_filt = scipy.signal.sosfilt(coeffs, sig)
-    np.testing.assert_allclose(got_filt, want_filt, atol=1e-3)
+    def test_filter(self, order, rp, rs, passband):
+        fs = 48000
+        sig = scipy.signal.chirp(np.linspace(0, 1, fs), 20, 1, 20000, method="linear")
+        coeffs = scipy.signal.ellip(
+            N=order,
+            rp=rp,
+            rs=rs,
+            Wn=passband,
+            btype="bandpass",
+            output="sos",
+            fs=fs,
+        )
+        got_filt = elliptic.iirfilter(
+            jnp.asarray(
+                [coeffs],
+            ),
+            sig,
+        )[0, :]
+        want_filt = scipy.signal.sosfilt(coeffs, sig)
+        np.testing.assert_allclose(got_filt, want_filt, atol=1e-3)
 
 
 if __name__ == "__main__":
-  googletest.main()
+    unittest.main()
