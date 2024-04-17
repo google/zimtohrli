@@ -24,13 +24,10 @@ Zimtohrli is a project under development, and is built and tested in a Debian-li
 
 ## Build
 
-Many dependencies for Zimtohrli are downloaded and managed by the build script, but a few
-need to be installed beforehand:
+Some dependencies for Zimtohrli are downloaded and managed by the build script, but others need to be installed before building.
 
 - cmake
 - ninja-build
-- clang
-- clang-tidy
 
 To build the compare tool, a few more dependencies are necessary:
 
@@ -41,7 +38,7 @@ To build the compare tool, a few more dependencies are necessary:
 - libasound2-dev
 - libglfw3-dev
 
-Finally, to run the Python and Go wrappers, the following dependencies are necessary:
+Finally, to build and test the Python and Go wrappers, the following dependencies are necessary:
 
 - golang-go
 - python3

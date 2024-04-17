@@ -245,10 +245,10 @@ struct Zimtohrli {
   // Assumes that any padding built into the spectrogram arrays (the
   // values between spectrogram.shape() and spectrogram.memory_shape()) is
   // populated with zeros.
-  Distance Distance(bool verbose,
-                    const hwy::AlignedNDArray<float, 2>& spectrogram_a,
-                    const hwy::AlignedNDArray<float, 2>& spectrogram_b,
-                    std::optional<size_t> unwarp_window_samples) const;
+  struct Distance Distance(bool verbose,
+                           const hwy::AlignedNDArray<float, 2>& spectrogram_a,
+                           const hwy::AlignedNDArray<float, 2>& spectrogram_b,
+                           std::optional<size_t> unwarp_window_samples) const;
 
   // Convenience method to analyze a signal.
   //

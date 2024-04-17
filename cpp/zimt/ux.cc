@@ -199,7 +199,8 @@ struct Image {
         audio_channel_index(channel_index),
         spectrogram_type(spectrogram_type) {}
   void RedrawPixels() {
-    pixels.reset(new uint8_t[render_size.x * render_size.y * 4]);
+    pixels.reset(
+        new uint8_t[static_cast<uint8_t>(render_size.x * render_size.y * 4)]);
     render_scale = {
         static_cast<float>(intensities->shape()[0]) / render_size.x,
         static_cast<float>(intensities->shape()[1]) / render_size.y};
