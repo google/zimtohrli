@@ -16,7 +16,7 @@ audio (and video containing audio) compression, and also be able to plug in the
 resulting psychoacoustic similarity measure into audio related machine learning
 models.
 
-For more details about how Zimtohrli works, see zimtohrli.ipynb.
+For more details about how Zimtohrli works, see [zimtohrli.ipynb](zimtohrli.ipynb).
 
 ## Compatibility
 

@@ -201,13 +201,13 @@ add_test(NAME zimtohrli_python_test
 add_test(NAME zimtohrli_ipynb_test
     COMMAND sh -c "${Python3_EXECUTABLE} -m venv ${python3_VENV_DIR} &&
         ${python3_VENV} -m pip install jax jaxlib numpy scipy jupyter nbconvert matplotlib &&
-        ${python3_VENV_DIR}/bin/jupyter nbconvert --to notebook --execute ${CMAKE_CURRENT_SOURCE_DIR}/zimtohrli.ipynb --inplace"
+        ${python3_VENV_DIR}/bin/jupyter nbconvert --to notebook --execute ${CMAKE_CURRENT_SOURCE_DIR}/zimtohrli.ipynb --stdout"
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 add_test(NAME zimtohrli_loudness_computation_ipynb_test
     COMMAND sh -c "${Python3_EXECUTABLE} -m venv ${python3_VENV_DIR} &&
         ${python3_VENV} -m pip install jax jaxlib numpy scipy jupyter nbconvert pandas matplotlib &&
-        ${python3_VENV_DIR}/bin/jupyter nbconvert --to notebook --execute ${CMAKE_CURRENT_SOURCE_DIR}/python/loudness_parameter_computation.ipynb --inplace"
+        ${python3_VENV_DIR}/bin/jupyter nbconvert --to notebook --execute ${CMAKE_CURRENT_SOURCE_DIR}/python/loudness_parameter_computation.ipynb --stdout"
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
