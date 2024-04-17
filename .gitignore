@@ -2,4 +2,5 @@ build
 debug_build
 asan_build
 .vscode
+python/__pycache__/**
 **/METADATA
