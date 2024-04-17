@@ -31,7 +31,7 @@ type winsize struct {
 	Ypixel uint16
 }
 
-func getTerminalWidth() int {
+func getTerminalWidth() (int, error) {
 	ws := &winsize{}
 	retCode, _, errno := syscall.Syscall(syscall.SYS_IOCTL,
 		uintptr(syscall.Stdin),
@@ -39,9 +39,9 @@ func getTerminalWidth() int {
 		uintptr(unsafe.Pointer(ws)))
 
 	if int(retCode) == -1 {
-		panic(errno)
+		return 0, fmt.Errorf("Syscall returned %v", errno)
 	}
-	return int(ws.Col)
+	return int(ws.Col), nil
 }
 
 // New returns a new progress bar.
@@ -85,7 +85,11 @@ func (b *Bar) Update(completed, total int) {
 	b.total = total
 	b.lastRender = now
 
-	width := getTerminalWidth()
+	width, err := getTerminalWidth()
+	if err != nil {
+		fmt.Printf("\r%s", err)
+		return
+	}
 	numFiller := width - len(prefix) - len(suffix)
 	doneFiller := int(float64(numFiller) * float64(b.completed) / float64(b.total))
 	filler := &bytes.Buffer{}
