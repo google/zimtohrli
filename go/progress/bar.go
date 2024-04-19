@@ -57,6 +57,7 @@ func New(name string) *Bar {
 type Bar struct {
 	name       string
 	completed  int
+	errors     int
 	total      int
 	emaSpeed   float64
 	lastRender time.Time
@@ -65,15 +66,15 @@ type Bar struct {
 
 // AddCompleted adds completed tasks to the bar and renders it.
 func (b *Bar) AddCompleted(num int) {
-	b.Update(b.total, b.completed+num)
+	b.Update(b.total, b.completed+num, b.errors)
 }
 
 // Update update completed and total tasks to the bar and updates it.
-func (b *Bar) Update(total, completed int) {
+func (b *Bar) Update(total, completed, errors int) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	prefix := fmt.Sprintf("%s, %d/%d ", b.name, completed, total)
+	prefix := fmt.Sprintf("%s, %d/%d/%d ", b.name, completed, errors, total)
 
 	now := time.Now()
 	timeUsed := now.Sub(b.lastRender)
@@ -96,11 +97,14 @@ func (b *Bar) Update(total, completed int) {
 		return
 	}
 	numFiller := width - len(prefix) - len(suffix)
-	doneFiller := int(float64(numFiller) * float64(b.completed) / float64(b.total))
+	completedFiller := int(float64(numFiller) * float64(b.completed) / float64(b.total))
+	errorFiller := int(float64(numFiller) * float64(b.errors) / float64(b.total))
 	filler := &bytes.Buffer{}
 	for i := 0; i < numFiller; i++ {
-		if i < doneFiller {
+		if i < completedFiller {
 			fmt.Fprintf(filler, "#")
+		} else if i < completedFiller+errorFiller {
+			fmt.Fprintf(filler, "☠")
 		} else {
 			fmt.Fprintf(filler, " ")
 		}
