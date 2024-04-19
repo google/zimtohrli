@@ -161,7 +161,7 @@ func (s Setup) getOptimizeComparisons() (map[string]comparisonSlice, error) {
 	pool := &worker.Pool[prepareResult]{
 		Workers: safeInt(s.MaxWorkers),
 		OnComplete: func(submitted, completed int) {
-			bar.Update(completed, submitted)
+			bar.Update(submitted, completed)
 		},
 	}
 	for _, loopDatasetDir := range datasetDirs {
@@ -256,7 +256,7 @@ func (s Setup) optimize() error {
 			pool := &worker.Pool[compareResult]{
 				Workers: safeInt(s.MaxWorkers),
 				OnComplete: func(submitted, completed int) {
-					bar.Update(completed, submitted)
+					bar.Update(submitted, completed)
 				},
 			}
 
@@ -462,7 +462,7 @@ func (s Setup) Run() error {
 		}
 		bar := progress.New(fmt.Sprintf("Calculating for %v references", len(data.References)))
 		result, err := data.Calculate(metrics, func(submitted, completed int) {
-			bar.Update(completed, submitted)
+			bar.Update(submitted, completed)
 		}, safeInt(s.MaxWorkers), safeString(s.ProgressDirectory))
 		if err != nil {
 			return err
