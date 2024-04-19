@@ -518,7 +518,7 @@ type scoreJob struct {
 
 // Calculate returns the datasets resulting from computing the provided metrics on this dataset.
 // Unless nil, updateProgress will be called each time a unit of work is done.
-func (d *Dataset) Calculate(metrics []MetricRunner, updateProgress func(submitted, completed int), maxWorkers int, progressDirectory string) (map[ScoreType]*Dataset, error) {
+func (d *Dataset) Calculate(metrics []MetricRunner, updateProgress func(submitted, completed, errors int), maxWorkers int, progressDirectory string) (map[ScoreType]*Dataset, error) {
 	metricsAndOutputs := []*metricAndOutput{}
 	for _, metric := range metrics {
 		outputs := []*Dataset{}

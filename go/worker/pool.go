@@ -24,7 +24,7 @@ import (
 // Pool is a pool of workers.
 type Pool[T any] struct {
 	Workers  int
-	OnChange func(submitted, completed int)
+	OnChange func(submitted, completed, errors int)
 
 	startOnce sync.Once
 
@@ -37,6 +37,7 @@ type Pool[T any] struct {
 
 	submittedJobs uint32
 	completedJobs uint32
+	errorJobs     uint32
 }
 
 func (p *Pool[T]) init() {
@@ -59,16 +60,22 @@ func (p *Pool[T]) init() {
 							p.errors <- err
 							p.errorsWaitGroup.Done()
 						}()
+						atomic.AddUint32(&p.errorJobs, 1)
+						p.change()
 					}
 					p.jobsWaitGroup.Done()
 					atomic.AddUint32(&p.completedJobs, 1)
-					if p.OnChange != nil {
-						p.OnChange(int(atomic.LoadUint32(&p.submittedJobs)), int(atomic.LoadUint32(&p.completedJobs)))
-					}
+					p.change()
 				}
 			}()
 		}
 	})
+}
+
+func (p *Pool[T]) change() {
+	if p.OnChange != nil {
+		p.OnChange(int(atomic.LoadUint32(&p.submittedJobs)), int(atomic.LoadUint32(&p.completedJobs)), int(atomic.LoadUint32(&p.errorJobs)))
+	}
 }
 
 // Submit submits a job to the pool.
@@ -77,9 +84,7 @@ func (p *Pool[T]) Submit(job func(func(T)) error) error {
 
 	p.jobsWaitGroup.Add(1)
 	atomic.AddUint32(&p.submittedJobs, 1)
-	if p.OnChange != nil {
-		p.OnChange(int(atomic.LoadUint32(&p.submittedJobs)), int(atomic.LoadUint32(&p.completedJobs)))
-	}
+	p.change()
 
 	go func() {
 		p.jobs <- job

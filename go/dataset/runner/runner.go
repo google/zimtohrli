@@ -159,10 +159,8 @@ func (s Setup) getOptimizeComparisons() (map[string]comparisonSlice, error) {
 	bar := progress.New(fmt.Sprintf("Preparing %v datasets", len(datasetDirs)))
 	defer fmt.Println()
 	pool := &worker.Pool[prepareResult]{
-		Workers: safeInt(s.MaxWorkers),
-		OnChange: func(submitted, completed int) {
-			bar.Update(submitted, completed)
-		},
+		Workers:  safeInt(s.MaxWorkers),
+		OnChange: bar.Update,
 	}
 	for _, loopDatasetDir := range datasetDirs {
 		datasetDir := loopDatasetDir
@@ -254,10 +252,8 @@ func (s Setup) optimize() error {
 		if err := func() error {
 			defer fmt.Println()
 			pool := &worker.Pool[compareResult]{
-				Workers: safeInt(s.MaxWorkers),
-				OnChange: func(submitted, completed int) {
-					bar.Update(submitted, completed)
-				},
+				Workers:  safeInt(s.MaxWorkers),
+				OnChange: bar.Update,
 			}
 
 			for loopDataset, loopComps := range comparisons {
@@ -461,9 +457,7 @@ func (s Setup) Run() error {
 			os.Exit(-2)
 		}
 		bar := progress.New(fmt.Sprintf("Calculating for %v references", len(data.References)))
-		result, err := data.Calculate(metrics, func(submitted, completed int) {
-			bar.Update(submitted, completed)
-		}, safeInt(s.MaxWorkers), safeString(s.ProgressDirectory))
+		result, err := data.Calculate(metrics, bar.Update, safeInt(s.MaxWorkers), safeString(s.ProgressDirectory))
 		if err != nil {
 			return err
 		}
