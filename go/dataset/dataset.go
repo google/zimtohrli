@@ -532,8 +532,8 @@ func (d *Dataset) Calculate(metrics []MetricRunner, updateProgress func(submitte
 	}
 
 	pool := &worker.Pool[any]{
-		Workers:    maxWorkers,
-		OnComplete: updateProgress,
+		Workers:  maxWorkers,
+		OnChange: updateProgress,
 	}
 
 	for _, loopRef := range d.References {

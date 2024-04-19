@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"fmt"
 	"math"
+	"sync"
 	"syscall"
 	"time"
 	"unsafe"
@@ -59,6 +60,7 @@ type Bar struct {
 	total      int
 	emaSpeed   float64
 	lastRender time.Time
+	lock       sync.Mutex
 }
 
 // AddCompleted adds completed tasks to the bar and renders it.
@@ -68,6 +70,9 @@ func (b *Bar) AddCompleted(num int) {
 
 // Update update completed and total tasks to the bar and updates it.
 func (b *Bar) Update(total, completed int) {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
 	prefix := fmt.Sprintf("%s, %d/%d ", b.name, completed, total)
 
 	now := time.Now()

@@ -23,8 +23,8 @@ import (
 
 // Pool is a pool of workers.
 type Pool[T any] struct {
-	Workers    int
-	OnComplete func(submitted, completed int)
+	Workers  int
+	OnChange func(submitted, completed int)
 
 	startOnce sync.Once
 
@@ -62,8 +62,8 @@ func (p *Pool[T]) init() {
 					}
 					p.jobsWaitGroup.Done()
 					atomic.AddUint32(&p.completedJobs, 1)
-					if p.OnComplete != nil {
-						p.OnComplete(int(atomic.LoadUint32(&p.submittedJobs)), int(atomic.LoadUint32(&p.completedJobs)))
+					if p.OnChange != nil {
+						p.OnChange(int(atomic.LoadUint32(&p.submittedJobs)), int(atomic.LoadUint32(&p.completedJobs)))
 					}
 				}
 			}()
@@ -77,6 +77,9 @@ func (p *Pool[T]) Submit(job func(func(T)) error) error {
 
 	p.jobsWaitGroup.Add(1)
 	atomic.AddUint32(&p.submittedJobs, 1)
+	if p.OnChange != nil {
+		p.OnChange(int(atomic.LoadUint32(&p.submittedJobs)), int(atomic.LoadUint32(&p.completedJobs)))
+	}
 
 	go func() {
 		p.jobs <- job
