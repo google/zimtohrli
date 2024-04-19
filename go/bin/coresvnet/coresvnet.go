@@ -12,46 +12,56 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package coresvnet provides functions to fetch the listening test at https://listening-test.coresv.net/results.htm.
-package coresvnet
+// coresvnet downloads the listening test at https://listening-test.coresv.net/results.htm.
+package main
 
 import (
+	"flag"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/google/zimtohrli/go/dataset"
+	"github.com/google/zimtohrli/go/aio"
+	"github.com/google/zimtohrli/go/data"
+	"github.com/google/zimtohrli/go/progress"
+	"github.com/google/zimtohrli/go/worker"
 )
 
-// Fetch returns the metadata for the listening test at https://listening-test.coresv.net/results.htm.
-func Fetch() (*dataset.Dataset, error) {
-	data := &dataset.Dataset{
-		ScoreType: dataset.Mos,
+func populate(dest string, workers int) error {
+	study, err := data.OpenStudy(dest)
+	if err != nil {
+		return err
 	}
 
 	rootURL, err := url.Parse("https://listening-test.coresv.net/results.htm")
 	if err != nil {
-		return nil, err
+		return err
 	}
 	res, err := http.Get(rootURL.String())
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
-		return nil, fmt.Errorf("status code error: %d %s", res.StatusCode, res.Status)
+		return fmt.Errorf("status code error: %d %s", res.StatusCode, res.Status)
 	}
 	doc, err := goquery.NewDocumentFromReader(res.Body)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	resultTable := doc.Find("h2#list3:contains(\"All sets of tracks (5 sets, each 8 tracks)\")").Next().Find("table.table")
 
-	formats := []dataset.Format{"", "", dataset.Opus, dataset.Aac, dataset.Ogg, dataset.Mp3, dataset.Faac, dataset.Faac}
-
+	references := []*data.Reference{}
 	err = nil
+	bar := progress.New("Downloading")
+	pool := worker.Pool[any]{
+		Workers:  workers,
+		OnChange: bar.Update,
+	}
 	resultTable.Find("tbody > tr").Each(func(index int, sel *goquery.Selection) {
 		columns := sel.Find("td")
 		if columns.Length() != 8 {
@@ -62,31 +72,61 @@ func Fetch() (*dataset.Dataset, error) {
 			err = parseErr
 			return
 		}
-		ref := &dataset.Reference{
-			Name:     u.String(),
-			Provider: dataset.URLPathProvider(u),
-			Format:   dataset.Wav,
+		ref := &data.Reference{
+			Name: u.String(),
 		}
+		pool.Submit(func(func(any)) error {
+			var err error
+			ref.Path, err = aio.Fetch(ref.Name, dest)
+			return err
+		})
 		for columnIndex := 2; columnIndex < columns.Length(); columnIndex++ {
 			u, parseErr := rootURL.Parse(columns.Eq(columnIndex).Find("a").AttrOr("href", ""))
 			if parseErr != nil {
 				err = parseErr
 				return
 			}
-			dist := &dataset.Distortion{
-				Name:     u.String(),
-				Provider: dataset.URLPathProvider(u),
-				Format:   formats[columnIndex],
+			dist := &data.Distortion{
+				Name:   u.String(),
+				Scores: map[data.ScoreType]float64{},
 			}
+			pool.Submit(func(func(any)) error {
+				var err error
+				dist.Path, err = aio.Fetch(dist.Name, dest)
+				return err
+			})
 			score, parseErr := strconv.ParseFloat(columns.Eq(columnIndex).Text(), 64)
 			if parseErr != nil {
 				err = parseErr
 				return
 			}
-			dist.Score = score
+			dist.Scores[data.MOS] = score
 			ref.Distortions = append(ref.Distortions, dist)
 		}
-		data.References = append(data.References, ref)
+		references = append(references, ref)
 	})
-	return data, err
+	if err := pool.Error(); err != nil {
+		return err
+	}
+	for _, ref := range references {
+		if err := study.Put(ref); err != nil {
+			return err
+		}
+	}
+	fmt.Println()
+	return nil
+}
+
+func main() {
+	destination := flag.String("dest", "", "Destination directory.")
+	workers := flag.Int("workers", 1, "Number of workers downloading sounds.")
+	flag.Parse()
+	if *destination == "" {
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	if err := populate(*destination, *workers); err != nil {
+		log.Fatal(err)
+	}
 }

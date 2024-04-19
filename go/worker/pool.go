@@ -21,10 +21,12 @@ import (
 	"sync/atomic"
 )
 
+type ChangeHandler func(submitted, completed, errors int)
+
 // Pool is a pool of workers.
 type Pool[T any] struct {
 	Workers  int
-	OnChange func(submitted, completed, errors int)
+	OnChange ChangeHandler
 
 	startOnce sync.Once
 

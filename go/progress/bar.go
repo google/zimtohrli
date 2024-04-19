@@ -80,14 +80,20 @@ func (b *Bar) Update(total, completed, errors int) {
 	timeUsed := now.Sub(b.lastRender)
 	currentSpeed := float64(completed-b.completed) / float64(timeUsed)
 	minutesUsed := float64(timeUsed) / float64(time.Minute)
-	smoothingM1 := math.Pow(0.5, minutesUsed*0.1)
-	if smoothingM1 > 0.999 {
-		smoothingM1 = 0.999
+	smoothingM1 := math.Pow(0.5, minutesUsed)
+	if smoothingM1 > 0.99 {
+		smoothingM1 = 0.99
 	}
 	b.emaSpeed = (1-smoothingM1)*currentSpeed + smoothingM1*b.emaSpeed
-	suffix := fmt.Sprintf(" %.2f/s ETA: %s", b.emaSpeed*float64(time.Second), time.Duration(float64(b.total-b.completed)/b.emaSpeed))
+	eta := time.Duration(float64(b.total-b.completed) / b.emaSpeed)
+	round := time.Minute
+	if eta < time.Minute {
+		round = time.Second
+	}
+	suffix := fmt.Sprintf(" %.2f/s ETA: %s", b.emaSpeed*float64(time.Second), eta.Round(round))
 
 	b.completed = completed
+	b.errors = errors
 	b.total = total
 	b.lastRender = now
 
@@ -98,7 +104,7 @@ func (b *Bar) Update(total, completed, errors int) {
 	}
 	numFiller := width - len(prefix) - len(suffix)
 	completedFiller := int(float64(numFiller) * float64(b.completed) / float64(b.total))
-	errorFiller := int(float64(numFiller) * float64(b.errors) / float64(b.total))
+	errorFiller := int(float64(numFiller) * float64(errors) / float64(b.total))
 	filler := &bytes.Buffer{}
 	for i := 0; i < numFiller; i++ {
 		if i < completedFiller {
