@@ -160,7 +160,7 @@ func (s Setup) getOptimizeComparisons() (map[string]comparisonSlice, error) {
 	defer fmt.Println()
 	pool := &worker.Pool[prepareResult]{
 		Workers: safeInt(s.MaxWorkers),
-		OnComplete: func(submitted, completed int) {
+		OnChange: func(submitted, completed int) {
 			bar.Update(submitted, completed)
 		},
 	}
@@ -255,7 +255,7 @@ func (s Setup) optimize() error {
 			defer fmt.Println()
 			pool := &worker.Pool[compareResult]{
 				Workers: safeInt(s.MaxWorkers),
-				OnComplete: func(submitted, completed int) {
+				OnChange: func(submitted, completed int) {
 					bar.Update(submitted, completed)
 				},
 			}
