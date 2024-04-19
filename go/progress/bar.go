@@ -63,11 +63,11 @@ type Bar struct {
 
 // AddCompleted adds completed tasks to the bar and renders it.
 func (b *Bar) AddCompleted(num int) {
-	b.Update(b.completed+num, b.total)
+	b.Update(b.total, b.completed+num)
 }
 
 // Update update completed and total tasks to the bar and updates it.
-func (b *Bar) Update(completed, total int) {
+func (b *Bar) Update(total, completed int) {
 	prefix := fmt.Sprintf("%s, %d/%d ", b.name, completed, total)
 
 	now := time.Now()
