@@ -17,12 +17,17 @@ package goohrli
 
 /*
 #cgo LDFLAGS: ${SRCDIR}/goohrli.a -lopus -lFLAC -lvorbis -lvorbisenc -logg -lasound -lm -lstdc++
+#cgo CFLAGS: -O3
 #include "goohrli.h"
 */
 import "C"
 import (
+	"fmt"
+	"math"
 	"runtime"
 	"time"
+
+	"github.com/google/zimtohrli/go/audio"
 )
 
 // EnergyAndMaxAbsAmplitude is holds the energy and maximum absolute amplitude of a measurement.
@@ -89,6 +94,24 @@ func (g *Goohrli) SampleRate() float64 { return g.sampleRate }
 
 // FrequencyResolution returns the configured frequency resolution.
 func (g *Goohrli) FrequencyResolution() float64 { return g.frequencyResolution }
+
+// NormalizedAudioDistance returns the distance between the audio files after normalizing their amplitudes for the same max amplitude.
+func (g *Goohrli) NormalizedAudioDistance(audioA, audioB *audio.Audio) (float64, error) {
+	sumOfSquares := 0.0
+	if g.sampleRate != audioA.Rate || g.sampleRate != audioB.Rate {
+		return 0, fmt.Errorf("one of the audio files doesn't have the expected sample rate %v: %v, %v", g.sampleRate, audioA.Rate, audioB.Rate)
+	}
+	if len(audioA.Samples) != len(audioB.Samples) {
+		return 0, fmt.Errorf("the audio files don't have the same number of channels: %v, %v", len(audioA.Samples), len(audioB.Samples))
+	}
+	for channelIndex := range audioA.Samples {
+		measurement := Measure(audioA.Samples[channelIndex])
+		NormalizeAmplitude(measurement.MaxAbsAmplitude, audioB.Samples[channelIndex])
+		dist := float64(g.Distance(audioA.Samples[channelIndex], audioB.Samples[channelIndex]))
+		sumOfSquares += dist * dist
+	}
+	return math.Sqrt(sumOfSquares / float64(len(audioA.Samples))), nil
+}
 
 // Analysis is a Go wrapper around zimthrli::Analysis.
 type Analysis struct {

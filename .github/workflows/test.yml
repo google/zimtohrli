@@ -10,7 +10,9 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
-    
+
+    if: '! github.event.pull_request.draft'
+
     steps:
     - name: Install dependencies
       run: sudo apt install -y libogg-dev libvorbis-dev libflac-dev cmake ninja-build libasound2-dev libglfw3-dev libopus-dev

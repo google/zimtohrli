@@ -60,7 +60,7 @@
 
 ABSL_FLAG(std::string, path_a, "", "file A to compare");
 ABSL_FLAG(std::vector<std::string>, path_b, {}, "files B to compare to file A");
-ABSL_FLAG(float, frequency_resolution, 1, "maximum frequency resolution, Hz");
+ABSL_FLAG(float, frequency_resolution, 8, "maximum frequency resolution, Hz");
 ABSL_FLAG(float, time_resolution_frequency, 100,
           "the frequency corresponding to the maximum time resolution, Hz");
 ABSL_FLAG(float, full_scale_sine_db, 80,
