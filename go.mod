@@ -15,6 +15,6 @@ require (
 	github.com/youpy/go-riff v0.1.0 // indirect
 	github.com/zaf/g711 v0.0.0-20190814101024-76a4a538f52b // indirect
 	golang.org/x/exp v0.0.0-20231110203233-9a3e6036ecaa // indirect
-	golang.org/x/net v0.21.0 // indirect
+	golang.org/x/net v0.23.0 // indirect
 	golang.org/x/tools v0.15.0 // indirect
 )
