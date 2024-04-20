@@ -37,7 +37,7 @@ func main() {
 	details := flag.String("details", "", "Path to database directory with a study to show the details from.")
 	calculate := flag.String("calculate", "", "Path to a database directory with a study to calculate metrics for.")
 	calculateZimtohrli := flag.Bool("calculate_zimtohrli", true, "Whether to calculate Zimtohrli scores.")
-	zimtohrliFrequencyResolution := flag.Float64("zimtohrli_frequency_resolution", 8.0, "Smallest bandwidth of of the filterbank.")
+	zimtohrliFrequencyResolution := flag.Float64("zimtohrli_frequency_resolution", 8.0, "Smallest bandwidth of the filterbank.")
 	correlate := flag.String("correlate", "", "Path to a database directory with a study to correlate scores for.")
 	workers := flag.Int("workers", runtime.NumCPU(), "Number of concurrent workers for tasks.")
 	flag.Parse()
