@@ -31,11 +31,13 @@ import (
 	"github.com/google/zimtohrli/go/audio"
 	"github.com/google/zimtohrli/go/worker"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/mattn/go-sqlite3" // To open sqlite3-databases.
 )
 
 const (
-	MOS       ScoreType = "MOS"
+	// Mean opinion score from human evaluators.
+	MOS ScoreType = "MOS"
+	// Zimtohrli distance.
 	Zimtohrli ScoreType = "Zimtohrli"
 )
 
@@ -219,7 +221,7 @@ func (s *Study) ViewEachReference(f func(*Reference) error) error {
 		return err
 	}
 	defer tx.Rollback()
-	rows, err := tx.Query("SELECT DATA FROM OBJ;")
+	rows, err := tx.Query("SELECT DATA FROM OBJ")
 	if err != nil {
 		return err
 	}
@@ -249,7 +251,7 @@ func (s *Study) UpdateEachReference(f func(*Reference) error) error {
 		return err
 	}
 	if err := func() error {
-		rows, err := tx.Query("SELECT KEY, DATA FROM OBJ;")
+		rows, err := tx.Query("SELECT KEY, DATA FROM OBJ")
 		if err != nil {
 			return err
 		}
@@ -272,15 +274,15 @@ func (s *Study) UpdateEachReference(f func(*Reference) error) error {
 			if err != nil {
 				return err
 			}
-			_, err = tx.Exec("UPDATE OBJ SET DATA = ? WHERE ID = ?", b, key)
-			return err
+			if _, err = tx.Exec("UPDATE OBJ SET DATA = ? WHERE ID = ?", b, key); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
 		return tx.Rollback()
-	} else {
-		return tx.Commit()
 	}
+	return tx.Commit()
 }
 
 // Put inserts a reference into a study.
@@ -297,10 +299,12 @@ func (s *Study) Put(ref *Reference) error {
 		_, err := tx.Exec("INSERT INTO OBJ (ID, DATA) VALUES (?, ?)", []byte(ref.Name), b)
 		return err
 	}(); err != nil {
-		return tx.Rollback()
-	} else {
-		return tx.Commit()
+		if rerr := tx.Rollback(); rerr != nil {
+			return rerr
+		}
+		return err
 	}
+	return tx.Commit()
 }
 
 // Distortion contains data for a distortion of a reference.
