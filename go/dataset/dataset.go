@@ -246,7 +246,8 @@ func (r *metricRunnerReferenceResult) score(m MetricRunner, pool *worker.Pool[an
 	}
 
 	var calculations int32
-	for distortionIndex, distortion := range r.Input.Distortions {
+	for distortionIndex, loopDistortion := range r.Input.Distortions {
+		distortion := loopDistortion
 		distortionPath, distortionMeanVolume, err := distortion.Provider(referenceMeanVolumePtr)
 		if err != nil {
 			return err
