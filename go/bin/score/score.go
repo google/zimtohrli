@@ -52,6 +52,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+		defer study.Close()
 		if err := study.ViewEachReference(func(ref *data.Reference) error {
 			b, err := json.MarshalIndent(ref, "", "  ")
 			if err != nil {
@@ -69,6 +70,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+		defer study.Close()
 		bar := progress.New("Calculating")
 		pool := &worker.Pool[any]{
 			Workers:  *workers,
@@ -91,6 +93,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+		defer study.Close()
 		corrTable, err := study.Correlate()
 		if err != nil {
 			log.Fatal(err)

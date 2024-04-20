@@ -36,6 +36,7 @@ func populate(dest string, workers int) error {
 	if err != nil {
 		return err
 	}
+	defer study.Close()
 
 	rootURL, err := url.Parse("https://listening-test.coresv.net/results.htm")
 	if err != nil {
