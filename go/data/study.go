@@ -296,7 +296,7 @@ func (s *Study) Put(ref *Reference) error {
 		return err
 	}
 	if err := func() error {
-		_, err := tx.Exec("INSERT INTO OBJ (ID, DATA) VALUES (?, ?)", []byte(ref.Name), b)
+		_, err := tx.Exec("INSERT INTO OBJ (ID, DATA) VALUES (?, ?) ON CONFLICT (ID) DO UPDATE SET DATA = ?", []byte(ref.Name), b, b)
 		return err
 	}(); err != nil {
 		if rerr := tx.Rollback(); rerr != nil {
