@@ -21,6 +21,7 @@ import (
 	"sync/atomic"
 )
 
+// ChangeHandler is updated when the worker pool increases the number of submitted, completed, or error jobs.
 type ChangeHandler func(submitted, completed, errors int)
 
 // Pool is a pool of workers.

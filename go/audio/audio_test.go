@@ -20,14 +20,14 @@ import (
 	"testing"
 )
 
-type test_1khz_48khz_wav struct {
+type test1khz48khzWAV struct {
 	name     string
 	data     []byte
 	channels int
 }
 
 var (
-	wavs = []test_1khz_48khz_wav{
+	wavs = []test1khz48khzWAV{
 		{
 			name: "1khz_sine_48khz_rate_1ch_s16le_wav",
 			data: []byte{
