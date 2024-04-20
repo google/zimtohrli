@@ -16,11 +16,13 @@
 package data
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"math"
+	"os"
 	"path/filepath"
 	"sort"
 
@@ -29,7 +31,7 @@ import (
 	"github.com/google/zimtohrli/go/audio"
 	"github.com/google/zimtohrli/go/worker"
 
-	badger "github.com/dgraph-io/badger/v4"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 const (
@@ -58,15 +60,31 @@ func (s ScoreTypes) Swap(i, j int) {
 // Study contains data from a study.
 type Study struct {
 	dir string
-	db  *badger.DB
+	db  *sql.DB
 }
 
 // OpenStudy opens a study from a database directory.
 // If the study doesn't exist, it will be created.
 func OpenStudy(dir string) (*Study, error) {
-	db, err := badger.Open(badger.DefaultOptions(filepath.Join(dir, "index.badgerdb")))
-	if err != nil {
+	err := os.MkdirAll(dir, 0755)
+	if err != nil && !os.IsExist(err) {
+		return nil, fmt.Errorf("trying to create %q: %v", dir, err)
+	}
+	dbPath := filepath.Join(dir, "db.sqlite3")
+	_, err = os.Stat(dbPath)
+	if os.IsNotExist(err) {
+		if _, err = os.Create(dbPath); err != nil {
+			return nil, err
+		}
+	} else if err != nil {
 		return nil, err
+	}
+	db, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		return nil, fmt.Errorf("trying to open %q: %v", dbPath, err)
+	}
+	if _, err := db.Exec("CREATE TABLE IF NOT EXISTS OBJ (ID BLOB PRIMARY KEY, DATA BLOB)"); err != nil {
+		return nil, fmt.Errorf("trying to ensure object table: %v", err)
 	}
 	return &Study{
 		dir: dir,
@@ -74,12 +92,19 @@ func OpenStudy(dir string) (*Study, error) {
 	}, nil
 }
 
+// Close closes the study.
+func (s *Study) Close() error {
+	return s.db.Close()
+}
+
+// CorrelationScore contains the scorrelation score between two score types.
 type CorrelationScore struct {
 	ScoreTypeA ScoreType
 	ScoreTypeB ScoreType
 	Score      float64
 }
 
+// CorrelationTable contains the pairwise correlations between a set of score types.
 type CorrelationTable [][]CorrelationScore
 
 func (c CorrelationTable) String() string {
@@ -189,53 +214,73 @@ func (s *Study) Calculate(measurements map[ScoreType]Measurement, pool *worker.P
 
 // ViewEachReference returns each reference in the study.
 func (s *Study) ViewEachReference(f func(*Reference) error) error {
-	return s.db.View(func(txn *badger.Txn) error {
-		iter := txn.NewIterator(badger.DefaultIteratorOptions)
-		defer iter.Close()
-		for iter.Rewind(); iter.Valid(); iter.Next() {
-			if err := iter.Item().Value(func(value []byte) error {
-				ref := &Reference{}
-				if err := json.Unmarshal(value, ref); err != nil {
-					return err
-				}
-				return f(ref)
-			}); err == io.EOF {
-				break
-			} else if err != nil {
-				return err
-			}
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	rows, err := tx.Query("SELECT DATA FROM OBJ;")
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var value []byte
+		if err := rows.Scan(&value); err != nil {
+			return err
 		}
-		return nil
-	})
+		ref := &Reference{}
+		if err := json.Unmarshal(value, ref); err != nil {
+			return err
+		}
+		if err := f(ref); err == io.EOF {
+			break
+		} else if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // UpdateEachReference returns each reference in the study and saves it after it's handled.
 func (s *Study) UpdateEachReference(f func(*Reference) error) error {
-	return s.db.Update(func(txn *badger.Txn) error {
-		iter := txn.NewIterator(badger.DefaultIteratorOptions)
-		defer iter.Close()
-		for iter.Rewind(); iter.Valid(); iter.Next() {
-			if err := iter.Item().Value(func(value []byte) error {
-				ref := &Reference{}
-				if err := json.Unmarshal(value, ref); err != nil {
-					return err
-				}
-				if err := f(ref); err != nil {
-					return err
-				}
-				b, err := json.Marshal(ref)
-				if err != nil {
-					return err
-				}
-				return txn.Set(iter.Item().Key(), b)
-			}); err == io.EOF {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	if err := func() error {
+		rows, err := tx.Query("SELECT KEY, DATA FROM OBJ;")
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var key, value []byte
+			if err := rows.Scan(&key, &value); err != nil {
+				return err
+			}
+			ref := &Reference{}
+			if err := json.Unmarshal(value, ref); err != nil {
+				return err
+			}
+			if err := f(ref); err == io.EOF {
 				break
 			} else if err != nil {
 				return err
 			}
+			b, err := json.Marshal(ref)
+			if err != nil {
+				return err
+			}
+			_, err = tx.Exec("UPDATE OBJ SET DATA = ? WHERE ID = ?", b, key)
+			return err
 		}
 		return nil
-	})
+	}(); err != nil {
+		return tx.Rollback()
+	} else {
+		return tx.Commit()
+	}
 }
 
 // Put inserts a reference into a study.
@@ -244,12 +289,18 @@ func (s *Study) Put(ref *Reference) error {
 	if err != nil {
 		return err
 	}
-	if err := s.db.Update(func(txn *badger.Txn) error {
-		return txn.Set([]byte(ref.Name), b)
-	}); err != nil {
+	tx, err := s.db.Begin()
+	if err != nil {
 		return err
 	}
-	return nil
+	if err := func() error {
+		_, err := tx.Exec("INSERT INTO OBJ (ID, DATA) VALUES (?, ?)", []byte(ref.Name), b)
+		return err
+	}(); err != nil {
+		return tx.Rollback()
+	} else {
+		return tx.Commit()
+	}
 }
 
 // Distortion contains data for a distortion of a reference.

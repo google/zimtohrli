@@ -19,10 +19,13 @@ import (
 	"fmt"
 )
 
+// Row is a row of table data.
 type Row []string
 
+// Table is table structured data that can render in straight columns in a terminal.
 type Table []Row
 
+// String returns a string representation of the table with colSpacing blanks between columns.
 func (t Table) String(colSpacing int) string {
 	maxCells := 0
 	for _, row := range t {
