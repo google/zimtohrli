@@ -35,9 +35,9 @@ import (
 )
 
 const (
-	// Mean opinion score from human evaluators.
+	// MOS is mean opinion score from human evaluators.
 	MOS ScoreType = "MOS"
-	// Zimtohrli distance.
+	// Zimtohrli is the Zimtohrli distance.
 	Zimtohrli ScoreType = "Zimtohrli"
 )
 
