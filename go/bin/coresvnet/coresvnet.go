@@ -109,12 +109,10 @@ func populate(dest string, workers int) error {
 	if err := pool.Error(); err != nil {
 		return err
 	}
-	for _, ref := range references {
-		if err := study.Put(ref); err != nil {
-			return err
-		}
+	if err := study.Put(references); err != nil {
+		return err
 	}
-	fmt.Println()
+	bar.Finish()
 	return nil
 }
 

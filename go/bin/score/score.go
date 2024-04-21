@@ -37,7 +37,7 @@ func main() {
 	details := flag.String("details", "", "Path to database directory with a study to show the details from.")
 	calculate := flag.String("calculate", "", "Path to a database directory with a study to calculate metrics for.")
 	calculateZimtohrli := flag.Bool("calculate_zimtohrli", true, "Whether to calculate Zimtohrli scores.")
-	zimtohrliFrequencyResolution := flag.Float64("zimtohrli_frequency_resolution", 8.0, "Smallest bandwidth of the filterbank.")
+	zimtohrliFrequencyResolution := flag.Float64("zimtohrli_frequency_resolution", 5.0, "Smallest bandwidth of the filterbank.")
 	correlate := flag.String("correlate", "", "Path to a database directory with a study to correlate scores for.")
 	workers := flag.Int("workers", runtime.NumCPU(), "Number of concurrent workers for tasks.")
 	flag.Parse()
@@ -53,16 +53,18 @@ func main() {
 			log.Fatal(err)
 		}
 		defer study.Close()
+		refs := []*data.Reference{}
 		if err := study.ViewEachReference(func(ref *data.Reference) error {
-			b, err := json.MarshalIndent(ref, "", "  ")
-			if err != nil {
-				return err
-			}
-			fmt.Printf("%s\n", b)
+			refs = append(refs, ref)
 			return nil
 		}); err != nil {
 			log.Fatal(err)
 		}
+		b, err := json.MarshalIndent(refs, "", "  ")
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("%s\n", b)
 	}
 
 	if *calculate != "" {
@@ -85,7 +87,7 @@ func main() {
 		if err := study.Calculate(measurements, pool); err != nil {
 			log.Fatal(err)
 		}
-		fmt.Println()
+		bar.Finish()
 	}
 
 	if *correlate != "" {

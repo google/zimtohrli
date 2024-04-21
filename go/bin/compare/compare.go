@@ -28,7 +28,7 @@ import (
 func main() {
 	pathA := flag.String("path_a", "", "Path to ffmpeg-decodable file with signal A.")
 	pathB := flag.String("path_b", "", "Path to ffmpeg-decodable file with signal B.")
-	frequencyResolution := flag.Float64("frequency_resolution", 8.0, "Band width of smallest filter, i.e. expected frequency resolution of human hearing.")
+	frequencyResolution := flag.Float64("frequency_resolution", 5.0, "Band width of smallest filter, i.e. expected frequency resolution of human hearing.")
 	flag.Parse()
 
 	if *pathA == "" || *pathB == "" {

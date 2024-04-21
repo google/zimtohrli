@@ -206,10 +206,8 @@ func (s *Study) Calculate(measurements map[ScoreType]Measurement, pool *worker.P
 	if err := pool.Error(); err != nil {
 		return err
 	}
-	for _, ref := range refs {
-		if err := s.Put(ref); err != nil {
-			return err
-		}
+	if err := s.Put(refs); err != nil {
+		return err
 	}
 	return nil
 }
@@ -244,60 +242,23 @@ func (s *Study) ViewEachReference(f func(*Reference) error) error {
 	return nil
 }
 
-// UpdateEachReference returns each reference in the study and saves it after it's handled.
-func (s *Study) UpdateEachReference(f func(*Reference) error) error {
+// Put inserts some references into a study.
+func (s *Study) Put(refs []*Reference) error {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return err
 	}
 	if err := func() error {
-		rows, err := tx.Query("SELECT KEY, DATA FROM OBJ")
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var key, value []byte
-			if err := rows.Scan(&key, &value); err != nil {
-				return err
-			}
-			ref := &Reference{}
-			if err := json.Unmarshal(value, ref); err != nil {
-				return err
-			}
-			if err := f(ref); err == io.EOF {
-				break
-			} else if err != nil {
-				return err
-			}
+		for _, ref := range refs {
 			b, err := json.Marshal(ref)
 			if err != nil {
 				return err
 			}
-			if _, err = tx.Exec("UPDATE OBJ SET DATA = ? WHERE ID = ?", b, key); err != nil {
+			if _, err = tx.Exec("INSERT INTO OBJ (ID, DATA) VALUES (?, ?) ON CONFLICT (ID) DO UPDATE SET DATA = ?", []byte(ref.Name), b, b); err != nil {
 				return err
 			}
 		}
 		return nil
-	}(); err != nil {
-		return tx.Rollback()
-	}
-	return tx.Commit()
-}
-
-// Put inserts a reference into a study.
-func (s *Study) Put(ref *Reference) error {
-	b, err := json.Marshal(ref)
-	if err != nil {
-		return err
-	}
-	tx, err := s.db.Begin()
-	if err != nil {
-		return err
-	}
-	if err := func() error {
-		_, err := tx.Exec("INSERT INTO OBJ (ID, DATA) VALUES (?, ?) ON CONFLICT (ID) DO UPDATE SET DATA = ?", []byte(ref.Name), b, b)
-		return err
 	}(); err != nil {
 		if rerr := tx.Rollback(); rerr != nil {
 			return rerr
