@@ -87,6 +87,8 @@ add_library(zimtohrli_base STATIC
     cpp/zimt/loudness.h
     cpp/zimt/masking.cc
     cpp/zimt/masking.h
+    cpp/zimt/mos.cc
+    cpp/zimt/mos.h
     cpp/zimt/zimtohrli.cc
     cpp/zimt/zimtohrli.h
 )
@@ -175,6 +177,7 @@ add_executable(zimtohrli_test
     cpp/zimt/filterbank_test.cc
     cpp/zimt/loudness_test.cc
     cpp/zimt/masking_test.cc
+    cpp/zimt/mos_test.cc
     cpp/zimt/zimtohrli_test.cc
     cpp/zimt/test_file_paths.cc
 )

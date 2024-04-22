@@ -28,6 +28,8 @@ import (
 func main() {
 	pathA := flag.String("path_a", "", "Path to ffmpeg-decodable file with signal A.")
 	pathB := flag.String("path_b", "", "Path to ffmpeg-decodable file with signal B.")
+	outputZimtohrliDistance := flag.Bool("output_zimtohrli_distance", false, "Whether to output the raw Zimtohrli distance instead of a mapped mean opinion score.")
+	perChannel := flag.Bool("per_channel", false, "Whether to output the produced metric per channel instead of a single value for all channels.")
 	frequencyResolution := flag.Float64("frequency_resolution", 5.0, "Band width of smallest filter, i.e. expected frequency resolution of human hearing.")
 	flag.Parse()
 
@@ -53,10 +55,25 @@ func main() {
 		log.Panic(fmt.Errorf("%q has %v channels, and %q has %v channels", *pathA, len(signalA.Samples), *pathB, len(signalB.Samples)))
 	}
 
+	getMetric := func(f float32) float32 {
+		if *outputZimtohrliDistance {
+			return f
+		}
+		return goohrli.MOSFromZimtohrli(f)
+	}
+
 	g := goohrli.New(signalA.Rate, *frequencyResolution)
-	for channelIndex := range signalA.Samples {
-		measurement := goohrli.Measure(signalA.Samples[channelIndex])
-		goohrli.NormalizeAmplitude(measurement.MaxAbsAmplitude, signalB.Samples[channelIndex])
-		fmt.Println(g.Distance(signalA.Samples[channelIndex], signalB.Samples[channelIndex]))
+	if *perChannel {
+		for channelIndex := range signalA.Samples {
+			measurement := goohrli.Measure(signalA.Samples[channelIndex])
+			goohrli.NormalizeAmplitude(measurement.MaxAbsAmplitude, signalB.Samples[channelIndex])
+			fmt.Println(getMetric(g.Distance(signalA.Samples[channelIndex], signalB.Samples[channelIndex])))
+		}
+	} else {
+		dist, err := g.NormalizedAudioDistance(signalA, signalB)
+		if err != nil {
+			log.Panic(err)
+		}
+		fmt.Println(getMetric(float32(dist)))
 	}
 }

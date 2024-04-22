@@ -56,8 +56,11 @@ EnergyAndMaxAbsAmplitude Measure(const float* signal, int size);
 // Normalizes the amplitudes of the signal so that it has the provided max
 // amplitude, and returns the new energ in dB FS, and the new maximum absolute
 // amplitude.
-EnergyAndMaxAbsAmplitude NormalizeAmplitudes(float max_abs_amplitude,
-                                             float* signal_data, int size);
+EnergyAndMaxAbsAmplitude NormalizeAmplitude(float max_abs_amplitude,
+                                            float* signal_data, int size);
+
+// Returns an approximate MOS score for a given Zimtohrli distance.
+float MOSFromZimtohrli(float zimtohrli_distance);
 
 // Deletes a zimtohrli::Analysis.
 void FreeAnalysis(Analysis a);
