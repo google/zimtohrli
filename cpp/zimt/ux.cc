@@ -1411,12 +1411,11 @@ struct RenderContext {
       EachSpectrogram([&](SpectrogramImages& image, const Analysis& analysis) {
         const Steps mapped_step_indices =
             GetMappedSteps(crosshair_step_index, crosshair_image, image);
-        const Positions mapped_positions =
-            ComputePositions(mapped_step_indices, cam_channel_index,
-                             image.spectrogram.render_scale);
 
         image.energy_channels_db.SetCrosshair(
-            mapped_positions.energy_channels_db);
+            ComputePositions(mapped_step_indices, cam_channel_index,
+                             image.energy_channels_db.render_scale)
+                .energy_channels_db);
         image.highlighted_energy_channels_db = {
             .value = analysis.energy_channels_db[{
                 mapped_step_indices.energy_channels_db}][cam_channel_index],
@@ -1426,7 +1425,9 @@ struct RenderContext {
                     time_resolution_frequency};
 
         image.partial_energy_channels_db.SetCrosshair(
-            mapped_positions.partial_energy_channels_db);
+            ComputePositions(mapped_step_indices, cam_channel_index,
+                             image.partial_energy_channels_db.render_scale)
+                .partial_energy_channels_db);
         image.highlighted_partial_energy_channels_db = {
             .value = analysis.partial_energy_channels_db[{
                 mapped_step_indices.partial_energy_channels_db}]
@@ -1436,7 +1437,10 @@ struct RenderContext {
             .time = mapped_step_indices.partial_energy_channels_db /
                     time_resolution_frequency};
 
-        image.spectrogram.SetCrosshair(mapped_positions.spectrogram);
+        image.spectrogram.SetCrosshair(
+            ComputePositions(mapped_step_indices, cam_channel_index,
+                             image.spectrogram.render_scale)
+                .spectrogram);
         image.highlighted_spectrogram = {
             .value = analysis.spectrogram[{mapped_step_indices.spectrogram}]
                                          [cam_channel_index],
