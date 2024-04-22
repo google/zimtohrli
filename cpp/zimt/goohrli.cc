@@ -21,6 +21,7 @@
 #include "hwy/aligned_allocator.h"
 #include "hwy/base.h"
 #include "zimt/cam.h"
+#include "zimt/mos.h"
 #include "zimt/zimtohrli.h"
 
 EnergyAndMaxAbsAmplitude Measure(const float* signal, int size) {
@@ -33,15 +34,20 @@ EnergyAndMaxAbsAmplitude Measure(const float* signal, int size) {
       .MaxAbsAmplitude = measurements.max_abs_amplitude};
 }
 
-EnergyAndMaxAbsAmplitude NormalizeAmplitudes(float max_abs_amplitude,
-                                             float* signal, int size) {
+EnergyAndMaxAbsAmplitude NormalizeAmplitude(float max_abs_amplitude,
+                                            float* signal, int size) {
   hwy::AlignedNDArray<float, 1> signal_array({static_cast<size_t>(size)});
   hwy::CopyBytes(signal, signal_array.data(), size * sizeof(float));
   const zimtohrli::EnergyAndMaxAbsAmplitude measurements =
       zimtohrli::NormalizeAmplitude(max_abs_amplitude, signal_array[{}]);
+  hwy::CopyBytes(signal_array.data(), signal, size * sizeof(float));
   return EnergyAndMaxAbsAmplitude{
       .EnergyDBFS = measurements.energy_db_fs,
       .MaxAbsAmplitude = measurements.max_abs_amplitude};
+}
+
+float MOSFromZimtohrli(float zimtohrli_distance) {
+  return zimtohrli::MOSFromZimtohrli(zimtohrli_distance);
 }
 
 Zimtohrli CreateZimtohrli(float sample_rate, float frequency_resolution) {

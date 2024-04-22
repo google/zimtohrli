@@ -55,6 +55,7 @@
 #include "sndfile.h"
 #include "zimt/audio.h"
 #include "zimt/cam.h"
+#include "zimt/mos.h"
 #include "zimt/ux.h"
 #include "zimt/zimtohrli.h"
 
@@ -79,6 +80,12 @@ ABSL_FLAG(float, time_norm_order, zimtohrli::Zimtohrli{}.time_norm_order,
 ABSL_FLAG(bool, normalize_amplitude, true,
           "whether to normalize the amplitude of all B sounds to the same max "
           "amplitude as the A sound");
+ABSL_FLAG(bool, output_zimtohrli_distance, false,
+          "Whether to output the raw Zimtohrli distance instead of a mapped "
+          "mean opinion score.");
+ABSL_FLAG(bool, per_channel, false,
+          "Whether to output the produced metric per channel instead of a "
+          "single value for all channels.");
 
 namespace zimtohrli {
 
@@ -170,6 +177,13 @@ std::ostream& operator<<(std::ostream& outs, const DistanceData& data) {
   PrintDistanceInfo(outs, data, "Peak relative noise",
                     data.distance.max_relative_delta);
   return outs;
+}
+
+float GetMetric(float zimtohrli_score) {
+  if (absl::GetFlag(FLAGS_output_zimtohrli_distance)) {
+    return zimtohrli_score;
+  }
+  return MOSFromZimtohrli(zimtohrli_score);
 }
 
 int Main(int argc, char* argv[]) {
@@ -291,6 +305,7 @@ int Main(int argc, char* argv[]) {
   }
 
   const bool ux = absl::GetFlag(FLAGS_ux);
+  const bool per_channel = absl::GetFlag(FLAGS_per_channel);
   if (!ux && !verbose) {
     const size_t num_downscaled_samples_a = static_cast<size_t>(
         std::ceil(static_cast<float>(file_a->Frames().shape()[1]) *
@@ -301,32 +316,53 @@ int Main(int argc, char* argv[]) {
         {num_downscaled_samples_a, z.cam_filterbank->filter.Size()});
     hwy::AlignedNDArray<float, 2> partial_energy_channels_db_a(
         {num_downscaled_samples_a, z.cam_filterbank->filter.Size()});
-    hwy::AlignedNDArray<float, 2> spectrogram_a(
-        {num_downscaled_samples_a, z.cam_filterbank->filter.Size()});
+    std::vector<hwy::AlignedNDArray<float, 2>> file_a_spectrograms;
     for (size_t channel_index = 0; channel_index < file_a->Info().channels;
          ++channel_index) {
+      hwy::AlignedNDArray<float, 2> spectrogram(
+          {num_downscaled_samples_a, z.cam_filterbank->filter.Size()});
       z.Spectrogram(file_a->Frames()[{channel_index}], channels_a,
                     energy_channels_db_a, partial_energy_channels_db_a,
-                    spectrogram_a);
-      for (const AudioFile& file_b : file_b_vector) {
-        const size_t num_downscaled_samples_b = static_cast<size_t>(std::ceil(
-            static_cast<float>(file_b.Frames().shape()[1]) *
-            time_resolution_frequency / z.cam_filterbank->sample_rate));
-        hwy::AlignedNDArray<float, 2> channels_b(
-            {file_b.Frames().shape()[1], z.cam_filterbank->filter.Size()});
-        hwy::AlignedNDArray<float, 2> energy_channels_db_b(
-            {num_downscaled_samples_b, z.cam_filterbank->filter.Size()});
-        hwy::AlignedNDArray<float, 2> partial_energy_channels_db_b(
-            {num_downscaled_samples_b, z.cam_filterbank->filter.Size()});
-        hwy::AlignedNDArray<float, 2> spectrogram_b(
-            {num_downscaled_samples_b, z.cam_filterbank->filter.Size()});
+                    spectrogram);
+      file_a_spectrograms.push_back(std::move(spectrogram));
+    }
+    for (int file_b_index = 0; file_b_index < file_b_vector.size();
+         ++file_b_index) {
+      const AudioFile& file_b = file_b_vector[file_b_index];
+      const size_t num_downscaled_samples_b = static_cast<size_t>(
+          std::ceil(static_cast<float>(file_b.Frames().shape()[1]) *
+                    time_resolution_frequency / z.cam_filterbank->sample_rate));
+      hwy::AlignedNDArray<float, 2> channels_b(
+          {file_b.Frames().shape()[1], z.cam_filterbank->filter.Size()});
+      hwy::AlignedNDArray<float, 2> energy_channels_db_b(
+          {num_downscaled_samples_b, z.cam_filterbank->filter.Size()});
+      hwy::AlignedNDArray<float, 2> partial_energy_channels_db_b(
+          {num_downscaled_samples_b, z.cam_filterbank->filter.Size()});
+      hwy::AlignedNDArray<float, 2> spectrogram_b(
+          {num_downscaled_samples_b, z.cam_filterbank->filter.Size()});
+      float sum_of_squares = 0;
+      for (size_t channel_index = 0; channel_index < file_a->Info().channels;
+           ++channel_index) {
         z.Spectrogram(file_b.Frames()[{channel_index}], channels_b,
                       energy_channels_db_b, partial_energy_channels_db_b,
                       spectrogram_b);
-        std::cout << z.Distance(false, spectrogram_a, spectrogram_b,
-                                unwarp_window_samples)
-                         .value
-                  << std::endl;
+        const float distance =
+            z.Distance(false, file_a_spectrograms[channel_index], spectrogram_b,
+                       unwarp_window_samples)
+                .value;
+        if (per_channel) {
+          std::cout << GetMetric(distance) << std::endl;
+        } else {
+          sum_of_squares += distance * distance;
+        }
+      }
+      if (!per_channel) {
+        for (int file_b_index = 0; file_b_index < file_b_vector.size();
+             ++file_b_index) {
+          std::cout << GetMetric(std::sqrt(sum_of_squares /
+                                           float(file_a->Info().channels)))
+                    << std::endl;
+        }
       }
     }
     return 0;
@@ -358,6 +394,7 @@ int Main(int argc, char* argv[]) {
       const AudioFile& file_b = file_b_vector[b_index];
       std::cout << "A (" << file_a->Path() << ") vs B (" << file_b.Path() << ")"
                 << std::endl;
+      float sum_of_squares = 0;
       for (size_t channel_index = 0;
            channel_index < comparison.analysis_a.size(); ++channel_index) {
         std::cout << "  Channel " << channel_index << std::endl;
@@ -385,7 +422,18 @@ int Main(int argc, char* argv[]) {
             time_resolution_frequency, unwarp_window_samples);
         std::cout << "    Phons channel distance: " << phons_channel_distance
                   << std::endl;
+
+        const float distance = phons_channel_distance.distance.value;
+        sum_of_squares += distance * distance;
+
+        std::cout << "    Channel MOS: " << MOSFromZimtohrli(distance)
+                  << std::endl;
       }
+      const float zimtohrli_file_distance =
+          std::sqrt(sum_of_squares / float(comparison.analysis_a.size()));
+      std::cout << "  File distance: " << zimtohrli_file_distance << std::endl;
+      std::cout << "  File MOS: " << MOSFromZimtohrli(zimtohrli_file_distance)
+                << std::endl;
     }
     return 0;
   }

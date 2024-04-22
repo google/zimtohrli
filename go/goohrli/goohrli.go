@@ -48,11 +48,16 @@ func Measure(signal []float32) EnergyAndMaxAbsAmplitude {
 // NormalizeAmplitude normalizes the amplitudes of the signal so that it has the provided max
 // amplitude, and returns the new energ in dB FS, and the new maximum absolute amplitude.
 func NormalizeAmplitude(maxAbsAmplitude float32, signal []float32) EnergyAndMaxAbsAmplitude {
-	measurements := C.NormalizeAmplitudes(C.float(maxAbsAmplitude), (*C.float)(&signal[0]), C.int(len(signal)))
+	measurements := C.NormalizeAmplitude(C.float(maxAbsAmplitude), (*C.float)(&signal[0]), C.int(len(signal)))
 	return EnergyAndMaxAbsAmplitude{
 		EnergyDBFS:      float32(measurements.EnergyDBFS),
 		MaxAbsAmplitude: float32(measurements.MaxAbsAmplitude),
 	}
+}
+
+// MOSFromZimtohrli returns an approximate mean opinion score for a given zimtohrli distance.
+func MOSFromZimtohrli(zimtohrliDistance float32) float32 {
+	return float32(C.MOSFromZimtohrli(C.float(zimtohrliDistance)))
 }
 
 // Goohrli is a Go wrapper around zimtohrli::Zimtohrli.
