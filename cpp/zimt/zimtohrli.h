@@ -257,20 +257,16 @@ struct Zimtohrli {
   //
   // signal is a span of audio samples between -1 and 1.
   //
-  // perceptual_sample_rate is the sample rate of the returned analysis, i.e.
-  // the assumed sample rate of human audio perception.
-  //
   // state is the state of the internal filterbank. Reusing the state between
   // calls allows processing of audio in chunks.
   //
   // channels is a (num_samples, num_channels)-shaped array that will be
   // populated with the audio samples in the individual channels.
-  Analysis Analyze(hwy::Span<const float> signal, float perceptual_sample_rate,
-                   FilterbankState& state,
+  Analysis Analyze(hwy::Span<const float> signal, FilterbankState& state,
                    hwy::AlignedNDArray<float, 2>& channels) const;
 
   // Analyze without chunk processing.
-  Analysis Analyze(hwy::Span<const float> signal, float perceptual_sample_rate,
+  Analysis Analyze(hwy::Span<const float> signal,
                    hwy::AlignedNDArray<float, 2>& channels) const;
 
   // Convenience method to compare multi channel audios.
@@ -292,16 +288,16 @@ struct Zimtohrli {
   // frames_b_span is a span of (num_audio_channels, num_samples)-shaped
   // arrays of samples between -1 and 1.
   //
-  // perceptual_sample_rate is the sample rate of the returned analysis, i.e.
-  // the assumed sample rate of human audio perception.
-  //
   // If unwarp_window_samples has a value, will run a ChainDTW with that window
   // and only compare matching time steps of the spectrograms.
   Comparison Compare(
       const hwy::AlignedNDArray<float, 2>& frames_a,
       absl::Span<const hwy::AlignedNDArray<float, 2>* const> frames_b_span,
-      float perceptual_sample_rate,
       std::optional<size_t> unwarp_window_samples);
+
+  // Sample rate corresponding to the human hearing sensitivity to timing
+  // differences.
+  float perceptual_sample_rate = 100.0;
 
   // The filterbank used to separate the signal in frequency channels.
   std::optional<CamFilterbank> cam_filterbank;

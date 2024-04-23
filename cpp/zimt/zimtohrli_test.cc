@@ -226,21 +226,21 @@ size_t PeakChannel(const hwy::AlignedNDArray<float, 2>& channels) {
 TEST(Zimtohrli, AnalysisTest) {
   const float full_scale_sine_db = 80;
   const float sample_rate = 48000;
-  const float perceptual_sample_rate = 100;
   const float seconds_of_audio = 1;
-  Zimtohrli z = {.cam_filterbank = Cam().CreateFilterbank(sample_rate),
+  const Cam cam{.minimum_bandwidth_hz = 1};
+  Zimtohrli z = {.cam_filterbank = cam.CreateFilterbank(sample_rate),
                  .full_scale_sine_db = full_scale_sine_db};
   const size_t channel = 600;
   const float channel_hz = z.cam_filterbank->thresholds_hz[{1}][channel];
   const size_t last_energy_sample =
-      static_cast<size_t>(perceptual_sample_rate * seconds_of_audio - 1);
+      static_cast<size_t>(z.perceptual_sample_rate * seconds_of_audio - 1);
 
   hwy::AlignedNDArray<float, 2> signal =
       CreateSignal(sample_rate, seconds_of_audio, {{channel_hz, 1.0}});
   hwy::AlignedNDArray<float, 2> channels(
       {signal.shape()[1], z.cam_filterbank->filter.Size()});
 
-  Analysis result = z.Analyze(signal[{0}], perceptual_sample_rate, channels);
+  Analysis result = z.Analyze(signal[{0}], channels);
 
   EXPECT_EQ(PeakChannel(result.spectrogram), channel);
   EXPECT_NEAR(result.energy_channels_db[{last_energy_sample}][channel],
@@ -316,7 +316,6 @@ void CheckIsAbsDiff(const Zimtohrli& z,
 TEST(Zimtohrli, ComparisonTest) {
   const float full_scale_sine_db = 80;
   const float sample_rate = 48000;
-  const float perceptual_sample_rate = 100;
   const float seconds_of_audio = 1;
   const size_t num_samples =
       static_cast<size_t>(sample_rate * seconds_of_audio);
@@ -338,13 +337,10 @@ TEST(Zimtohrli, ComparisonTest) {
   hwy::AlignedNDArray<float, 2> channels(
       {audio_a.shape()[1], z.cam_filterbank->filter.Size()});
 
-  Analysis analysis_a =
-      z.Analyze(audio_a[{0}], perceptual_sample_rate, channels);
-  Analysis analysis_b =
-      z.Analyze(audio_b[0][{0}], perceptual_sample_rate, channels);
+  Analysis analysis_a = z.Analyze(audio_a[{0}], channels);
+  Analysis analysis_b = z.Analyze(audio_b[0][{0}], channels);
 
-  Comparison comparison = z.Compare(audio_a, audio_b_pointers,
-                                    perceptual_sample_rate, std::nullopt);
+  Comparison comparison = z.Compare(audio_a, audio_b_pointers, std::nullopt);
 
   CheckNear(analysis_a.energy_channels_db,
             comparison.analysis_a[0].energy_channels_db);
@@ -404,7 +400,8 @@ TEST(Zimtohrli, SpectrogramTest) {
   const float full_scale_sine_db = 80;
   const float sample_rate = 48000;
   const float seconds_of_audio = 1;
-  Zimtohrli z = {.cam_filterbank = Cam().CreateFilterbank(sample_rate),
+  const Cam cam{.minimum_bandwidth_hz = 1};
+  Zimtohrli z = {.cam_filterbank = cam.CreateFilterbank(sample_rate),
                  .full_scale_sine_db = full_scale_sine_db};
   const size_t low_channel = 600;
   const size_t high_channel = 620;

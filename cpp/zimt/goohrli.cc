@@ -24,6 +24,14 @@
 #include "zimt/mos.h"
 #include "zimt/zimtohrli.h"
 
+float DefaultFrequencyResolution() {
+  return zimtohrli::Cam{}.minimum_bandwidth_hz;
+}
+
+float DefaultPerceptualSampleRate() {
+  return zimtohrli::Zimtohrli{}.perceptual_sample_rate;
+}
+
 EnergyAndMaxAbsAmplitude Measure(const float* signal, int size) {
   hwy::AlignedNDArray<float, 1> signal_array({static_cast<size_t>(size)});
   hwy::CopyBytes(signal, signal_array.data(), size * sizeof(float));
@@ -61,15 +69,13 @@ void FreeZimtohrli(Zimtohrli zimtohrli) {
   delete static_cast<zimtohrli::Zimtohrli*>(zimtohrli);
 }
 
-Analysis Analyze(Zimtohrli zimtohrli, float perceptual_sample_rate, float* data,
-                 int size) {
+Analysis Analyze(Zimtohrli zimtohrli, float* data, int size) {
   zimtohrli::Zimtohrli* z = static_cast<zimtohrli::Zimtohrli*>(zimtohrli);
   hwy::AlignedNDArray<float, 1> signal({static_cast<size_t>(size)});
   hwy::CopyBytes(data, signal.data(), size * sizeof(float));
   hwy::AlignedNDArray<float, 2> channels(
       {signal.shape()[0], z->cam_filterbank->filter.Size()});
-  zimtohrli::Analysis analysis =
-      z->Analyze(signal[{}], perceptual_sample_rate, channels);
+  zimtohrli::Analysis analysis = z->Analyze(signal[{}], channels);
   return new zimtohrli::Analysis{
       .energy_channels_db = std::move(analysis.energy_channels_db),
       .partial_energy_channels_db =
@@ -104,4 +110,12 @@ float GetFreqNormOrder(Zimtohrli zimtohrli) {
 
 void SetFreqNormOrder(Zimtohrli zimtohrli, float f) {
   static_cast<zimtohrli::Zimtohrli*>(zimtohrli)->freq_norm_order = f;
+}
+
+float GetPerceptualSampleRate(Zimtohrli zimtohrli) {
+  return static_cast<zimtohrli::Zimtohrli*>(zimtohrli)->perceptual_sample_rate;
+}
+
+void SetPerceptualSampleRate(Zimtohrli zimtohrli, float f) {
+  static_cast<zimtohrli::Zimtohrli*>(zimtohrli)->perceptual_sample_rate = f;
 }

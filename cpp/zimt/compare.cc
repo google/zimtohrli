@@ -61,8 +61,10 @@
 
 ABSL_FLAG(std::string, path_a, "", "file A to compare");
 ABSL_FLAG(std::vector<std::string>, path_b, {}, "files B to compare to file A");
-ABSL_FLAG(float, frequency_resolution, 8, "maximum frequency resolution, Hz");
-ABSL_FLAG(float, time_resolution_frequency, 100,
+ABSL_FLAG(float, frequency_resolution, zimtohrli::Cam{}.minimum_bandwidth_hz,
+          "maximum frequency resolution, Hz");
+ABSL_FLAG(float, perceptual_sample_rate,
+          zimtohrli::Zimtohrli{}.perceptual_sample_rate,
           "the frequency corresponding to the maximum time resolution, Hz");
 ABSL_FLAG(float, full_scale_sine_db, 80,
           "reference dB SPL for a sine signal of amplitude 1");
@@ -114,7 +116,7 @@ struct DistanceData {
                const hwy::AlignedNDArray<float, 2>& thresholds_hz,
                const hwy::AlignedNDArray<float, 2>& a,
                const hwy::AlignedNDArray<float, 2>& b, const std::string& unit,
-               float time_resolution_frequency,
+               float perceptual_sample_rate,
                std::optional<size_t> unwarp_window_samples)
       : previous_step(previous_step),
         a(&a),
@@ -122,14 +124,14 @@ struct DistanceData {
         distance(z.Distance(true, a, b, unwarp_window_samples)),
         unit(unit),
         thresholds_hz(&thresholds_hz),
-        time_resolution_frequency(time_resolution_frequency) {}
+        perceptual_sample_rate(perceptual_sample_rate) {}
   const DistanceData* previous_step;
   const hwy::AlignedNDArray<float, 2>* a;
   const hwy::AlignedNDArray<float, 2>* b;
   const Distance distance;
   const std::string unit;
   const hwy::AlignedNDArray<float, 2>* thresholds_hz;
-  const float time_resolution_frequency;
+  const float perceptual_sample_rate;
 };
 
 std::string Fix(float f, const std::string& unit, size_t width) {
@@ -147,10 +149,10 @@ void PrintDistanceInfo(std::ostream& outs, const DistanceData& data,
        << " at sample A:" << delta.sample_a_index
        << "/B:" << delta.sample_b_index << " (A:"
        << (static_cast<float>(delta.sample_a_index) /
-           static_cast<float>(data.time_resolution_frequency))
+           static_cast<float>(data.perceptual_sample_rate))
        << " s/B:"
        << (static_cast<float>(delta.sample_b_index) /
-           static_cast<float>(data.time_resolution_frequency))
+           static_cast<float>(data.perceptual_sample_rate))
        << " s) and channel " << delta.channel_index << " ("
        << (*data.thresholds_hz)[{0}][delta.channel_index] << "-"
        << (*data.thresholds_hz)[{2}][delta.channel_index] << " Hz)" << std::endl
@@ -272,20 +274,21 @@ int Main(int argc, char* argv[]) {
   Cam cam{.minimum_bandwidth_hz = frequency_resolution};
   cam.high_threshold_hz =
       std::min(cam.high_threshold_hz, file_a->Info().samplerate / 2.0f);
-  Zimtohrli z = {.cam_filterbank = cam.CreateFilterbank(
-                     static_cast<float>(file_a->Info().samplerate)),
-                 .time_norm_order = absl::GetFlag(FLAGS_time_norm_order),
-                 .freq_norm_order = absl::GetFlag(FLAGS_freq_norm_order),
-                 .full_scale_sine_db = full_scale_sine_db};
+  Zimtohrli z = {
+      .perceptual_sample_rate = absl::GetFlag(FLAGS_perceptual_sample_rate),
+      .cam_filterbank =
+          cam.CreateFilterbank(static_cast<float>(file_a->Info().samplerate)),
+      .time_norm_order = absl::GetFlag(FLAGS_time_norm_order),
+      .freq_norm_order = absl::GetFlag(FLAGS_freq_norm_order),
+      .full_scale_sine_db = absl::GetFlag(FLAGS_full_scale_sine_db),
+  };
 
   // Run a more optimized code path if the user doesn't want either UX or
   // verbose output.
-  const float time_resolution_frequency =
-      absl::GetFlag(FLAGS_time_resolution_frequency);
   std::optional<size_t> unwarp_window_samples;
   if (absl::GetFlag(FLAGS_unwarp_window) > 0) {
     unwarp_window_samples = static_cast<size_t>(
-        time_resolution_frequency * absl::GetFlag(FLAGS_unwarp_window));
+        z.perceptual_sample_rate * absl::GetFlag(FLAGS_unwarp_window));
   } else {
     unwarp_window_samples = std::nullopt;
   }
@@ -309,7 +312,7 @@ int Main(int argc, char* argv[]) {
   if (!ux && !verbose) {
     const size_t num_downscaled_samples_a = static_cast<size_t>(
         std::ceil(static_cast<float>(file_a->Frames().shape()[1]) *
-                  time_resolution_frequency / z.cam_filterbank->sample_rate));
+                  z.perceptual_sample_rate / z.cam_filterbank->sample_rate));
     hwy::AlignedNDArray<float, 2> channels_a(
         {file_a->Frames().shape()[1], z.cam_filterbank->filter.Size()});
     hwy::AlignedNDArray<float, 2> energy_channels_db_a(
@@ -331,7 +334,7 @@ int Main(int argc, char* argv[]) {
       const AudioFile& file_b = file_b_vector[file_b_index];
       const size_t num_downscaled_samples_b = static_cast<size_t>(
           std::ceil(static_cast<float>(file_b.Frames().shape()[1]) *
-                    time_resolution_frequency / z.cam_filterbank->sample_rate));
+                    z.perceptual_sample_rate / z.cam_filterbank->sample_rate));
       hwy::AlignedNDArray<float, 2> channels_b(
           {file_b.Frames().shape()[1], z.cam_filterbank->filter.Size()});
       hwy::AlignedNDArray<float, 2> energy_channels_db_b(
@@ -374,8 +377,7 @@ int Main(int argc, char* argv[]) {
     frames_b.push_back(&file_b.Frames());
   }
   Comparison comparison =
-      z.Compare(file_a->Frames(), frames_b, time_resolution_frequency,
-                unwarp_window_samples);
+      z.Compare(file_a->Frames(), frames_b, unwarp_window_samples);
 
   if (ux) {
     UX ux;
@@ -384,7 +386,7 @@ int Main(int argc, char* argv[]) {
               .comparison = std::move(comparison),
               .thresholds_hz = std::move(z.cam_filterbank->thresholds_hz),
               .full_scale_sine_db = full_scale_sine_db,
-              .time_resolution_frequency = time_resolution_frequency,
+              .perceptual_sample_rate = z.perceptual_sample_rate,
               .unwarp_window = unwarp_window_samples});
     return 0;
   }
@@ -402,7 +404,7 @@ int Main(int argc, char* argv[]) {
             z, nullptr, z.cam_filterbank->thresholds_hz,
             comparison.analysis_a[channel_index].energy_channels_db,
             comparison.analysis_b[b_index][channel_index].energy_channels_db,
-            "dB SPL", time_resolution_frequency, unwarp_window_samples);
+            "dB SPL", z.perceptual_sample_rate, unwarp_window_samples);
         std::cout << "    Raw channel distance: " << raw_channel_distance
                   << std::endl;
 
@@ -411,7 +413,7 @@ int Main(int argc, char* argv[]) {
             comparison.analysis_a[channel_index].partial_energy_channels_db,
             comparison.analysis_b[b_index][channel_index]
                 .partial_energy_channels_db,
-            "dB SPL", time_resolution_frequency, unwarp_window_samples);
+            "dB SPL", z.perceptual_sample_rate, unwarp_window_samples);
         std::cout << "    Masked channel distance: " << masked_channel_distance
                   << std::endl;
 
@@ -419,7 +421,7 @@ int Main(int argc, char* argv[]) {
             z, &masked_channel_distance, z.cam_filterbank->thresholds_hz,
             comparison.analysis_a[channel_index].spectrogram,
             comparison.analysis_b[b_index][channel_index].spectrogram, "Phons",
-            time_resolution_frequency, unwarp_window_samples);
+            z.perceptual_sample_rate, unwarp_window_samples);
         std::cout << "    Phons channel distance: " << phons_channel_distance
                   << std::endl;
 

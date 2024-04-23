@@ -30,7 +30,7 @@ func main() {
 	pathB := flag.String("path_b", "", "Path to ffmpeg-decodable file with signal B.")
 	outputZimtohrliDistance := flag.Bool("output_zimtohrli_distance", false, "Whether to output the raw Zimtohrli distance instead of a mapped mean opinion score.")
 	perChannel := flag.Bool("per_channel", false, "Whether to output the produced metric per channel instead of a single value for all channels.")
-	frequencyResolution := flag.Float64("frequency_resolution", 5.0, "Band width of smallest filter, i.e. expected frequency resolution of human hearing.")
+	frequencyResolution := flag.Float64("frequency_resolution", float64(goohrli.DefaultFrequencyResolution()), "Band width of smallest filter, i.e. expected frequency resolution of human hearing.")
 	flag.Parse()
 
 	if *pathA == "" || *pathB == "" {

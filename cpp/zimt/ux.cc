@@ -805,12 +805,12 @@ struct DTWPresentation {
   DTWPresentation(DTWPresentation&& other) = default;
   DTWPresentation(const std::string& file_b_name,
                   const std::vector<AnalysisDTW>& dtw,
-                  float time_resolution_frequency,
+                  float perceptual_sample_rate,
                   CrosshairManager crosshair_manager,
                   SelectManager select_manager, size_t b_index,
                   std::optional<size_t> unwarp_window)
       : file_b_name(file_b_name),
-        time_resolution_frequency(time_resolution_frequency),
+        perceptual_sample_rate(perceptual_sample_rate),
         unwarp_window(unwarp_window) {
     for (size_t channel_index = 0; channel_index < dtw.size();
          ++channel_index) {
@@ -819,15 +819,15 @@ struct DTWPresentation {
     }
   }
   void Paint(ImGuiIO* io, size_t channel_index, const ImVec2& size) {
-    ImGui::Text("Dynamic time warp between A and %s channel %zu, %.2fs windows",
-                file_b_name.c_str(), channel_index,
-                static_cast<float>(unwarp_window.value_or(0) /
-                                   time_resolution_frequency));
+    ImGui::Text(
+        "Dynamic time warp between A and %s channel %zu, %.2fs windows",
+        file_b_name.c_str(), channel_index,
+        static_cast<float>(unwarp_window.value_or(0) / perceptual_sample_rate));
     images[channel_index].Paint(io, size);
   }
   std::string file_b_name;
   std::vector<hwy::AlignedNDArray<float, 2>> image_pixels;
-  float time_resolution_frequency;
+  float perceptual_sample_rate;
   std::vector<DTWImages> images;
   CrosshairManager crosshair_manager;
   SelectManager select_manager;
@@ -943,13 +943,13 @@ std::vector<AudioBuffer> GetFramesDeltaBuffers(
 std::vector<DTWPresentation> GetDTWPresentations(
     const std::vector<FilePresentation>& file_b_vector,
     const std::vector<std::vector<AnalysisDTW>>& dtw,
-    float time_resolution_frequency, CrosshairManager crosshair_manager,
+    float perceptual_sample_rate, CrosshairManager crosshair_manager,
     SelectManager select_manager, std::optional<size_t> unwarp_window) {
   std::vector<DTWPresentation> result;
   result.reserve(dtw.size());
   for (size_t b_index = 0; b_index < dtw.size(); ++b_index) {
     result.emplace_back(file_b_vector[b_index].name, dtw[b_index],
-                        time_resolution_frequency, crosshair_manager,
+                        perceptual_sample_rate, crosshair_manager,
                         select_manager, b_index, unwarp_window);
   }
   return result;
@@ -1108,10 +1108,10 @@ struct RenderContext {
             bind_front(&RenderContext::ManageSpectrogramCrosshairs, this),
             bind_front(&RenderContext::ManageSpectrogramSelect, this),
             &this->thresholds_hz, FileTypeA)),
-        time_resolution_frequency(comparison.time_resolution_frequency),
+        perceptual_sample_rate(comparison.perceptual_sample_rate),
         dtw_vector(GetDTWPresentations(
             file_b_vector, comparison.comparison.dtw,
-            comparison.time_resolution_frequency,
+            comparison.perceptual_sample_rate,
             bind_front(&RenderContext::ManageDTWCrosshairs, this),
             bind_front(&RenderContext::ManageDTWSelect, this),
             comparison.unwarp_window)),
@@ -1239,9 +1239,9 @@ struct RenderContext {
                            Image& crosshair_image) {
     if (position.has_value()) {
       const float step_a = position->x * crosshair_image.render_scale.x;
-      const float time_a = step_a / time_resolution_frequency;
+      const float time_a = step_a / perceptual_sample_rate;
       const float step_b = position->y * crosshair_image.render_scale.y;
-      const float time_b = step_b / time_resolution_frequency;
+      const float time_b = step_b / perceptual_sample_rate;
       EachSpectrogram([&](SpectrogramImages& image, const Analysis& analysis) {
         if (image.file_type == FileTypeA) {
           const ImVec2 pos(step_a / image.spectrogram.render_scale.x, -1);
@@ -1422,7 +1422,7 @@ struct RenderContext {
             .frequencies = {thresholds_hz[{0}][cam_channel_index],
                             thresholds_hz[{2}][cam_channel_index]},
             .time = mapped_step_indices.energy_channels_db /
-                    time_resolution_frequency};
+                    perceptual_sample_rate};
 
         image.partial_energy_channels_db.SetCrosshair(
             ComputePositions(mapped_step_indices, cam_channel_index,
@@ -1435,7 +1435,7 @@ struct RenderContext {
             .frequencies = {thresholds_hz[{0}][cam_channel_index],
                             thresholds_hz[{2}][cam_channel_index]},
             .time = mapped_step_indices.partial_energy_channels_db /
-                    time_resolution_frequency};
+                    perceptual_sample_rate};
 
         image.spectrogram.SetCrosshair(
             ComputePositions(mapped_step_indices, cam_channel_index,
@@ -1446,8 +1446,7 @@ struct RenderContext {
                                          [cam_channel_index],
             .frequencies = {thresholds_hz[{0}][cam_channel_index],
                             thresholds_hz[{2}][cam_channel_index]},
-            .time =
-                mapped_step_indices.spectrogram / time_resolution_frequency};
+            .time = mapped_step_indices.spectrogram / perceptual_sample_rate};
       });
     } else {
       EachSpectrogram([&](SpectrogramImages& image, const Analysis& analysis) {
@@ -1470,7 +1469,7 @@ struct RenderContext {
   std::vector<FilePresentation> file_b_vector;
   std::vector<FilePresentation> file_absolute_delta_vector;
   std::vector<FilePresentation> file_relative_delta_vector;
-  float time_resolution_frequency;
+  float perceptual_sample_rate;
   std::vector<DTWPresentation> dtw_vector;
   std::queue<RenderCallback> callbacks;
   std::optional<std::pair<ImVec2, ImVec2>> selected_coordinates;

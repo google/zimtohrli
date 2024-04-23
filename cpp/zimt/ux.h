@@ -42,7 +42,7 @@ struct FileComparison {
   // Reference dB SPL for a sine signal of amplitude 1.
   float full_scale_sine_db;
   // The frequency corresponding to the maximum time resolution, Hz.
-  float time_resolution_frequency;
+  float perceptual_sample_rate;
   // The size of the unwarp window, if DTW is used.
   std::optional<size_t> unwarp_window;
 };
