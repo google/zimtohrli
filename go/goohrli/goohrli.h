@@ -30,6 +30,12 @@ extern "C" {
 // void* representation of zimtohrli::Zimtohrli.
 typedef void* Zimtohrli;
 
+// Returns the default frequency resolution.
+float DefaultFrequencyResolution();
+
+// Returns the default perceptual sample rate.
+float DefaultPerceptualSampleRate();
+
 // Returns a zimtohrli::Zimtohrli for the given parameters.
 Zimtohrli CreateZimtohrli(float sample_rate, float frequency_resolution);
 
@@ -41,8 +47,7 @@ typedef void* Analysis;
 
 // Returns a zimtohrli::Analysis produced by the provided zimtohrli::Zimtohrli
 // and using the provided perceptual_sample_rate and data.
-Analysis Analyze(Zimtohrli zimtohrli, float perceptual_sample_rate, float* data,
-                 int size);
+Analysis Analyze(Zimtohrli zimtohrli, float* data, int size);
 
 // Plain C version of zimtohrli::EnergyAndMaxAbsAmplitude.
 typedef struct {
@@ -85,6 +90,13 @@ float GetFreqNormOrder(Zimtohrli zimtohrli);
 // Sets the order of the norm across frequency channels when computing Zimtohrli
 // distance.
 void SetFreqNormOrder(Zimtohrli zimtohrli, float f);
+
+// Returns the perceptual sample rate used, corresponding to human hearing
+// sensitivity to timing differences.
+float GetPerceptualSampleRate(Zimtohrli zimtohrli);
+
+// Sets the perceptual sample rate used.
+void SetPerceptualSampleRate(Zimtohrli zimtohrli, float f);
 
 #ifdef __cplusplus
 }

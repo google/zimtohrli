@@ -63,8 +63,9 @@ struct Cam {
   float low_threshold_hz = 20;
   // High frequency threshold for hearing.
   float high_threshold_hz = 20000;
-  // Frequency resolution at low threshold.
-  float minimum_bandwidth_hz = 1;
+  // Frequency resolution at low threshold. Default is 5 since it has
+  // provided the best correlation scores with tested datasets.
+  float minimum_bandwidth_hz = 5;
   // Order (sharpness and slowness) of channel filters.
   int filter_order = 1;
   // Attenuation in dB in each filter where the filterbank filters meet.

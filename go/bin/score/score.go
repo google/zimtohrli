@@ -37,8 +37,8 @@ func main() {
 	details := flag.String("details", "", "Path to database directory with a study to show the details from.")
 	calculate := flag.String("calculate", "", "Path to a database directory with a study to calculate metrics for.")
 	calculateZimtohrli := flag.Bool("calculate_zimtohrli", true, "Whether to calculate Zimtohrli scores.")
-	zimtohrliFrequencyResolution := flag.Float64("zimtohrli_frequency_resolution", 5.0, "Smallest bandwidth of the Zimtohrli filterbank.")
-	zimtohrliPerceptualSampleRate := flag.Float64("zimtohrli_perceptual_sample_rate", 100.0, "Sample rate of the Zimtohrli spectrograms.")
+	zimtohrliFrequencyResolution := flag.Float64("zimtohrli_frequency_resolution", float64(goohrli.DefaultFrequencyResolution()), "Smallest bandwidth of the Zimtohrli filterbank.")
+	zimtohrliPerceptualSampleRate := flag.Float64("zimtohrli_perceptual_sample_rate", float64(goohrli.DefaultPerceptualSampleRate()), "Sample rate of the Zimtohrli spectrograms.")
 	correlate := flag.String("correlate", "", "Path to a database directory with a study to correlate scores for.")
 	workers := flag.Int("workers", runtime.NumCPU(), "Number of concurrent workers for tasks.")
 	flag.Parse()
@@ -82,7 +82,7 @@ func main() {
 		measurements := map[data.ScoreType]data.Measurement{}
 		if *calculateZimtohrli {
 			z := goohrli.New(sampleRate, *zimtohrliFrequencyResolution)
-			z.PerceptualSampleRate = float32(*zimtohrliPerceptualSampleRate)
+			z.SetPerceptualSampleRate(float32(*zimtohrliPerceptualSampleRate))
 			measurements[data.Zimtohrli] = z.NormalizedAudioDistance
 		}
 		if err := study.Calculate(measurements, pool); err != nil {

@@ -58,20 +58,15 @@ struct PyohrliObject {
   PyObject_HEAD
   zimtohrli::Zimtohrli *zimtohrli;
   // clang-format on
-  float perceptual_sample_rate;
   float unwarp_window;
 };
 
 int Pyohrli_init(PyohrliObject* self, PyObject* args, PyObject* kwds) {
   float sample_rate;
-  float frequency_resolution;
-  const char* keywords[] = {"sample_rate", "frequency_resolution", nullptr};
-  if (!PyArg_ParseTupleAndKeywords(args, kwds, "ff",
-                                   const_cast<char**>(keywords), &sample_rate,
-                                   &frequency_resolution)) {
-    PyErr_SetString(
-        PyExc_TypeError,
-        "unable to parse sample_rate and frequency_resolution as float");
+  const char* keywords[] = {"sample_rate", nullptr};
+  if (!PyArg_ParseTupleAndKeywords(
+          args, kwds, "f", const_cast<char**>(keywords), &sample_rate)) {
+    PyErr_SetString(PyExc_TypeError, "unable to parse sample_rate as float");
     return -1;
   }
   try {
@@ -81,9 +76,8 @@ int Pyohrli_init(PyohrliObject* self, PyObject* args, PyObject* kwds) {
             zimtohrli::Cam{
                 .high_threshold_hz =
                     std::min(sample_rate * 0.5f, default_cam.high_threshold_hz),
-                .minimum_bandwidth_hz = frequency_resolution}
+            }
                 .CreateFilterbank(sample_rate)};
-    self->perceptual_sample_rate = 100;
     self->unwarp_window = 2.0f;
   } catch (const std::bad_alloc&) {
     PyErr_SetNone(PyExc_MemoryError);
@@ -114,8 +108,7 @@ struct BufferDeleter {
 // If the return value is std::nullopt that means a Python error is set and the
 // current operation should be terminated ASAP.
 std::optional<zimtohrli::Analysis> Analyze(
-    const zimtohrli::Zimtohrli& zimtohrli, PyObject* buffer_object,
-    float perceptual_sample_rate) {
+    const zimtohrli::Zimtohrli& zimtohrli, PyObject* buffer_object) {
   Py_buffer buffer_view;
   if (PyObject_GetBuffer(buffer_object, &buffer_view, PyBUF_C_CONTIGUOUS)) {
     PyErr_SetString(PyExc_TypeError, "object is not buffer");
@@ -135,7 +128,7 @@ std::optional<zimtohrli::Analysis> Analyze(
   hwy::AlignedNDArray<float, 2> channels(
       {signal_array.size(), zimtohrli.cam_filterbank->filter.Size()});
   return std::optional<zimtohrli::Analysis>{
-      zimtohrli.Analyze(signal_array[{}], perceptual_sample_rate, channels)};
+      zimtohrli.Analyze(signal_array[{}], channels)};
 }
 
 PyObject* BadArgument(const std::string& message) {
@@ -149,7 +142,7 @@ PyObject* Pyohrli_analyze(PyohrliObject* self, PyObject* const* args,
     return BadArgument("not exactly 1 argument provided");
   }
   std::optional<zimtohrli::Analysis> analysis =
-      Analyze(*self->zimtohrli, args[0], self->perceptual_sample_rate);
+      Analyze(*self->zimtohrli, args[0]);
   if (!analysis.has_value()) {
     return nullptr;
   }
@@ -196,9 +189,10 @@ PyObject* Pyohrli_analysis_distance(PyohrliObject* self, PyObject* const* args,
   if (!Py_IS_TYPE(args[1], &AnalysisType)) {
     return BadArgument("argument 1 is not an Analysis instance");
   }
-  return Distance(*self->zimtohrli, *((AnalysisObject*)args[0])->analysis,
-                  *((AnalysisObject*)args[1])->analysis,
-                  self->unwarp_window * self->perceptual_sample_rate);
+  return Distance(
+      *self->zimtohrli, *((AnalysisObject*)args[0])->analysis,
+      *((AnalysisObject*)args[1])->analysis,
+      self->unwarp_window * self->zimtohrli->perceptual_sample_rate);
 }
 
 PyObject* Pyohrli_distance(PyohrliObject* self, PyObject* const* args,
@@ -207,17 +201,18 @@ PyObject* Pyohrli_distance(PyohrliObject* self, PyObject* const* args,
     return BadArgument("not exactly 2 arguments provided");
   }
   const std::optional<zimtohrli::Analysis> analysis_a =
-      Analyze(*self->zimtohrli, args[0], self->perceptual_sample_rate);
+      Analyze(*self->zimtohrli, args[0]);
   if (!analysis_a.has_value()) {
     return nullptr;
   }
   const std::optional<zimtohrli::Analysis> analysis_b =
-      Analyze(*self->zimtohrli, args[1], self->perceptual_sample_rate);
+      Analyze(*self->zimtohrli, args[1]);
   if (!analysis_b.has_value()) {
     return nullptr;
   }
-  return Distance(*self->zimtohrli, analysis_a.value(), analysis_b.value(),
-                  self->unwarp_window * self->perceptual_sample_rate);
+  return Distance(
+      *self->zimtohrli, analysis_a.value(), analysis_b.value(),
+      self->unwarp_window * self->zimtohrli->perceptual_sample_rate);
 }
 
 PyObject* Pyohrli_set_time_norm_order(PyohrliObject* self,
@@ -273,10 +268,6 @@ PyObject* Pyohrli_get_full_scale_sine_db(PyohrliObject* self, PyObject* args,
 }
 
 PyMemberDef Pyohrli_members[] = {
-    {"perceptual_sample_rate", T_FLOAT,
-     offsetof(PyohrliObject, perceptual_sample_rate), 0,
-     "Perceptual sample rate, the sample rate at which human hearing is "
-     "expected to detect timing differences"},
     {"unwarp_window", T_FLOAT, offsetof(PyohrliObject, unwarp_window), 0,
      "Unwarp window, the duration in seconds of a window when unwarping the "
      "timeline using dynamic time warp"},

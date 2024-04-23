@@ -329,7 +329,6 @@ void Zimtohrli::Spectrogram(
 }
 
 Analysis Zimtohrli::Analyze(hwy::Span<const float> signal,
-                            float perceptual_sample_rate,
                             FilterbankState& state,
                             hwy::AlignedNDArray<float, 2>& channels) const {
   const size_t num_downscaled_samples = static_cast<size_t>(std::max(
@@ -349,10 +348,9 @@ Analysis Zimtohrli::Analyze(hwy::Span<const float> signal,
 }
 
 Analysis Zimtohrli::Analyze(hwy::Span<const float> signal,
-                            float perceptual_sample_rate,
                             hwy::AlignedNDArray<float, 2>& channels) const {
   FilterbankState new_state = cam_filterbank->filter.NewState();
-  return Analyze(signal, perceptual_sample_rate, new_state, channels);
+  return Analyze(signal, new_state, channels);
 }
 
 AnalysisDTW::AnalysisDTW(const Analysis& analysis_a, const Analysis& analysis_b,
@@ -380,7 +378,7 @@ AnalysisDTW::AnalysisDTW(size_t length) {
 Comparison Zimtohrli::Compare(
     const hwy::AlignedNDArray<float, 2>& frames_a,
     absl::Span<const hwy::AlignedNDArray<float, 2>* const> frames_b_span,
-    float perceptual_sample_rate, std::optional<size_t> unwarp_window_samples) {
+    std::optional<size_t> unwarp_window_samples) {
   for (const auto& frames_b : frames_b_span) {
     if (!unwarp_window_samples.has_value()) {
       CHECK_EQ(frames_a.shape()[0], frames_b->shape()[0]);
@@ -402,14 +400,13 @@ Comparison Zimtohrli::Compare(
        ++audio_channel_index) {
     hwy::AlignedNDArray<float, 2> channels_a(
         {frames_a.shape()[1], cam_filterbank->filter.Size()});
-    Analysis current_analysis_a = Analyze(frames_a[{audio_channel_index}],
-                                          perceptual_sample_rate, channels_a);
+    Analysis current_analysis_a =
+        Analyze(frames_a[{audio_channel_index}], channels_a);
     for (size_t b_index = 0; b_index < frames_b_span.size(); ++b_index) {
       hwy::AlignedNDArray<float, 2> channels_b(
           {frames_b_span[b_index]->shape()[1], cam_filterbank->filter.Size()});
       Analysis current_analysis_b =
-          Analyze((*frames_b_span[b_index])[{audio_channel_index}],
-                  perceptual_sample_rate, channels_b);
+          Analyze((*frames_b_span[b_index])[{audio_channel_index}], channels_b);
 
       const AnalysisDTW current_analysis_dtw =
           unwarp_window_samples.has_value()

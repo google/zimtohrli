@@ -30,6 +30,15 @@ import (
 	"github.com/google/zimtohrli/go/audio"
 )
 
+// DefaultFrequencyResolution returns the default frequency resolution corresponding to the minimum width (at the low frequency end) of the Zimtohrli filter bank.
+func DefaultFrequencyResolution() float32 {
+	return float32(C.DefaultFrequencyResolution())
+}
+
+func DefaultPerceptualSampleRate() float32 {
+	return float32(C.DefaultPerceptualSampleRate())
+}
+
 // EnergyAndMaxAbsAmplitude is holds the energy and maximum absolute amplitude of a measurement.
 type EnergyAndMaxAbsAmplitude struct {
 	EnergyDBFS      float32
@@ -66,10 +75,6 @@ type Goohrli struct {
 	sampleRate          float64
 	frequencyResolution float64
 
-	// PerceptualSampleRate is the sample rate of returned analyses. Defaults to 100, i.e. 10ms is the
-	// smallest time difference human hearing is expected to notice.
-	PerceptualSampleRate float32
-
 	// UnwarpWindow is the duration of a window when unwarping the timeline using dynamic time warp.
 	UnwarpWindow time.Duration
 }
@@ -82,11 +87,10 @@ type Goohrli struct {
 // resolution of human hearing.
 func New(sampleRate float64, frequencyResolution float64) *Goohrli {
 	result := &Goohrli{
-		zimtohrli:            C.CreateZimtohrli(C.float(sampleRate), C.float(frequencyResolution)),
-		sampleRate:           sampleRate,
-		frequencyResolution:  frequencyResolution,
-		PerceptualSampleRate: 100.0,
-		UnwarpWindow:         2 * time.Second,
+		zimtohrli:           C.CreateZimtohrli(C.float(sampleRate), C.float(frequencyResolution)),
+		sampleRate:          sampleRate,
+		frequencyResolution: frequencyResolution,
+		UnwarpWindow:        2 * time.Second,
 	}
 	runtime.SetFinalizer(result, func(g *Goohrli) {
 		C.FreeZimtohrli(g.zimtohrli)
@@ -126,7 +130,7 @@ type Analysis struct {
 // Analyze returns an analysis of the signal.
 func (g *Goohrli) Analyze(signal []float32) *Analysis {
 	result := &Analysis{
-		analysis: C.Analyze(g.zimtohrli, C.float(g.PerceptualSampleRate), (*C.float)(&signal[0]), C.int(len(signal))),
+		analysis: C.Analyze(g.zimtohrli, (*C.float)(&signal[0]), C.int(len(signal))),
 	}
 	runtime.SetFinalizer(result, func(a *Analysis) {
 		C.FreeAnalysis(a.analysis)
@@ -136,16 +140,16 @@ func (g *Goohrli) Analyze(signal []float32) *Analysis {
 
 // AnalysisDistance returns the Zimtohrli distance between two analyses.
 func (g *Goohrli) AnalysisDistance(analysisA *Analysis, analysisB *Analysis) float32 {
-	return float32(C.AnalysisDistance(g.zimtohrli, analysisA.analysis, analysisB.analysis, C.int(float64(g.PerceptualSampleRate)*g.UnwarpWindow.Seconds())))
+	return float32(C.AnalysisDistance(g.zimtohrli, analysisA.analysis, analysisB.analysis, C.int(float64(g.GetPerceptualSampleRate())*g.UnwarpWindow.Seconds())))
 }
 
 // Distance returns the Zimtohrli distance between two signals.
 func (g *Goohrli) Distance(signalA []float32, signalB []float32) float32 {
-	analysisA := C.Analyze(g.zimtohrli, C.float(g.PerceptualSampleRate), (*C.float)(&signalA[0]), C.int(len(signalA)))
+	analysisA := C.Analyze(g.zimtohrli, (*C.float)(&signalA[0]), C.int(len(signalA)))
 	defer C.FreeAnalysis(analysisA)
-	analysisB := C.Analyze(g.zimtohrli, C.float(g.PerceptualSampleRate), (*C.float)(&signalB[0]), C.int(len(signalB)))
+	analysisB := C.Analyze(g.zimtohrli, (*C.float)(&signalB[0]), C.int(len(signalB)))
 	defer C.FreeAnalysis(analysisB)
-	return float32(C.AnalysisDistance(g.zimtohrli, analysisA, analysisB, C.int(g.PerceptualSampleRate)))
+	return float32(C.AnalysisDistance(g.zimtohrli, analysisA, analysisB, C.int(float64(g.GetPerceptualSampleRate())*g.UnwarpWindow.Seconds())))
 }
 
 // GetTimeNormOrder returns the order of the norm across time steps when computing Zimtohrli distance.
@@ -166,4 +170,14 @@ func (g *Goohrli) GetFreqNormOrder() float32 {
 // SetFreqNormOrder sets the order of the norm across frequency channels when computing Zimtohrli distance.
 func (g *Goohrli) SetFreqNormOrder(f float32) {
 	C.SetFreqNormOrder(g.zimtohrli, C.float(f))
+}
+
+// GetPerceptualSampleRate returns the perceptual sample rate used, corresponding to human hearing sensitivity to differences in timing.
+func (g *Goohrli) GetPerceptualSampleRate() float32 {
+	return float32(C.GetPerceptualSampleRate(g.zimtohrli))
+}
+
+// SetPerceptualSampleRate sets the perceptual sample rate used.
+func (g *Goohrli) SetPerceptualSampleRate(f float32) {
+	C.SetPerceptualSampleRate(g.zimtohrli, C.float(f))
 }
