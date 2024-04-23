@@ -14,6 +14,9 @@
 
 #include "zimt/mos.h"
 
+#include <cstddef>
+#include <vector>
+
 #include "gtest/gtest.h"
 
 namespace zimtohrli {
