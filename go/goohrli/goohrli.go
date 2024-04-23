@@ -35,6 +35,7 @@ func DefaultFrequencyResolution() float32 {
 	return float32(C.DefaultFrequencyResolution())
 }
 
+// DefaultPerceptualSampleRate returns the default perceptual sample rate corresponding to the human hearing sensitivity to timing changes.
 func DefaultPerceptualSampleRate() float32 {
 	return float32(C.DefaultPerceptualSampleRate())
 }
