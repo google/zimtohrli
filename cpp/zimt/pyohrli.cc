@@ -21,6 +21,7 @@
 #include "hwy/base.h"
 #include "structmember.h"  // NOLINT // For PyMemberDef
 #include "zimt/cam.h"
+#include "zimt/mos.h"
 #include "zimt/zimtohrli.h"
 
 namespace {
@@ -317,11 +318,28 @@ PyTypeObject PyohrliType = {
     .tp_new = PyType_GenericNew,
 };
 
+PyObject* MOSFromZimtohrli(PyohrliObject* self, PyObject* const* args,
+                           Py_ssize_t nargs) {
+  if (nargs != 1) {
+    return BadArgument("not exactly 1 argument provided");
+  }
+  return PyFloat_FromDouble(
+      zimtohrli::MOSFromZimtohrli(PyFloat_AsDouble(args[0])));
+}
+
+static PyMethodDef PyohrliModuleMethods[] = {
+    {"MOSFromZimtohrli", (PyCFunction)MOSFromZimtohrli, METH_FASTCALL,
+     "Returns an approximate mean opinion score based on the provided "
+     "Zimtohrli distance."},
+    {NULL, NULL, 0, NULL},
+};
+
 PyModuleDef PyohrliModule = {
     .m_base = PyModuleDef_HEAD_INIT,
     .m_name = "pyohrli",
     .m_doc = "Python wrapper around the C++ zimtohrli library.",
     .m_size = -1,
+    .m_methods = PyohrliModuleMethods,
 };
 
 PyMODINIT_FUNC PyInit__pyohrli(void) {

@@ -64,7 +64,12 @@ EnergyAndMaxAbsAmplitude Measure(const float* signal, int size);
 EnergyAndMaxAbsAmplitude NormalizeAmplitude(float max_abs_amplitude,
                                             float* signal_data, int size);
 
-// Returns an approximate MOS score for a given Zimtohrli distance.
+// Returns a _very_approximate_ mean opinion score based on the
+// provided Zimtohrli distance.
+// This is calibrated using default settings of v0.1.5, with a
+// minimum channel bandwidth (zimtohrli::Cam.minimum_bandwidth_hz)
+// of 5Hz and perceptual sample rate
+// (zimtohrli::Distance(..., perceptual_sample_rate, ...) of 100Hz.
 float MOSFromZimtohrli(float zimtohrli_distance);
 
 // Deletes a zimtohrli::Analysis.

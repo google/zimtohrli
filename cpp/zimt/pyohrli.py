@@ -19,6 +19,11 @@ import numpy.typing as npt
 import _pyohrli
 
 
+def mos_from_zimtohrli(zimtohrli_distance: float) -> float:
+    """Returns an approximate mean opinion score based on the provided Zimtohrli distance."""
+    return _pyohrli.MOSFromZimtohrli(zimtohrli_distance)
+
+
 class Analysis:
     """Wrapper around C++ zimtohrli::Analysis."""
 
