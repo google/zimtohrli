@@ -102,6 +102,21 @@ class PyohrliTest(unittest.TestCase):
         # threshold to half the sample rate.
         metric.analyze(signal)
 
+    def test_mos_from_zimtohrli(self):
+        zimt_scores = np.asarray([5, 20, 40, 80])
+        mos = np.asarray(
+            [
+                4.746790024702545,
+                4.01181593706087,
+                2.8773086764995064,
+                2.0648331964917945,
+            ]
+        )
+        for index in range(len(zimt_scores)):
+            self.assertAlmostEqual(
+                mos[index], pyohrli.mos_from_zimtohrli(zimt_scores[index]), places=3
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
