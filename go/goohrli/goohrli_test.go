@@ -39,8 +39,8 @@ func TestMeasureAndNormalize(t *testing.T) {
 
 func TestMOSFromZimtohrli(t *testing.T) {
 	for _, tc := range []struct {
-		zimtDistance float32
-		wantMOS      float32
+		zimtDistance float64
+		wantMOS      float64
 	}{
 		{
 			zimtDistance: 5,
@@ -59,7 +59,7 @@ func TestMOSFromZimtohrli(t *testing.T) {
 			wantMOS:      2.0648331964917945,
 		},
 	} {
-		if mos := MOSFromZimtohrli(tc.zimtDistance); math.Abs(float64(mos-tc.wantMOS)) > 1e-2 {
+		if mos := MOSFromZimtohrli(tc.zimtDistance); math.Abs(mos-tc.wantMOS) > 1e-2 {
 			t.Errorf("MOSFromZimtohrli(%v) = %v, want %v", tc.zimtDistance, mos, tc.wantMOS)
 		}
 	}
@@ -129,6 +129,39 @@ func TestGoohrli(t *testing.T) {
 		distance := float64(g.Distance(soundA, soundB))
 		if math.Abs(distance-tc.distance) > 1e-3 {
 			t.Errorf("Distance = %v, want %v", distance, tc.distance)
+		}
+	}
+}
+
+func TestViSQOL(t *testing.T) {
+	sampleRate := 48000.0
+	g := NewViSQOL()
+	for _, tc := range []struct {
+		freqA   float64
+		freqB   float64
+		wantMOS float64
+	}{
+		{
+			freqA:   5000,
+			freqB:   5000,
+			wantMOS: 4.7321014404296875,
+		},
+		{
+			freqA:   5000,
+			freqB:   10000,
+			wantMOS: 1.5407887697219849,
+		},
+	} {
+		soundA := make([]float32, int(sampleRate))
+		for index := 0; index < len(soundA); index++ {
+			soundA[index] = float32(math.Sin(2 * math.Pi * tc.freqA * float64(index) / sampleRate))
+		}
+		soundB := make([]float32, int(sampleRate))
+		for index := 0; index < len(soundB); index++ {
+			soundB[index] = float32(math.Sin(2 * math.Pi * tc.freqB * float64(index) / sampleRate))
+		}
+		if mos := g.MOS(sampleRate, soundA, soundB); math.Abs(mos-tc.wantMOS) > 1e-3 {
+			t.Errorf("got mos %v, wanted mos %v", mos, tc.wantMOS)
 		}
 	}
 }
