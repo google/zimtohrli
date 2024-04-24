@@ -16,6 +16,7 @@
 package data
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -128,6 +129,88 @@ func (c CorrelationTable) String() string {
 	return result.String(2)
 }
 
+// Histogram contains histogram data.
+type Histogram struct {
+	Title      string
+	Thresholds []float64
+	Counts     []int
+	Fractions  []float64
+}
+
+// String returns the histogram with a fraction of 1.0 corresponding to width characters.
+func (h *Histogram) String(width int) string {
+	result := Table{}
+	for index := range h.Thresholds {
+		row := Row{fmt.Sprintf("%.2f", h.Thresholds[index]), fmt.Sprintf("%v", h.Counts[index]), fmt.Sprintf("(%.2f)", h.Fractions[index])}
+		buf := &bytes.Buffer{}
+		chars := int(float64(width) * h.Fractions[index])
+		for i := 0; i < chars; i++ {
+			fmt.Fprintf(buf, "#")
+		}
+		row = append(row, buf.String())
+		result = append(result, row)
+	}
+	return fmt.Sprintf("*** %v\n%v", h.Title, result.String(2))
+}
+
+// JNDHist takes a slice of Zimtohrli score thresholds and returns the
+// fractions of evaluations with JND=1 and JND=0 that have Zimtohrli scores
+// higher than the provided threshold.
+func (s *Study) JNDHist(thresholds []float64) (*Histogram, *Histogram, error) {
+	audibleCounts := make([]int, len(thresholds))
+	nonAudibleCounts := make([]int, len(thresholds))
+	audibleSum := 0
+	nonAudibleSum := 0
+	if err := s.ViewEachReference(func(ref *Reference) error {
+		for _, dist := range ref.Distortions {
+			zimt, found := dist.Scores[Zimtohrli]
+			if !found {
+				return fmt.Errorf("%+v doesn't have a Zimtohrli score", ref)
+			}
+			jnd, found := dist.Scores[JND]
+			if !found {
+				return fmt.Errorf("%+v doesn't have a JND score", ref)
+			}
+			switch jnd {
+			case 0:
+				nonAudibleSum++
+				for thresholdIndex, thresholdValue := range thresholds {
+					if zimt > thresholdValue {
+						nonAudibleCounts[thresholdIndex]++
+					}
+				}
+			case 1:
+				audibleSum++
+				for thresholdIndex, thresholdValue := range thresholds {
+					if zimt < thresholdValue {
+						audibleCounts[thresholdIndex]++
+					}
+				}
+			default:
+				return fmt.Errorf("%+v JND isn't 0 or 1", ref)
+			}
+		}
+		return nil
+	}); err != nil {
+		return nil, nil, err
+	}
+	audible := &Histogram{
+		Title:      "Evaluations with audible distortions and Zimtohrli distance greater than X",
+		Thresholds: thresholds,
+		Counts:     audibleCounts,
+	}
+	nonAudible := &Histogram{
+		Title:      "Evaluations with non-audible distortions and Zimtohrli distance less than X",
+		Thresholds: thresholds,
+		Counts:     nonAudibleCounts,
+	}
+	for index := range thresholds {
+		audible.Fractions = append(audible.Fractions, float64(audibleCounts[index])/float64(audibleSum))
+		nonAudible.Fractions = append(nonAudible.Fractions, float64(nonAudibleCounts[index])/float64(nonAudibleSum))
+	}
+	return audible, nonAudible, nil
+}
+
 // Correlate returns a table of all scores in the study Spearman correlated to each other.
 func (s *Study) Correlate() (CorrelationTable, error) {
 	scores := map[ScoreType][]float64{}
@@ -143,7 +226,10 @@ func (s *Study) Correlate() (CorrelationTable, error) {
 	}
 	sortedScoreTypes := ScoreTypes{}
 	for scoreType := range scores {
-		sortedScoreTypes = append(sortedScoreTypes, scoreType)
+		// Can't correlate JND.
+		if scoreType != JND {
+			sortedScoreTypes = append(sortedScoreTypes, scoreType)
+		}
 	}
 	sort.Sort(sortedScoreTypes)
 	result := CorrelationTable{}
