@@ -153,14 +153,9 @@ func (h *Histogram) String(width int) string {
 	return fmt.Sprintf("*** %v\n%v", h.Title, result.String(2))
 }
 
-// JNDHist takes a slice of Zimtohrli score thresholds and returns the
-// fractions of evaluations with JND=1 and JND=0 that have Zimtohrli scores
-// higher than the provided threshold.
 func (s *Study) JNDHist(thresholds []float64) (*Histogram, *Histogram, error) {
-	audibleCounts := make([]int, len(thresholds))
-	nonAudibleCounts := make([]int, len(thresholds))
-	audibleSum := 0
-	nonAudibleSum := 0
+	audible := sort.Float64Slice{}
+	inaudible := sort.Float64Slice{}
 	if err := s.ViewEachReference(func(ref *Reference) error {
 		for _, dist := range ref.Distortions {
 			zimt, found := dist.Scores[Zimtohrli]
@@ -173,19 +168,9 @@ func (s *Study) JNDHist(thresholds []float64) (*Histogram, *Histogram, error) {
 			}
 			switch jnd {
 			case 0:
-				nonAudibleSum++
-				for thresholdIndex, thresholdValue := range thresholds {
-					if zimt > thresholdValue {
-						nonAudibleCounts[thresholdIndex]++
-					}
-				}
+				inaudible = append(inaudible, zimt)
 			case 1:
-				audibleSum++
-				for thresholdIndex, thresholdValue := range thresholds {
-					if zimt < thresholdValue {
-						audibleCounts[thresholdIndex]++
-					}
-				}
+				audible = append(audible, zimt)
 			default:
 				return fmt.Errorf("%+v JND isn't 0 or 1", ref)
 			}
@@ -194,21 +179,25 @@ func (s *Study) JNDHist(thresholds []float64) (*Histogram, *Histogram, error) {
 	}); err != nil {
 		return nil, nil, err
 	}
-	audible := &Histogram{
-		Title:      "Evaluations with audible distortions and Zimtohrli distance less than X",
+	sort.Sort(audible)
+	sort.Sort(inaudible)
+	audibleHist := &Histogram{
+		Title:      "Correct detection of audible distortion if Zimtohrli distance X is used as threshold",
 		Thresholds: thresholds,
-		Counts:     audibleCounts,
 	}
-	nonAudible := &Histogram{
-		Title:      "Evaluations with non-audible distortions and Zimtohrli distance greater than X",
+	inaudibleHist := &Histogram{
+		Title:      "Correct detection of inaudible distortion if Zimtohrli distance X is used as threshold",
 		Thresholds: thresholds,
-		Counts:     nonAudibleCounts,
 	}
-	for index := range thresholds {
-		audible.Fractions = append(audible.Fractions, float64(audibleCounts[index])/float64(audibleSum))
-		nonAudible.Fractions = append(nonAudible.Fractions, float64(nonAudibleCounts[index])/float64(nonAudibleSum))
+	for _, threshold := range thresholds {
+		correctAudiblePredictions := len(audible) - sort.SearchFloat64s(audible, threshold)
+		audibleHist.Counts = append(audibleHist.Counts, correctAudiblePredictions)
+		audibleHist.Fractions = append(audibleHist.Fractions, float64(correctAudiblePredictions)/float64(len(audible)))
+		correctInaudiblePredictions := sort.SearchFloat64s(inaudible, threshold)
+		inaudibleHist.Counts = append(inaudibleHist.Counts, correctInaudiblePredictions)
+		inaudibleHist.Fractions = append(inaudibleHist.Fractions, float64(correctInaudiblePredictions)/float64(len(inaudible)))
 	}
-	return audible, nonAudible, nil
+	return audibleHist, inaudibleHist, nil
 }
 
 // Correlate returns a table of all scores in the study Spearman correlated to each other.
