@@ -16,6 +16,7 @@
 package worker
 
 import (
+	"bytes"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -95,11 +96,22 @@ func (p *Pool[T]) Submit(job func(func(T)) error) error {
 	return nil
 }
 
+// Errors is a slice of errors.
+type Errors []error
+
+func (e Errors) Error() string {
+	buf := &bytes.Buffer{}
+	for _, err := range e {
+		fmt.Fprintln(buf, err.Error())
+	}
+	return buf.String()
+}
+
 // Error waits for all submitted jobs to finish, closes the submission channel, and returns whether
 // any of the jobs produced an error.
 //
 // Must be called after all jobs are added.
-func (p *Pool[T]) Error() error {
+func (p *Pool[T]) Error() Errors {
 	p.init()
 
 	p.jobsWaitGroup.Wait()
@@ -108,12 +120,12 @@ func (p *Pool[T]) Error() error {
 		p.errorsWaitGroup.Wait()
 		close(p.errors)
 	}()
-	result := []error{}
+	result := Errors{}
 	for err := range p.errors {
 		result = append(result, err)
 	}
 	if len(result) > 0 {
-		return fmt.Errorf("%+v", result)
+		return result
 	}
 	return nil
 }
