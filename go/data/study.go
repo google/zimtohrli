@@ -39,6 +39,8 @@ const (
 	MOS ScoreType = "MOS"
 	// Zimtohrli is the Zimtohrli distance.
 	Zimtohrli ScoreType = "Zimtohrli"
+	// JND is 1 if the evaluator detected a difference and 0 if not.
+	JND ScoreType = "JND"
 )
 
 // ScoreType represents a type of score, such as MOS or Zimtohrli.
