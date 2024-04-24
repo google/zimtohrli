@@ -66,8 +66,8 @@ func NormalizeAmplitude(maxAbsAmplitude float32, signal []float32) EnergyAndMaxA
 }
 
 // MOSFromZimtohrli returns an approximate mean opinion score for a given zimtohrli distance.
-func MOSFromZimtohrli(zimtohrliDistance float32) float32 {
-	return float32(C.MOSFromZimtohrli(C.float(zimtohrliDistance)))
+func MOSFromZimtohrli(zimtohrliDistance float64) float64 {
+	return float64(C.MOSFromZimtohrli(C.float(zimtohrliDistance)))
 }
 
 // Goohrli is a Go wrapper around zimtohrli::Zimtohrli.
@@ -145,12 +145,12 @@ func (g *Goohrli) AnalysisDistance(analysisA *Analysis, analysisB *Analysis) flo
 }
 
 // Distance returns the Zimtohrli distance between two signals.
-func (g *Goohrli) Distance(signalA []float32, signalB []float32) float32 {
+func (g *Goohrli) Distance(signalA []float32, signalB []float32) float64 {
 	analysisA := C.Analyze(g.zimtohrli, (*C.float)(&signalA[0]), C.int(len(signalA)))
 	defer C.FreeAnalysis(analysisA)
 	analysisB := C.Analyze(g.zimtohrli, (*C.float)(&signalB[0]), C.int(len(signalB)))
 	defer C.FreeAnalysis(analysisB)
-	return float32(C.AnalysisDistance(g.zimtohrli, analysisA, analysisB, C.int(float64(g.GetPerceptualSampleRate())*g.UnwarpWindow.Seconds())))
+	return float64(C.AnalysisDistance(g.zimtohrli, analysisA, analysisB, C.int(float64(g.GetPerceptualSampleRate())*g.UnwarpWindow.Seconds())))
 }
 
 // GetTimeNormOrder returns the order of the norm across time steps when computing Zimtohrli distance.

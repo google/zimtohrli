@@ -42,11 +42,12 @@ Finally, to build and test the Python and Go wrappers, the following dependencie
 
 - golang-go
 - python3
+- xxd
 
 To install these in a Debian-like system:
 
 ```
-sudo apt install -y cmake ninja-build clang clang-tidy libogg-dev libvorbis-dev libflac-dev libopus-dev libasound2-dev libglfw3-dev golang-go python3
+sudo apt install -y cmake ninja-build clang clang-tidy libogg-dev libvorbis-dev libflac-dev libopus-dev libasound2-dev libglfw3-dev golang-go python3 xxd
 ```
 
 Once they are installed, configure the project:

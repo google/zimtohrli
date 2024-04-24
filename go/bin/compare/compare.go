@@ -55,7 +55,7 @@ func main() {
 		log.Panic(fmt.Errorf("%q has %v channels, and %q has %v channels", *pathA, len(signalA.Samples), *pathB, len(signalB.Samples)))
 	}
 
-	getMetric := func(f float32) float32 {
+	getMetric := func(f float64) float64 {
 		if *outputZimtohrliDistance {
 			return f
 		}
@@ -74,6 +74,6 @@ func main() {
 		if err != nil {
 			log.Panic(err)
 		}
-		fmt.Println(getMetric(float32(dist)))
+		fmt.Println(getMetric(dist))
 	}
 }
