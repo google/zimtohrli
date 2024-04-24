@@ -195,12 +195,12 @@ func (s *Study) JNDHist(thresholds []float64) (*Histogram, *Histogram, error) {
 		return nil, nil, err
 	}
 	audible := &Histogram{
-		Title:      "Evaluations with audible distortions and Zimtohrli distance greater than X",
+		Title:      "Evaluations with audible distortions and Zimtohrli distance less than X",
 		Thresholds: thresholds,
 		Counts:     audibleCounts,
 	}
 	nonAudible := &Histogram{
-		Title:      "Evaluations with non-audible distortions and Zimtohrli distance less than X",
+		Title:      "Evaluations with non-audible distortions and Zimtohrli distance greater than X",
 		Thresholds: thresholds,
 		Counts:     nonAudibleCounts,
 	}
