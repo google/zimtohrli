@@ -77,21 +77,19 @@ class PyohrliTest(unittest.TestCase):
             distance=52.45160675048828,
         ),
     )
-    def test_distance(self, **kwargs):
+    def test_distance(
+        self, testcase_name: str, a_hz: float, b_hz: float, distance: float
+    ):
         sample_rate = 48000.0
         metric = pyohrli.Pyohrli(sample_rate)
-        signal_a = np.sin(
-            np.linspace(0.0, np.pi * 2 * kwargs["a_hz"], int(sample_rate))
-        )
+        signal_a = np.sin(np.linspace(0.0, np.pi * 2 * a_hz, int(sample_rate)))
         analysis_a = metric.analyze(signal_a)
-        signal_b = np.sin(
-            np.linspace(0.0, np.pi * 2 * kwargs["b_hz"], int(sample_rate))
-        )
+        signal_b = np.sin(np.linspace(0.0, np.pi * 2 * b_hz, int(sample_rate)))
         analysis_b = metric.analyze(signal_b)
         analysis_distance = metric.analysis_distance(analysis_a, analysis_b)
-        self.assertLess(abs(analysis_distance - kwargs["distance"]), 1e-4)
+        self.assertLess(abs(analysis_distance - distance), 1e-4)
         distance = metric.distance(signal_a, signal_b)
-        self.assertLess(abs(distance - kwargs["distance"]), 1e-4)
+        self.assertLess(abs(distance - distance), 1e-4)
 
     def test_nyquist_threshold(self):
         sample_rate = 12000.0
@@ -102,20 +100,16 @@ class PyohrliTest(unittest.TestCase):
         # threshold to half the sample rate.
         metric.analyze(signal)
 
-    def test_mos_from_zimtohrli(self):
-        zimt_scores = np.asarray([5, 20, 40, 80])
-        mos = np.asarray(
-            [
-                4.746790024702545,
-                4.01181593706087,
-                2.8773086764995064,
-                2.0648331964917945,
-            ]
+    @parameterize(
+        dict(zimtohrli_distance=5, mos=4.746790024702545),
+        dict(zimtohrli_distance=20, mos=4.01181593706087),
+        dict(zimtohrli_distance=40, mos=2.8773086764995064),
+        dict(zimtohrli_distance=80, mos=2.0648331964917945),
+    )
+    def test_mos_from_zimtohrli(self, zimtohrli_distance: float, mos: float):
+        self.assertAlmostEqual(
+            mos, pyohrli.mos_from_zimtohrli(zimtohrli_distance), places=3
         )
-        for index in range(len(zimt_scores)):
-            self.assertAlmostEqual(
-                mos[index], pyohrli.mos_from_zimtohrli(zimt_scores[index]), places=3
-            )
 
 
 if __name__ == "__main__":
