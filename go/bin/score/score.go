@@ -43,7 +43,7 @@ func main() {
 	zimtohrliPerceptualSampleRate := flag.Float64("zimtohrli_perceptual_sample_rate", float64(goohrli.DefaultPerceptualSampleRate()), "Sample rate of the Zimtohrli spectrograms.")
 	correlate := flag.String("correlate", "", "Path to a database directory with a study to correlate scores for.")
 	hist := flag.String("hist", "", "Path to a database directory with a study to provide JND histograms for.")
-	histThresholds := flag.String("hist_thresholds", "5,10,20,40,80", "A comma separated list of Zimtohrli distance thresholds to compute histograms for.")
+	histThresholds := flag.String("hist_thresholds", "0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100", "A comma separated list of Zimtohrli distance thresholds to compute histograms for.")
 	workers := flag.Int("workers", runtime.NumCPU(), "Number of concurrent workers for tasks.")
 	flag.Parse()
 
@@ -122,11 +122,11 @@ func main() {
 			}
 			thresholds = append(thresholds, f)
 		}
-		audible, nonAudible, err := study.JNDHist(thresholds)
+		audible, inaudible, err := study.JNDHist(thresholds)
 		if err != nil {
 			log.Fatal(err)
 		}
 		fmt.Println(audible.String(50))
-		fmt.Println(nonAudible.String(50))
+		fmt.Println(inaudible.String(50))
 	}
 }
