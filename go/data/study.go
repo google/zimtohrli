@@ -42,6 +42,8 @@ const (
 	Zimtohrli ScoreType = "Zimtohrli"
 	// JND is 1 if the evaluator detected a difference and 0 if not.
 	JND ScoreType = "JND"
+	// ViSQOL is the ViSQOL MOS.
+	ViSQOL = "ViSQOL"
 )
 
 // ScoreType represents a type of score, such as MOS or Zimtohrli.
@@ -182,11 +184,11 @@ func (s *Study) JNDHist(thresholds []float64) (*Histogram, *Histogram, error) {
 	sort.Sort(audible)
 	sort.Sort(inaudible)
 	audibleHist := &Histogram{
-		Title:      "Correct detection of audible distortion if Zimtohrli distance X is used as threshold",
+		Title:      "Correct detection of true audible distortion if Zimtohrli distance X is used as threshold",
 		Thresholds: thresholds,
 	}
 	inaudibleHist := &Histogram{
-		Title:      "Correct detection of inaudible distortion if Zimtohrli distance X is used as threshold",
+		Title:      "Correct detection of true inaudible distortion if Zimtohrli distance X is used as threshold",
 		Thresholds: thresholds,
 	}
 	for _, threshold := range thresholds {

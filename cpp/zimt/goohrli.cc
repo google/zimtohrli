@@ -22,6 +22,7 @@
 #include "hwy/base.h"
 #include "zimt/cam.h"
 #include "zimt/mos.h"
+#include "zimt/visqol.h"
 #include "zimt/zimtohrli.h"
 
 float DefaultFrequencyResolution() {
@@ -118,4 +119,18 @@ float GetPerceptualSampleRate(Zimtohrli zimtohrli) {
 
 void SetPerceptualSampleRate(Zimtohrli zimtohrli, float f) {
   static_cast<zimtohrli::Zimtohrli*>(zimtohrli)->perceptual_sample_rate = f;
+}
+
+typedef void* ViSQOL;
+
+ViSQOL CreateViSQOL() { return new zimtohrli::ViSQOL(); }
+
+void FreeViSQOL(ViSQOL v) { delete (zimtohrli::ViSQOL*)(v); }
+
+float MOS(const ViSQOL v, float sample_rate, const float* reference,
+          int reference_size, const float* distorted, int distorted_size) {
+  const zimtohrli::ViSQOL* visqol = static_cast<const zimtohrli::ViSQOL*>(v);
+  return visqol->MOS(absl::Span<const float>(reference, reference_size),
+                     absl::Span<const float>(distorted, distorted_size),
+                     sample_rate);
 }

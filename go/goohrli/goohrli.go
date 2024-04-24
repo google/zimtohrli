@@ -16,7 +16,7 @@
 package goohrli
 
 /*
-#cgo LDFLAGS: ${SRCDIR}/goohrli.a -lopus -lFLAC -lvorbis -lvorbisenc -logg -lasound -lm -lstdc++
+#cgo LDFLAGS: ${SRCDIR}/goohrli.a -lz -lopus -lFLAC -lvorbis -lvorbisenc -logg -lasound -lm -lstdc++
 #cgo CFLAGS: -O3
 #include "goohrli.h"
 */
@@ -66,8 +66,8 @@ func NormalizeAmplitude(maxAbsAmplitude float32, signal []float32) EnergyAndMaxA
 }
 
 // MOSFromZimtohrli returns an approximate mean opinion score for a given zimtohrli distance.
-func MOSFromZimtohrli(zimtohrliDistance float32) float32 {
-	return float32(C.MOSFromZimtohrli(C.float(zimtohrliDistance)))
+func MOSFromZimtohrli(zimtohrliDistance float64) float64 {
+	return float64(C.MOSFromZimtohrli(C.float(zimtohrliDistance)))
 }
 
 // Goohrli is a Go wrapper around zimtohrli::Zimtohrli.
@@ -145,12 +145,12 @@ func (g *Goohrli) AnalysisDistance(analysisA *Analysis, analysisB *Analysis) flo
 }
 
 // Distance returns the Zimtohrli distance between two signals.
-func (g *Goohrli) Distance(signalA []float32, signalB []float32) float32 {
+func (g *Goohrli) Distance(signalA []float32, signalB []float32) float64 {
 	analysisA := C.Analyze(g.zimtohrli, (*C.float)(&signalA[0]), C.int(len(signalA)))
 	defer C.FreeAnalysis(analysisA)
 	analysisB := C.Analyze(g.zimtohrli, (*C.float)(&signalB[0]), C.int(len(signalB)))
 	defer C.FreeAnalysis(analysisB)
-	return float32(C.AnalysisDistance(g.zimtohrli, analysisA, analysisB, C.int(float64(g.GetPerceptualSampleRate())*g.UnwarpWindow.Seconds())))
+	return float64(C.AnalysisDistance(g.zimtohrli, analysisA, analysisB, C.int(float64(g.GetPerceptualSampleRate())*g.UnwarpWindow.Seconds())))
 }
 
 // GetTimeNormOrder returns the order of the norm across time steps when computing Zimtohrli distance.
@@ -181,4 +181,41 @@ func (g *Goohrli) GetPerceptualSampleRate() float32 {
 // SetPerceptualSampleRate sets the perceptual sample rate used.
 func (g *Goohrli) SetPerceptualSampleRate(f float32) {
 	C.SetPerceptualSampleRate(g.zimtohrli, C.float(f))
+}
+
+// ViSQOL is a Go wrapper around zimtohrli::ViSQOL.
+type ViSQOL struct {
+	visqol C.ViSQOL
+}
+
+// New returns a new Gosqol.
+func NewViSQOL() *ViSQOL {
+	result := &ViSQOL{
+		visqol: C.CreateViSQOL(),
+	}
+	runtime.SetFinalizer(result, func(g *ViSQOL) {
+		C.FreeViSQOL(g.visqol)
+	})
+	return result
+}
+
+// MOS returns the ViSQOL mean opinion score of the degraded samples comapred to the reference samples.
+func (g *ViSQOL) MOS(sampleRate float64, reference []float32, degraded []float32) float64 {
+	return float64(C.MOS(g.visqol, C.float(sampleRate), (*C.float)(&reference[0]), C.int(len(reference)), (*C.float)(&degraded[0]), C.int(len(degraded))))
+}
+
+// AudioMOS returns the ViSQOL mean opinion score of the degraded audio compared to the reference audio.
+func (g *ViSQOL) AudioMOS(reference, degraded *audio.Audio) (float64, error) {
+	sumOfSquares := 0.0
+	if reference.Rate != degraded.Rate {
+		return 0, fmt.Errorf("the audio files don't have the same sample rate: %v, %v", reference.Rate, degraded.Rate)
+	}
+	if len(reference.Samples) != len(degraded.Samples) {
+		return 0, fmt.Errorf("the audio files don't have the same number of channels: %v, %v", len(reference.Samples), len(degraded.Samples))
+	}
+	for channelIndex := range reference.Samples {
+		mos := g.MOS(reference.Rate, reference.Samples[channelIndex], degraded.Samples[channelIndex])
+		sumOfSquares += mos * mos
+	}
+	return math.Sqrt(sumOfSquares / float64(len(reference.Samples))), nil
 }

@@ -103,6 +103,19 @@ float GetPerceptualSampleRate(Zimtohrli zimtohrli);
 // Sets the perceptual sample rate used.
 void SetPerceptualSampleRate(Zimtohrli zimtohrli, float f);
 
+// void* representation of zimtohrli::ViSQOL.
+typedef void* ViSQOL;
+
+// Returns a zimtohrli::ViSQOL.
+ViSQOL CreateViSQOL();
+
+// Deletes a zimtohrli::ViSQOL.
+void FreeViSQOL(ViSQOL v);
+
+// MOS returns a ViSQOL MOS between reference and distorted.
+float MOS(ViSQOL v, float sample_rate, const float* reference,
+          int reference_size, const float* distorted, int distorted_size);
+
 #ifdef __cplusplus
 }
 #endif
