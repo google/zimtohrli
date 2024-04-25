@@ -125,7 +125,8 @@ TEST(Zimtohrli, DTWDistanceTest) {
        ++sample_index) {
     spectrogram_b[{sample_index}][0] = b_values[sample_index];
   }
-  Zimtohrli z = {.cam_filterbank = Cam().CreateFilterbank(48000)};
+  const Cam cam{.minimum_bandwidth_hz = 1};
+  Zimtohrli z = {.cam_filterbank = cam.CreateFilterbank(48000)};
   EXPECT_NEAR(
       z.Distance(false, spectrogram_a, spectrogram_b, std::nullopt).value,
       0.795f, 1e-2f);
@@ -136,7 +137,8 @@ TEST(Zimtohrli, DTWDistanceTest) {
 TEST(Zimtohrli, DistanceTest) {
   hwy::AlignedNDArray<float, 2> spectrogram_a({2, 2});
   hwy::AlignedNDArray<float, 2> spectrogram_b({2, 2});
-  Zimtohrli z = {.cam_filterbank = Cam().CreateFilterbank(48000)};
+  const Cam cam{.minimum_bandwidth_hz = 1};
+  Zimtohrli z = {.cam_filterbank = cam.CreateFilterbank(48000)};
 
   spectrogram_b[{0}] = {1, 1};
   CheckDistanceNear(z.Distance(/* verbose */ true, spectrogram_a, spectrogram_b,
@@ -319,7 +321,8 @@ TEST(Zimtohrli, ComparisonTest) {
   const float seconds_of_audio = 1;
   const size_t num_samples =
       static_cast<size_t>(sample_rate * seconds_of_audio);
-  Zimtohrli z = {.cam_filterbank = Cam().CreateFilterbank(sample_rate),
+  const Cam cam{.minimum_bandwidth_hz = 1};
+  Zimtohrli z = {.cam_filterbank = cam.CreateFilterbank(sample_rate),
                  .full_scale_sine_db = full_scale_sine_db};
   const size_t channel_0 = 600;
   const float channel_0_hz = z.cam_filterbank->thresholds_hz[{1}][channel_0];
@@ -558,10 +561,11 @@ TEST(Zimtohrli, FindMaxDistortionTest) {
   }
 
   // Initialize two Zimtohrli instances with default values.
-  Zimtohrli z1{.cam_filterbank = Cam().CreateFilterbank(sample_rate),
+  const Cam cam{.minimum_bandwidth_hz = 1};
+  Zimtohrli z1{.cam_filterbank = cam.CreateFilterbank(sample_rate),
                .full_scale_sine_db = full_scale_sine_db};
   FilterbankState z1_state = z1.cam_filterbank->filter.NewState();
-  Zimtohrli z2{.cam_filterbank = Cam().CreateFilterbank(sample_rate),
+  Zimtohrli z2{.cam_filterbank = cam.CreateFilterbank(sample_rate),
                .full_scale_sine_db = full_scale_sine_db};
   FilterbankState z2_state = z2.cam_filterbank->filter.NewState();
 
