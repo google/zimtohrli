@@ -10,6 +10,7 @@ add_executable(zimtohrli_test
     cpp/zimt/zimtohrli_test.cc
     cpp/zimt/test_file_paths.cc
 )
+asan_target(zimtohrli_test)
 target_link_libraries(zimtohrli_test zimtohrli_base gtest gmock_main benchmark)
 target_compile_definitions(zimtohrli_test PRIVATE CMAKE_CURRENT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR})
 gtest_discover_tests(zimtohrli_test)
@@ -57,4 +58,5 @@ add_executable(zimtohrli_benchmark
     cpp/zimt/masking_test.cc
     cpp/zimt/zimtohrli_test.cc
 )
+asan_target(zimtohrli_benchmark)
 target_link_libraries(zimtohrli_benchmark zimtohrli_base gtest gmock benchmark_main)
