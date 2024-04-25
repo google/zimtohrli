@@ -9,6 +9,14 @@ include(cmake/deps.cmake)
 enable_testing()
 include(GoogleTest)
 
+option(ZIMTOHRLI_ASAN "Build Zimtohrli with address sanitizer." OFF)
+macro(asan_target TARGET)
+    if (ZIMTOHRLI_ASAN)
+    target_compile_options(${TARGET} PRIVATE -fsanitize=address)
+    target_link_options(${TARGET} PRIVATE -fsanitize=address)
+    endif()
+endmacro()
+
 add_library(zimtohrli_base STATIC
     cpp/zimt/audio.cc
     cpp/zimt/audio.h
@@ -29,6 +37,7 @@ add_library(zimtohrli_base STATIC
     cpp/zimt/zimtohrli.cc
     cpp/zimt/zimtohrli.h
 )
+asan_target(zimtohrli_base)
 target_include_directories(zimtohrli_base PUBLIC cpp)
 target_link_libraries(zimtohrli_base PRIVATE absl::check)
 target_link_libraries(zimtohrli_base PUBLIC hwy portaudio absl::statusor absl::span sndfile)
@@ -38,6 +47,7 @@ add_library(zimtohrli_visqol_adapter STATIC
     cpp/zimt/visqol.cc
     cpp/zimt/resample.h
 )
+asan_target(zimtohrli_visqol_adapter)
 target_include_directories(zimtohrli_visqol_adapter PUBLIC cpp)
 target_link_libraries(zimtohrli_visqol_adapter PRIVATE visqol samplerate hwy)
 target_link_libraries(zimtohrli_visqol_adapter PUBLIC absl::span)
@@ -57,6 +67,7 @@ add_library(zimtohrli_goohrli_glue STATIC
     cpp/zimt/goohrli.cc
     go/goohrli/goohrli.h
 )
+asan_target(zimtohrli_goohrli_glue)
 target_include_directories(zimtohrli_goohrli_glue PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/go/goohrli ${CMAKE_CURRENT_SOURCE_DIR}/go/gosqol)
 target_link_libraries(zimtohrli_goohrli_glue zimtohrli_base zimtohrli_visqol_adapter)
 
@@ -87,6 +98,7 @@ add_library(zimtohrli_ux STATIC
     cpp/zimt/ux.cc
     cpp/zimt/ux.h
 )
+asan_target(zimtohrli_ux)
 target_include_directories(zimtohrli_ux PRIVATE ${imgui_SOURCE_DIR}/backends ${gles_INCLUDE_DIRS})
 target_include_directories(zimtohrli_ux PUBLIC ${imgui_SOURCE_DIR})
 target_link_libraries(zimtohrli_ux zimtohrli_base glfw OpenGL::GL imgui)
@@ -94,6 +106,7 @@ target_link_libraries(zimtohrli_ux zimtohrli_base glfw OpenGL::GL imgui)
 add_executable(zimtohrli_compare
     cpp/zimt/compare.cc
 )
+asan_target(zimtohrli_compare)
 target_link_libraries(zimtohrli_compare zimtohrli_ux zimtohrli_base absl::flags_parse)
 set_target_properties(zimtohrli_compare PROPERTIES
     PREFIX ""
