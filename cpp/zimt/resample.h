@@ -15,6 +15,10 @@
 #ifndef CPP_ZIMT_RESAMPLE_H_
 #define CPP_ZIMT_RESAMPLE_H_
 
+#include <cstddef>
+#include <type_traits>
+#include <vector>
+
 #include "absl/log/check.h"
 #include "absl/types/span.h"
 #include "samplerate.h"
