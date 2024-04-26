@@ -188,7 +188,7 @@ type ViSQOL struct {
 	visqol C.ViSQOL
 }
 
-// New returns a new Gosqol.
+// NewViSQOL returns a new Gosqol.
 func NewViSQOL() *ViSQOL {
 	result := &ViSQOL{
 		visqol: C.CreateViSQOL(),
