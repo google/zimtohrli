@@ -43,6 +43,8 @@ target_link_libraries(zimtohrli_base PRIVATE absl::check)
 target_link_libraries(zimtohrli_base PUBLIC hwy portaudio absl::statusor absl::span sndfile)
 
 add_library(zimtohrli_visqol_adapter STATIC
+    cpp/zimt/visqol_model.h
+    cpp/zimt/visqol_model.cc
     cpp/zimt/visqol.h
     cpp/zimt/visqol.cc
     cpp/zimt/resample.h

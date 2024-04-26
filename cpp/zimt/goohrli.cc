@@ -121,8 +121,6 @@ void SetPerceptualSampleRate(Zimtohrli zimtohrli, float f) {
   static_cast<zimtohrli::Zimtohrli*>(zimtohrli)->perceptual_sample_rate = f;
 }
 
-typedef void* ViSQOL;
-
 ViSQOL CreateViSQOL() { return new zimtohrli::ViSQOL(); }
 
 void FreeViSQOL(ViSQOL v) { delete (zimtohrli::ViSQOL*)(v); }
