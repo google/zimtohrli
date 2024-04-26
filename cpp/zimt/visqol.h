@@ -17,6 +17,7 @@
 
 #include <filesystem>
 
+#include "absl/status/statusor.h"
 #include "absl/types/span.h"
 
 namespace zimtohrli {
@@ -25,8 +26,9 @@ class ViSQOL {
  public:
   ViSQOL();
   ~ViSQOL();
-  float MOS(absl::Span<const float> reference, absl::Span<const float> degraded,
-            float sample_rate) const;
+  absl::StatusOr<float> MOS(absl::Span<const float> reference,
+                            absl::Span<const float> degraded,
+                            float sample_rate) const;
 
  private:
   std::filesystem::path model_path_;

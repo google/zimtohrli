@@ -22,8 +22,6 @@ import (
 	"log"
 	"os"
 	"runtime"
-	"strconv"
-	"strings"
 
 	"github.com/google/zimtohrli/go/data"
 	"github.com/google/zimtohrli/go/goohrli"
@@ -43,12 +41,11 @@ func main() {
 	zimtohrliFrequencyResolution := flag.Float64("zimtohrli_frequency_resolution", goohrli.DefaultFrequencyResolution(), "Smallest bandwidth of the Zimtohrli filterbank.")
 	zimtohrliPerceptualSampleRate := flag.Float64("zimtohrli_perceptual_sample_rate", goohrli.DefaultPerceptualSampleRate(), "Sample rate of the Zimtohrli spectrograms.")
 	correlate := flag.String("correlate", "", "Path to a database directory with a study to correlate scores for.")
-	hist := flag.String("hist", "", "Path to a database directory with a study to provide JND histograms for.")
-	histThresholds := flag.String("hist_thresholds", "0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100", "A comma separated list of Zimtohrli distance thresholds to compute histograms for.")
+	accuracy := flag.String("accuracy", "", "Path to a database directory with a study to provide JND accuracy for.")
 	workers := flag.Int("workers", runtime.NumCPU(), "Number of concurrent workers for tasks.")
 	flag.Parse()
 
-	if *details == "" && *calculate == "" && *correlate == "" && *hist == "" {
+	if *details == "" && *calculate == "" && *correlate == "" && *accuracy == "" {
 		flag.Usage()
 		os.Exit(1)
 	}
@@ -113,25 +110,16 @@ func main() {
 		fmt.Println(corrTable)
 	}
 
-	if *hist != "" {
-		study, err := data.OpenStudy(*hist)
+	if *accuracy != "" {
+		study, err := data.OpenStudy(*accuracy)
 		if err != nil {
 			log.Fatal(err)
 		}
 		defer study.Close()
-		thresholds := []float64{}
-		for _, threshString := range strings.Split(*histThresholds, ",") {
-			f, err := strconv.ParseFloat(threshString, 64)
-			if err != nil {
-				log.Fatal(err)
-			}
-			thresholds = append(thresholds, f)
-		}
-		audible, inaudible, err := study.JNDHist(thresholds)
+		accuracy, err := study.Accuracy()
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Println(audible.String(50))
-		fmt.Println(inaudible.String(50))
+		fmt.Println(accuracy)
 	}
 }

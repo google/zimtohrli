@@ -112,9 +112,15 @@ ViSQOL CreateViSQOL();
 // Deletes a zimtohrli::ViSQOL.
 void FreeViSQOL(ViSQOL v);
 
+// MOSResult contains a MOS value and a status code.
+typedef struct {
+  float MOS;
+  int Status;
+} MOSResult;
+
 // MOS returns a ViSQOL MOS between reference and distorted.
-float MOS(ViSQOL v, float sample_rate, const float* reference,
-          int reference_size, const float* distorted, int distorted_size);
+MOSResult MOS(ViSQOL v, float sample_rate, const float* reference,
+              int reference_size, const float* distorted, int distorted_size);
 
 #ifdef __cplusplus
 }

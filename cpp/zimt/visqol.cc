@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "absl/log/check.h"
+#include "absl/status/statusor.h"
 #include "absl/types/span.h"
 #include "visqol_api.h"
 #include "zimt/resample.h"
@@ -54,8 +55,9 @@ ViSQOL::ViSQOL() {
 
 ViSQOL::~ViSQOL() { std::filesystem::remove(model_path_); }
 
-float ViSQOL::MOS(absl::Span<const float> reference,
-                  absl::Span<const float> degraded, float sample_rate) const {
+absl::StatusOr<float> ViSQOL::MOS(absl::Span<const float> reference,
+                                  absl::Span<const float> degraded,
+                                  float sample_rate) const {
   std::vector<double> resampled_reference =
       Resample<double>(reference, sample_rate, SAMPLE_RATE);
   std::vector<double> resampled_degraded =
@@ -89,7 +91,10 @@ float ViSQOL::MOS(absl::Span<const float> reference,
                                         resampled_reference.size()),
                      absl::Span<double>(resampled_degraded.data(),
                                         resampled_degraded.size()));
-  CHECK_OK(comparison_status_or);
+  if (!comparison_status_or.ok()) {
+    return absl::Status(comparison_status_or.status().code(),
+                        "when calling visqol.Measure");
+  }
 
   Visqol::SimilarityResultMsg similarity_result = comparison_status_or.value();
 

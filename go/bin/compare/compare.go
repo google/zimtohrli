@@ -59,7 +59,10 @@ func main() {
 		v := goohrli.NewViSQOL()
 		if *perChannel {
 			for channelIndex := range signalA.Samples {
-				mos := v.MOS(signalA.Rate, signalA.Samples[channelIndex], signalB.Samples[channelIndex])
+				mos, err := v.MOS(signalA.Rate, signalA.Samples[channelIndex], signalB.Samples[channelIndex])
+				if err != nil {
+					log.Panic(err)
+				}
 				fmt.Println(mos)
 			}
 		} else {

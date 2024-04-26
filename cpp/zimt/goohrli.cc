@@ -126,10 +126,16 @@ ViSQOL CreateViSQOL() { return new zimtohrli::ViSQOL(); }
 
 void FreeViSQOL(ViSQOL v) { delete (zimtohrli::ViSQOL*)(v); }
 
-float MOS(const ViSQOL v, float sample_rate, const float* reference,
-          int reference_size, const float* distorted, int distorted_size) {
+MOSResult MOS(const ViSQOL v, float sample_rate, const float* reference,
+              int reference_size, const float* distorted, int distorted_size) {
   const zimtohrli::ViSQOL* visqol = static_cast<const zimtohrli::ViSQOL*>(v);
-  return visqol->MOS(absl::Span<const float>(reference, reference_size),
-                     absl::Span<const float>(distorted, distorted_size),
-                     sample_rate);
+  const absl::StatusOr<float> result = visqol->MOS(
+      absl::Span<const float>(reference, reference_size),
+      absl::Span<const float>(distorted, distorted_size), sample_rate);
+  if (result.ok()) {
+    return MOSResult{.MOS = result.value(), .Status = 0};
+  } else {
+    return MOSResult{.MOS = 0.0,
+                     .Status = static_cast<int>(result.status().code())};
+  }
 }

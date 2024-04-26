@@ -160,7 +160,11 @@ func TestViSQOL(t *testing.T) {
 		for index := 0; index < len(soundB); index++ {
 			soundB[index] = float32(math.Sin(2 * math.Pi * tc.freqB * float64(index) / sampleRate))
 		}
-		if mos := g.MOS(sampleRate, soundA, soundB); math.Abs(mos-tc.wantMOS) > 1e-3 {
+		mos, err := g.MOS(sampleRate, soundA, soundB)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if math.Abs(mos-tc.wantMOS) > 1e-3 {
 			t.Errorf("got mos %v, wanted mos %v", mos, tc.wantMOS)
 		}
 	}
