@@ -14,7 +14,13 @@
 
 #include "zimt/visqol.h"
 
-#include <iostream>
+#include <cerrno>
+#include <cstring>
+#include <filesystem>
+#include <fstream>
+#include <random>
+#include <string>
+#include <vector>
 
 #include "absl/log/check.h"
 #include "absl/types/span.h"
@@ -27,13 +33,14 @@ constexpr size_t SAMPLE_RATE = 48000;
 namespace zimtohrli {
 
 ViSQOL::ViSQOL() {
-  std::string path_template = (std::filesystem::path(std::string(P_tmpdir)) /
+  std::string path_template = (std::filesystem::temp_directory_path() /
                                "zimtohrli_cpp_zimt_visqol_model_XXXXXX")
                                   .string();
   std::vector<char> populated_path_template(path_template.begin(),
                                             path_template.end());
-  int model_path_file = mkstemp(populated_path_template.data());
-  CHECK_GT(model_path_file, 0);
+  populated_path_template.push_back('\0');
+  const int model_path_file = mkstemp(populated_path_template.data());
+  CHECK_GT(model_path_file, 0) << strerror(errno);
   CHECK_EQ(close(model_path_file), 0);
   model_path_ = std::filesystem::path(std::string(
       populated_path_template.data(), populated_path_template.size()));
