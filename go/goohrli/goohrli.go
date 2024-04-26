@@ -200,8 +200,13 @@ func NewViSQOL() *ViSQOL {
 }
 
 // MOS returns the ViSQOL mean opinion score of the degraded samples comapred to the reference samples.
-func (v *ViSQOL) MOS(sampleRate float64, reference []float32, degraded []float32) float64 {
-	return float64(C.MOS(v.visqol, C.float(sampleRate), (*C.float)(&reference[0]), C.int(len(reference)), (*C.float)(&degraded[0]), C.int(len(degraded))))
+func (v *ViSQOL) MOS(sampleRate float64, reference []float32, degraded []float32) (float64, error) {
+	result := C.MOS(v.visqol, C.float(sampleRate), (*C.float)(&reference[0]), C.int(len(reference)), (*C.float)(&degraded[0]), C.int(len(degraded)))
+	if result.Status == 0 {
+		return float64(result.MOS), nil
+	} else {
+		return 0, fmt.Errorf("calling ViSQOL returned status %v", result.Status)
+	}
 }
 
 // AudioMOS returns the ViSQOL mean opinion score of the degraded audio compared to the reference audio.
@@ -214,7 +219,10 @@ func (v *ViSQOL) AudioMOS(reference, degraded *audio.Audio) (float64, error) {
 		return 0, fmt.Errorf("the audio files don't have the same number of channels: %v, %v", len(reference.Samples), len(degraded.Samples))
 	}
 	for channelIndex := range reference.Samples {
-		mos := v.MOS(reference.Rate, reference.Samples[channelIndex], degraded.Samples[channelIndex])
+		mos, err := v.MOS(reference.Rate, reference.Samples[channelIndex], degraded.Samples[channelIndex])
+		if err != nil {
+			return 0, err
+		}
 		sumOfSquares += mos * mos
 	}
 	return math.Sqrt(sumOfSquares / float64(len(reference.Samples))), nil

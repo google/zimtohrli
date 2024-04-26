@@ -16,7 +16,6 @@
 package data
 
 import (
-	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -48,6 +47,22 @@ const (
 
 // ScoreType represents a type of score, such as MOS or Zimtohrli.
 type ScoreType string
+
+// Better returns 1 if higher is better for the score type, or -1 if lower is better.
+func (s ScoreType) Better() int {
+	switch s {
+	case MOS:
+		return 1
+	case Zimtohrli:
+		return -1
+	case JND:
+		return -1
+	case ViSQOL:
+		return 1
+	default:
+		return 0
+	}
+}
 
 // ScoreTypes is a slice of ScoreType.
 type ScoreTypes []ScoreType
@@ -104,6 +119,115 @@ func (s *Study) Close() error {
 	return s.db.Close()
 }
 
+// AccuracyScore contains the accuracy for a metric when used to predict audible differences, and the threshold when that accuracy was achieved.
+type AccuracyScore struct {
+	ScoreType ScoreType
+	Threshold float64
+	Accuracy  float64
+}
+
+// AccuracyScores contains the accuracy scores for multiple score types.
+type AccuracyScores []AccuracyScore
+
+func (a AccuracyScores) String() string {
+	table := Table{Row{"Score type", "Threshold", "Accuracy"}}
+	for _, score := range a {
+		table = append(table, Row{string(score.ScoreType), fmt.Sprintf("%.2v", score.Threshold), fmt.Sprintf("%.2f", score.Accuracy)})
+	}
+	return fmt.Sprintf("Maximal audibility classification threshold and accuracy per score type\n%s", table.String(2))
+}
+
+func abs(i int) int {
+	if i < 0 {
+		return -1
+	}
+	return i
+}
+
+func ternarySearch(f func(int) float64, left, right int) int {
+	for abs(right-left) > 2 {
+		third := (right - left) / 3
+		leftThird := left + third
+		rightThird := right - third
+		if f(leftThird) < f(rightThird) {
+			left = leftThird
+		} else {
+			right = rightThird
+		}
+	}
+	return (left + right) / 2
+}
+
+// Accuracy returns the accuracy of each score type when used to predict audible differences.
+func (s *Study) Accuracy() (AccuracyScores, error) {
+	audibleMap := map[ScoreType]sort.Float64Slice{}
+	inaudibleMap := map[ScoreType]sort.Float64Slice{}
+	allMapMap := map[ScoreType]map[float64]struct{}{}
+	if err := s.ViewEachReference(func(ref *Reference) error {
+		for _, dist := range ref.Distortions {
+			jnd, found := dist.Scores[JND]
+			if !found {
+				return fmt.Errorf("%+v doesn't have a JND score", ref)
+			}
+			for scoreType, score := range dist.Scores {
+				if scoreType == JND {
+					continue
+				}
+				scoreAll, found := allMapMap[scoreType]
+				if !found {
+					scoreAll = map[float64]struct{}{}
+					allMapMap[scoreType] = scoreAll
+				}
+				scoreAll[score] = struct{}{}
+				switch jnd {
+				case 0:
+					inaudibleMap[scoreType] = append(inaudibleMap[scoreType], score)
+				case 1:
+					audibleMap[scoreType] = append(audibleMap[scoreType], score)
+				default:
+					return fmt.Errorf("%+v JND isn't 0 or 1", ref)
+				}
+			}
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	result := AccuracyScores{}
+	for scoreType := range allMapMap {
+		audible := audibleMap[scoreType]
+		inaudible := inaudibleMap[scoreType]
+		sort.Sort(audible)
+		sort.Sort(inaudible)
+		all := sort.Float64Slice{}
+		for score := range allMapMap[scoreType] {
+			all = append(all, score)
+		}
+		sort.Sort(all)
+		accuracy := func(index int) float64 {
+			threshold := all[index]
+			audibleBelowThreshold := sort.SearchFloat64s(audible, threshold)
+			inaudibleBelowThreshold := sort.SearchFloat64s(inaudible, threshold)
+			correctAudible, correctInaudible := 0, 0
+			if scoreType.Better() > 0 {
+				correctAudible = audibleBelowThreshold
+				correctInaudible = len(inaudible) - inaudibleBelowThreshold
+			} else {
+				correctAudible = len(audible) - audibleBelowThreshold
+				correctInaudible = inaudibleBelowThreshold
+			}
+			return float64(correctAudible+correctInaudible) / float64(len(audible)+len(inaudible))
+		}
+		bestAccuracyThresholdIndex := ternarySearch(accuracy, 0, len(all)-1)
+		result = append(result, AccuracyScore{
+			ScoreType: scoreType,
+			Threshold: all[bestAccuracyThresholdIndex],
+			Accuracy:  accuracy(bestAccuracyThresholdIndex),
+		})
+	}
+	return result, nil
+}
+
 // CorrelationScore contains the scorrelation score between two score types.
 type CorrelationScore struct {
 	ScoreTypeA ScoreType
@@ -129,78 +253,6 @@ func (c CorrelationTable) String() string {
 		result = append(result, row)
 	}
 	return result.String(2)
-}
-
-// Histogram contains histogram data.
-type Histogram struct {
-	Title      string
-	Thresholds []float64
-	Counts     []int
-	Fractions  []float64
-}
-
-// String returns the histogram with a fraction of 1.0 corresponding to width characters.
-func (h *Histogram) String(width int) string {
-	result := Table{}
-	for index := range h.Thresholds {
-		row := Row{fmt.Sprintf("%.2f", h.Thresholds[index]), fmt.Sprintf("%v", h.Counts[index]), fmt.Sprintf("(%.2f)", h.Fractions[index])}
-		buf := &bytes.Buffer{}
-		chars := int(float64(width) * h.Fractions[index])
-		for i := 0; i < chars; i++ {
-			fmt.Fprintf(buf, "#")
-		}
-		row = append(row, buf.String())
-		result = append(result, row)
-	}
-	return fmt.Sprintf("*** %v\n%v", h.Title, result.String(2))
-}
-
-// JNDHist returns histograms for the relationship between Zimtohrli and JND scores.
-func (s *Study) JNDHist(thresholds []float64) (*Histogram, *Histogram, error) {
-	audible := sort.Float64Slice{}
-	inaudible := sort.Float64Slice{}
-	if err := s.ViewEachReference(func(ref *Reference) error {
-		for _, dist := range ref.Distortions {
-			zimt, found := dist.Scores[Zimtohrli]
-			if !found {
-				return fmt.Errorf("%+v doesn't have a Zimtohrli score", ref)
-			}
-			jnd, found := dist.Scores[JND]
-			if !found {
-				return fmt.Errorf("%+v doesn't have a JND score", ref)
-			}
-			switch jnd {
-			case 0:
-				inaudible = append(inaudible, zimt)
-			case 1:
-				audible = append(audible, zimt)
-			default:
-				return fmt.Errorf("%+v JND isn't 0 or 1", ref)
-			}
-		}
-		return nil
-	}); err != nil {
-		return nil, nil, err
-	}
-	sort.Sort(audible)
-	sort.Sort(inaudible)
-	audibleHist := &Histogram{
-		Title:      "Correct detection of true audible distortion if Zimtohrli distance X is used as threshold",
-		Thresholds: thresholds,
-	}
-	inaudibleHist := &Histogram{
-		Title:      "Correct detection of true inaudible distortion if Zimtohrli distance X is used as threshold",
-		Thresholds: thresholds,
-	}
-	for _, threshold := range thresholds {
-		correctAudiblePredictions := len(audible) - sort.SearchFloat64s(audible, threshold)
-		audibleHist.Counts = append(audibleHist.Counts, correctAudiblePredictions)
-		audibleHist.Fractions = append(audibleHist.Fractions, float64(correctAudiblePredictions)/float64(len(audible)))
-		correctInaudiblePredictions := sort.SearchFloat64s(inaudible, threshold)
-		inaudibleHist.Counts = append(inaudibleHist.Counts, correctInaudiblePredictions)
-		inaudibleHist.Fractions = append(inaudibleHist.Fractions, float64(correctInaudiblePredictions)/float64(len(inaudible)))
-	}
-	return audibleHist, inaudibleHist, nil
 }
 
 // Correlate returns a table of all scores in the study Spearman correlated to each other.
@@ -284,7 +336,7 @@ func (s *Study) Calculate(measurements map[ScoreType]Measurement, pool *worker.P
 		})
 	}
 	if err := pool.Error(); err != nil {
-		return err
+		log.Println(err.Error())
 	}
 	if err := s.Put(refs); err != nil {
 		return err
