@@ -155,6 +155,7 @@ func (h *Histogram) String(width int) string {
 	return fmt.Sprintf("*** %v\n%v", h.Title, result.String(2))
 }
 
+// JNDHist returns histograms for the relationship between Zimtohrli and JND scores.
 func (s *Study) JNDHist(thresholds []float64) (*Histogram, *Histogram, error) {
 	audible := sort.Float64Slice{}
 	inaudible := sort.Float64Slice{}
