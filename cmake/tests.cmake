@@ -44,7 +44,6 @@ add_test(NAME zimtohrli_loudness_computation_ipynb_test
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-
 add_test(NAME zimtohrli_go_test
     COMMAND go test ./...
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}

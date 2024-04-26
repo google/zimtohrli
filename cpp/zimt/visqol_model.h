@@ -20,7 +20,7 @@
 namespace zimtohrli {
 
 // Returns the bytes of the default ViSQOL model.
-absl::Span<char> ViSQOLModel();
+absl::Span<const char> ViSQOLModel();
 
 }  // namespace zimtohrli
 

@@ -19,7 +19,7 @@
 
 namespace zimtohrli {
 
-absl::Span<char> ViSQOLModel() {
+absl::Span<const char> ViSQOLModel() {
   return absl::Span<char>(reinterpret_cast<char*>(visqol_model_bytes),
                           visqol_model_bytes_len);
 }
