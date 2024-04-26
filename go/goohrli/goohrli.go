@@ -31,13 +31,13 @@ import (
 )
 
 // DefaultFrequencyResolution returns the default frequency resolution corresponding to the minimum width (at the low frequency end) of the Zimtohrli filter bank.
-func DefaultFrequencyResolution() float32 {
-	return float32(C.DefaultFrequencyResolution())
+func DefaultFrequencyResolution() float64 {
+	return float64(C.DefaultFrequencyResolution())
 }
 
 // DefaultPerceptualSampleRate returns the default perceptual sample rate corresponding to the human hearing sensitivity to timing changes.
-func DefaultPerceptualSampleRate() float32 {
-	return float32(C.DefaultPerceptualSampleRate())
+func DefaultPerceptualSampleRate() float64 {
+	return float64(C.DefaultPerceptualSampleRate())
 }
 
 // EnergyAndMaxAbsAmplitude is holds the energy and maximum absolute amplitude of a measurement.
@@ -200,12 +200,12 @@ func NewViSQOL() *ViSQOL {
 }
 
 // MOS returns the ViSQOL mean opinion score of the degraded samples comapred to the reference samples.
-func (g *ViSQOL) MOS(sampleRate float64, reference []float32, degraded []float32) float64 {
-	return float64(C.MOS(g.visqol, C.float(sampleRate), (*C.float)(&reference[0]), C.int(len(reference)), (*C.float)(&degraded[0]), C.int(len(degraded))))
+func (v *ViSQOL) MOS(sampleRate float64, reference []float32, degraded []float32) float64 {
+	return float64(C.MOS(v.visqol, C.float(sampleRate), (*C.float)(&reference[0]), C.int(len(reference)), (*C.float)(&degraded[0]), C.int(len(degraded))))
 }
 
 // AudioMOS returns the ViSQOL mean opinion score of the degraded audio compared to the reference audio.
-func (g *ViSQOL) AudioMOS(reference, degraded *audio.Audio) (float64, error) {
+func (v *ViSQOL) AudioMOS(reference, degraded *audio.Audio) (float64, error) {
 	sumOfSquares := 0.0
 	if reference.Rate != degraded.Rate {
 		return 0, fmt.Errorf("the audio files don't have the same sample rate: %v, %v", reference.Rate, degraded.Rate)
@@ -214,7 +214,7 @@ func (g *ViSQOL) AudioMOS(reference, degraded *audio.Audio) (float64, error) {
 		return 0, fmt.Errorf("the audio files don't have the same number of channels: %v, %v", len(reference.Samples), len(degraded.Samples))
 	}
 	for channelIndex := range reference.Samples {
-		mos := g.MOS(reference.Rate, reference.Samples[channelIndex], degraded.Samples[channelIndex])
+		mos := v.MOS(reference.Rate, reference.Samples[channelIndex], degraded.Samples[channelIndex])
 		sumOfSquares += mos * mos
 	}
 	return math.Sqrt(sumOfSquares / float64(len(reference.Samples))), nil

@@ -28,9 +28,9 @@ import (
 func main() {
 	pathA := flag.String("path_a", "", "Path to ffmpeg-decodable file with signal A.")
 	pathB := flag.String("path_b", "", "Path to ffmpeg-decodable file with signal B.")
+	visqol := flag.Bool("visqol", false, "Whether to use ViSQOL instead of Zimtohrli metrics.")
 	outputZimtohrliDistance := flag.Bool("output_zimtohrli_distance", false, "Whether to output the raw Zimtohrli distance instead of a mapped mean opinion score.")
 	perChannel := flag.Bool("per_channel", false, "Whether to output the produced metric per channel instead of a single value for all channels.")
-	frequencyResolution := flag.Float64("frequency_resolution", float64(goohrli.DefaultFrequencyResolution()), "Band width of smallest filter, i.e. expected frequency resolution of human hearing.")
 	flag.Parse()
 
 	if *pathA == "" || *pathB == "" {
@@ -55,25 +55,41 @@ func main() {
 		log.Panic(fmt.Errorf("%q has %v channels, and %q has %v channels", *pathA, len(signalA.Samples), *pathB, len(signalB.Samples)))
 	}
 
-	getMetric := func(f float64) float64 {
-		if *outputZimtohrliDistance {
-			return f
-		}
-		return goohrli.MOSFromZimtohrli(f)
-	}
-
-	g := goohrli.New(signalA.Rate, *frequencyResolution)
-	if *perChannel {
-		for channelIndex := range signalA.Samples {
-			measurement := goohrli.Measure(signalA.Samples[channelIndex])
-			goohrli.NormalizeAmplitude(measurement.MaxAbsAmplitude, signalB.Samples[channelIndex])
-			fmt.Println(getMetric(g.Distance(signalA.Samples[channelIndex], signalB.Samples[channelIndex])))
+	if *visqol {
+		v := goohrli.NewViSQOL()
+		if *perChannel {
+			for channelIndex := range signalA.Samples {
+				mos := v.MOS(signalA.Rate, signalA.Samples[channelIndex], signalB.Samples[channelIndex])
+				fmt.Println(mos)
+			}
+		} else {
+			mos, err := v.AudioMOS(signalA, signalB)
+			if err != nil {
+				log.Panic(err)
+			}
+			fmt.Println(mos)
 		}
 	} else {
-		dist, err := g.NormalizedAudioDistance(signalA, signalB)
-		if err != nil {
-			log.Panic(err)
+		getMetric := func(f float64) float64 {
+			if *outputZimtohrliDistance {
+				return f
+			}
+			return goohrli.MOSFromZimtohrli(f)
 		}
-		fmt.Println(getMetric(dist))
+
+		g := goohrli.New(signalA.Rate, goohrli.DefaultFrequencyResolution())
+		if *perChannel {
+			for channelIndex := range signalA.Samples {
+				measurement := goohrli.Measure(signalA.Samples[channelIndex])
+				goohrli.NormalizeAmplitude(measurement.MaxAbsAmplitude, signalB.Samples[channelIndex])
+				fmt.Println(getMetric(g.Distance(signalA.Samples[channelIndex], signalB.Samples[channelIndex])))
+			}
+		} else {
+			dist, err := g.NormalizedAudioDistance(signalA, signalB)
+			if err != nil {
+				log.Panic(err)
+			}
+			fmt.Println(getMetric(dist))
+		}
 	}
 }

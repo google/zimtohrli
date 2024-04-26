@@ -18,9 +18,9 @@
 
 #include "absl/log/check.h"
 #include "absl/types/span.h"
-#include "libsvm_nu_svr_model.h"
 #include "visqol_api.h"
 #include "zimt/resample.h"
+#include "zimt/visqol_model.h"
 
 constexpr size_t SAMPLE_RATE = 48000;
 
@@ -39,8 +39,8 @@ ViSQOL::ViSQOL() {
       populated_path_template.data(), populated_path_template.size()));
   std::ofstream output_stream(model_path_);
   CHECK(output_stream.good());
-  output_stream.write(reinterpret_cast<char*>(visqol_model_bytes),
-                      visqol_model_bytes_len);
+  absl::Span<const char> model = ViSQOLModel();
+  output_stream.write(model.data(), model.size());
   CHECK(output_stream.good());
   output_stream.close();
   CHECK(output_stream.good());
@@ -82,7 +82,7 @@ float ViSQOL::MOS(absl::Span<const float> reference,
       visqol.Measure(absl::Span<double>(resampled_reference.data(),
                                         resampled_reference.size()),
                      absl::Span<double>(resampled_degraded.data(),
-                                        resampled_reference.size()));
+                                        resampled_degraded.size()));
   CHECK_OK(comparison_status_or);
 
   Visqol::SimilarityResultMsg similarity_result = comparison_status_or.value();
