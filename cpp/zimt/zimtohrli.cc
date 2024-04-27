@@ -425,13 +425,15 @@ Comparison Zimtohrli::Compare(
           current_analysis_a.energy_channels_db.shape()[0];
       for (const auto& dtw_block_pair :
            current_analysis_dtw.energy_channels_db) {
-        const std::pair<size_t, size_t> offset_pair = {
-            dtw_block_pair.first * dtw_block_size,
-            dtw_block_pair.second * dtw_block_size};
+        const size_t first_dtw_offset = dtw_block_pair.first * dtw_block_size;
+        float* audio_delta_data =
+            audio_delta[{audio_channel_index}].data() + first_dtw_offset;
+        const float* frames_a_data =
+            frames_a[{audio_channel_index}].data() + first_dtw_offset;
+        const float* frames_b_data = frames_b[{audio_channel_index}].data() +
+                                     dtw_block_pair.second * dtw_block_size;
         for (size_t index = 0; index < dtw_block_size; ++index) {
-          audio_delta[{audio_channel_index}][offset_pair.first + index] =
-              frames_a[{audio_channel_index}][offset_pair.first + index] -
-              frames_b[{audio_channel_index}][offset_pair.second + index];
+          audio_delta_data[index] = frames_a_data[index] - frames_b_data[index];
         }
       }
 

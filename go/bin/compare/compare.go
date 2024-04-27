@@ -23,12 +23,15 @@ import (
 
 	"github.com/google/zimtohrli/go/aio"
 	"github.com/google/zimtohrli/go/goohrli"
+	"github.com/google/zimtohrli/go/pipe"
 )
 
 func main() {
 	pathA := flag.String("path_a", "", "Path to ffmpeg-decodable file with signal A.")
 	pathB := flag.String("path_b", "", "Path to ffmpeg-decodable file with signal B.")
-	visqol := flag.Bool("visqol", false, "Whether to use ViSQOL instead of Zimtohrli metrics.")
+	visqol := flag.Bool("visqol", false, "Whether to measure using ViSQOL.")
+	pipeMetric := flag.String("pipe_metric", "", "Path to a binary that serves metrics via stdin/stdout pipe. Install some of the via 'install_python_metrics.py'.")
+	zimtohrli := flag.Bool("zimtohrli", true, "Whether to measure using Zimtohrli.")
 	outputZimtohrliDistance := flag.Bool("output_zimtohrli_distance", false, "Whether to output the raw Zimtohrli distance instead of a mapped mean opinion score.")
 	perChannel := flag.Bool("per_channel", false, "Whether to output the produced metric per channel instead of a single value for all channels.")
 	flag.Parse()
@@ -55,6 +58,23 @@ func main() {
 		log.Panic(fmt.Errorf("%q has %v channels, and %q has %v channels", *pathA, len(signalA.Samples), *pathB, len(signalB.Samples)))
 	}
 
+	if *pipeMetric != "" {
+		metric, err := pipe.StartMetric(*pipeMetric)
+		if err != nil {
+			log.Panic(err)
+		}
+		defer metric.Close()
+		scoreType, err := metric.ScoreType()
+		if err != nil {
+			log.Panic(err)
+		}
+		score, err := metric.Measure(signalA, signalB)
+		if err != nil {
+			log.Panic(err)
+		}
+		fmt.Printf("%v=%v\n", scoreType, score)
+	}
+
 	if *visqol {
 		v := goohrli.NewViSQOL()
 		if *perChannel {
@@ -63,16 +83,18 @@ func main() {
 				if err != nil {
 					log.Panic(err)
 				}
-				fmt.Println(mos)
+				fmt.Printf("ViSQOL#%v=%v\n", channelIndex, mos)
 			}
 		} else {
 			mos, err := v.AudioMOS(signalA, signalB)
 			if err != nil {
 				log.Panic(err)
 			}
-			fmt.Println(mos)
+			fmt.Printf("ViSQOL=%v\n", mos)
 		}
-	} else {
+	}
+
+	if *zimtohrli {
 		getMetric := func(f float64) float64 {
 			if *outputZimtohrliDistance {
 				return f
@@ -85,14 +107,14 @@ func main() {
 			for channelIndex := range signalA.Samples {
 				measurement := goohrli.Measure(signalA.Samples[channelIndex])
 				goohrli.NormalizeAmplitude(measurement.MaxAbsAmplitude, signalB.Samples[channelIndex])
-				fmt.Println(getMetric(g.Distance(signalA.Samples[channelIndex], signalB.Samples[channelIndex])))
+				fmt.Printf("Zimtohrli#%v=%v\n", channelIndex, getMetric(g.Distance(signalA.Samples[channelIndex], signalB.Samples[channelIndex])))
 			}
 		} else {
 			dist, err := g.NormalizedAudioDistance(signalA, signalB)
 			if err != nil {
 				log.Panic(err)
 			}
-			fmt.Println(getMetric(dist))
+			fmt.Printf("Zimtohrli=%v\n", getMetric(dist))
 		}
 	}
 }

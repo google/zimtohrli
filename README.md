@@ -44,11 +44,12 @@ Finally, to build and test the Python and Go wrappers, the following dependencie
 - python3
 - xxd
 - zlib1g-dev
+- ffmpeg
 
 To install these in a Debian-like system:
 
 ```
-sudo apt install -y cmake ninja-build clang clang-tidy libogg-dev libvorbis-dev libflac-dev libopus-dev libasound2-dev libglfw3-dev golang-go python3 xxd zlib1g-dev
+sudo apt install -y cmake ninja-build clang clang-tidy libogg-dev libvorbis-dev libflac-dev libopus-dev libasound2-dev libglfw3-dev golang-go python3 xxd zlib1g-dev ffmpeg
 ```
 
 Once they are installed, configure the project:

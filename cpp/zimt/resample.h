@@ -26,7 +26,7 @@
 namespace zimtohrli {
 
 template <typename O, typename I>
-std::vector<O> Convert(absl::Span<I> input) {
+std::vector<O> Convert(absl::Span<const I> input) {
   if constexpr (std::is_same<O, I>::value) {
     std::vector<O> result(input.size());
     memcpy(result.data(), input.data(), input.size() * sizeof(I));
@@ -40,7 +40,7 @@ std::vector<O> Convert(absl::Span<I> input) {
 }
 
 template <typename O, typename I>
-std::vector<O> Resample(absl::Span<I> samples, float in_sample_rate,
+std::vector<O> Resample(absl::Span<const I> samples, float in_sample_rate,
                         float out_sample_rate) {
   if (in_sample_rate == out_sample_rate) {
     return Convert<O>(samples);
@@ -57,8 +57,8 @@ std::vector<O> Resample(absl::Span<I> samples, float in_sample_rate,
       .src_ratio = out_sample_rate / in_sample_rate,
   };
   CHECK_EQ(src_simple(&resample_data, SRC_SINC_BEST_QUALITY, 1), 0);
-  return Convert<O>(
-      absl::Span<float>(result_as_floats.data(), result_as_floats.size()));
+  return Convert<O>(absl::Span<const float>(result_as_floats.data(),
+                                            result_as_floats.size()));
 }
 
 }  // namespace zimtohrli

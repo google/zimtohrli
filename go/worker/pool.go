@@ -18,6 +18,7 @@ package worker
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"sync"
 	"sync/atomic"
 )
@@ -29,6 +30,7 @@ type ChangeHandler func(submitted, completed, errors int)
 type Pool[T any] struct {
 	Workers  int
 	OnChange ChangeHandler
+	FailFast bool
 
 	startOnce sync.Once
 
@@ -59,6 +61,9 @@ func (p *Pool[T]) init() {
 							p.resultsWaitGroup.Done()
 						}()
 					}); err != nil {
+						if p.FailFast {
+							log.Fatal(err)
+						}
 						p.errorsWaitGroup.Add(1)
 						go func() {
 							p.errors <- err
