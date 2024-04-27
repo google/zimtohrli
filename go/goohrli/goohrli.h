@@ -27,14 +27,14 @@
 extern "C" {
 #endif
 
-// void* representation of zimtohrli::Zimtohrli.
-typedef void* Zimtohrli;
-
 // Returns the default frequency resolution.
 float DefaultFrequencyResolution();
 
 // Returns the default perceptual sample rate.
 float DefaultPerceptualSampleRate();
+
+// void* representation of zimtohrli::Zimtohrli.
+typedef void* Zimtohrli;
 
 // Returns a zimtohrli::Zimtohrli for the given parameters.
 Zimtohrli CreateZimtohrli(float sample_rate, float frequency_resolution);

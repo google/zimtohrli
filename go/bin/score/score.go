@@ -25,6 +25,7 @@ import (
 
 	"github.com/google/zimtohrli/go/data"
 	"github.com/google/zimtohrli/go/goohrli"
+	"github.com/google/zimtohrli/go/pipe"
 	"github.com/google/zimtohrli/go/progress"
 	"github.com/google/zimtohrli/go/worker"
 )
@@ -36,13 +37,15 @@ const (
 func main() {
 	details := flag.String("details", "", "Path to database directory with a study to show the details from.")
 	calculate := flag.String("calculate", "", "Path to a database directory with a study to calculate metrics for.")
-	calculateZimtohrli := flag.Bool("calculate_zimtohrli", true, "Whether to calculate Zimtohrli scores.")
+	calculateZimtohrli := flag.Bool("calculate_zimtohrli", false, "Whether to calculate Zimtohrli scores.")
 	calculateViSQOL := flag.Bool("calculate_visqol", false, "Whether to calculate ViSQOL scores.")
+	calculatePipeMetric := flag.String("calculate_pipe", "", "Path to a binary that serves metrics via stdin/stdout pipe. Install some of the via 'install_python_metrics.py'.")
 	zimtohrliFrequencyResolution := flag.Float64("zimtohrli_frequency_resolution", goohrli.DefaultFrequencyResolution(), "Smallest bandwidth of the Zimtohrli filterbank.")
 	zimtohrliPerceptualSampleRate := flag.Float64("zimtohrli_perceptual_sample_rate", goohrli.DefaultPerceptualSampleRate(), "Sample rate of the Zimtohrli spectrograms.")
 	correlate := flag.String("correlate", "", "Path to a database directory with a study to correlate scores for.")
 	accuracy := flag.String("accuracy", "", "Path to a database directory with a study to provide JND accuracy for.")
 	workers := flag.Int("workers", runtime.NumCPU(), "Number of concurrent workers for tasks.")
+	failFast := flag.Bool("fail_fast", false, "Whether to panic immediately on any error.")
 	flag.Parse()
 
 	if *details == "" && *calculate == "" && *correlate == "" && *accuracy == "" {
@@ -80,6 +83,7 @@ func main() {
 		pool := &worker.Pool[any]{
 			Workers:  *workers,
 			OnChange: bar.Update,
+			FailFast: *failFast,
 		}
 		measurements := map[data.ScoreType]data.Measurement{}
 		if *calculateZimtohrli {
@@ -90,6 +94,18 @@ func main() {
 		if *calculateViSQOL {
 			v := goohrli.NewViSQOL()
 			measurements[data.ViSQOL] = v.AudioMOS
+		}
+		if *calculatePipeMetric != "" {
+			pool, err := pipe.NewMeterPool(*calculatePipeMetric)
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer pool.Close()
+			measurements[pool.ScoreType] = pool.Measure
+		}
+		if len(measurements) == 0 {
+			log.Print("No metrics to calculate, provide one of the -calculate_XXX flags!")
+			os.Exit(2)
 		}
 		if err := study.Calculate(measurements, pool); err != nil {
 			log.Fatal(err)

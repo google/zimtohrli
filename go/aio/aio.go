@@ -17,6 +17,7 @@ package aio
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"os"
 	"os/exec"
@@ -26,9 +27,17 @@ import (
 	"github.com/google/zimtohrli/go/audio"
 )
 
+// Fetch calls Recode if path ends with .wav, otherwise Copy.
+func Fetch(path string, dir string) (string, error) {
+	if strings.ToLower(filepath.Ext(path)) == ".wav" {
+		return Recode(path, dir)
+	}
+	return Copy(path, dir)
+}
+
 // Load loads audio from an ffmpeg-decodable file from a path (which may be a URL).
 func Load(path string) (*audio.Audio, error) {
-	cmd := exec.Command("ffmpeg", "-i", path, "-vn", "-c:a", "pcm_s16le", "-f", "wav", "-ar", "48000", "-")
+	cmd := exec.Command("ffmpeg", "-i", path, "-vn", "-acodec", "pcm_s16le", "-f", "wav", "-ar", "48000", "-")
 	stdout, stderr := &bytes.Buffer{}, &bytes.Buffer{}
 	cmd.Stdout, cmd.Stderr = stdout, stderr
 	if err := cmd.Run(); err != nil {
@@ -41,22 +50,16 @@ func Load(path string) (*audio.Audio, error) {
 	return w.Audio()
 }
 
-// Fetch calls Recode if path ends with .wav, otherwise Copy.
-func Fetch(path string, dir string) (string, error) {
-	if strings.ToLower(filepath.Ext(path)) == ".wav" {
-		return Recode(path, dir)
-	}
-	return Copy(path, dir)
-}
-
 // Copy copies any file from a path (which may be a URL) and returns a path inside dir containing the file.
 func Copy(path string, dir string) (string, error) {
-	outFile, err := os.CreateTemp(dir, fmt.Sprintf("zimtohrli.go.io.Copy.*%s", filepath.Ext(path)))
+	// This function uses ffmpeg since it both verifies that the file is a proper media file, and handles
+	// URLs and paths exactly like the other functions in this package.
+	outFile, err := os.CreateTemp(dir, fmt.Sprintf("zimtohrli.go.aio.Copy.*%s", filepath.Ext(path)))
 	if err != nil {
 		return "", err
 	}
 	outFile.Close()
-	cmd := exec.Command("ffmpeg", "-y", "-i", path, "-vn", "-c:a", "copy", outFile.Name())
+	cmd := exec.Command("ffmpeg", "-y", "-i", path, "-vn", "-acodec", "copy", outFile.Name())
 	ffmpegResult, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("trying to execute %v: %v\n%s", cmd, err, ffmpegResult)
@@ -66,15 +69,44 @@ func Copy(path string, dir string) (string, error) {
 
 // Recode copies an ffmpeg-decodable file from path (which may be a URL) and returns a path inside dir containing a FLAC encoded version of it.
 func Recode(path string, dir string) (string, error) {
-	flacFile, err := os.CreateTemp(dir, "zimtohrli.go.io.Recode.*.flac")
+	flacFile, err := os.CreateTemp(dir, "zimtohrli.go.aio.Recode.*.flac")
 	if err != nil {
 		return "", err
 	}
 	flacFile.Close()
-	cmd := exec.Command("ffmpeg", "-y", "-i", path, "-vn", "-c:a", "flac", "-f", "flac", flacFile.Name())
+	cmd := exec.Command("ffmpeg", "-y", "-i", path, "-vn", "-acodec", "flac", "-f", "flac", flacFile.Name())
 	ffmpegResult, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("trying to execute %v: %v\n%s", cmd, err, ffmpegResult)
 	}
 	return filepath.Rel(dir, flacFile.Name())
+}
+
+// Dump stores the audio as a WAV in a temporary directory and returns the path.
+func DumpWAV(audio *audio.Audio) (string, error) {
+	wavFile, err := os.CreateTemp(os.TempDir(), "zimtohrli.go.aio.DumpWAV.*.wav")
+	if err != nil {
+		return "", err
+	}
+	wavFile.Close()
+	return wavFile.Name(), Save(audio, wavFile.Name())
+}
+
+// Save stores the audio in the ffmpeg-encodable path.
+func Save(audio *audio.Audio, path string) error {
+	buf := &bytes.Buffer{}
+	for sampleIndex := range audio.Samples[0] {
+		for channelIndex := range audio.Samples {
+			if err := binary.Write(buf, binary.LittleEndian, audio.Samples[channelIndex][sampleIndex]); err != nil {
+				return err
+			}
+		}
+	}
+	cmd := exec.Command("ffmpeg", "-y", "-ac", fmt.Sprint(len(audio.Samples)), "-f", "f32le", "-ar", fmt.Sprint(int(audio.Rate)), "-i", "-", path)
+	cmd.Stdin = buf
+	ffmpegResult, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("trying to execute %v: %v\n%s", cmd, err, ffmpegResult)
+	}
+	return nil
 }
