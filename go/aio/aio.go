@@ -82,7 +82,7 @@ func Recode(path string, dir string) (string, error) {
 	return filepath.Rel(dir, flacFile.Name())
 }
 
-// Dump stores the audio as a WAV in a temporary directory and returns the path.
+// DumpWAV stores the audio as a WAV in a temporary directory and returns the path.
 func DumpWAV(audio *audio.Audio) (string, error) {
 	wavFile, err := os.CreateTemp(os.TempDir(), "zimtohrli.go.aio.DumpWAV.*.wav")
 	if err != nil {
