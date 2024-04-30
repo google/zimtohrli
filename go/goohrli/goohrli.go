@@ -202,11 +202,10 @@ func NewViSQOL() *ViSQOL {
 // MOS returns the ViSQOL mean opinion score of the degraded samples comapred to the reference samples.
 func (v *ViSQOL) MOS(sampleRate float64, reference []float32, degraded []float32) (float64, error) {
 	result := C.MOS(v.visqol, C.float(sampleRate), (*C.float)(&reference[0]), C.int(len(reference)), (*C.float)(&degraded[0]), C.int(len(degraded)))
-	if result.Status == 0 {
-		return float64(result.MOS), nil
-	} else {
+	if result.Status != 0 {
 		return 0, fmt.Errorf("calling ViSQOL returned status %v", result.Status)
 	}
+	return float64(result.MOS), nil
 }
 
 // AudioMOS returns the ViSQOL mean opinion score of the degraded audio compared to the reference audio.
