@@ -21,7 +21,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"runtime"
+	"sort"
 
 	"github.com/google/zimtohrli/go/data"
 	"github.com/google/zimtohrli/go/goohrli"
@@ -37,20 +39,40 @@ const (
 func main() {
 	details := flag.String("details", "", "Path to database directory with a study to show the details from.")
 	calculate := flag.String("calculate", "", "Path to a database directory with a study to calculate metrics for.")
+	force := flag.Bool("force", false, "Whether to recalculate scores that already exist.")
 	calculateZimtohrli := flag.Bool("calculate_zimtohrli", false, "Whether to calculate Zimtohrli scores.")
 	calculateViSQOL := flag.Bool("calculate_visqol", false, "Whether to calculate ViSQOL scores.")
 	calculatePipeMetric := flag.String("calculate_pipe", "", "Path to a binary that serves metrics via stdin/stdout pipe. Install some of the via 'install_python_metrics.py'.")
 	zimtohrliFrequencyResolution := flag.Float64("zimtohrli_frequency_resolution", goohrli.DefaultFrequencyResolution(), "Smallest bandwidth of the Zimtohrli filterbank.")
 	zimtohrliPerceptualSampleRate := flag.Float64("zimtohrli_perceptual_sample_rate", goohrli.DefaultPerceptualSampleRate(), "Sample rate of the Zimtohrli spectrograms.")
 	correlate := flag.String("correlate", "", "Path to a database directory with a study to correlate scores for.")
+	leaderboard := flag.String("leaderboard", "", "Glob to directories with databases to compute leaderboard for.")
 	accuracy := flag.String("accuracy", "", "Path to a database directory with a study to provide JND accuracy for.")
 	workers := flag.Int("workers", runtime.NumCPU(), "Number of concurrent workers for tasks.")
 	failFast := flag.Bool("fail_fast", false, "Whether to panic immediately on any error.")
 	flag.Parse()
 
-	if *details == "" && *calculate == "" && *correlate == "" && *accuracy == "" {
+	if *details == "" && *calculate == "" && *correlate == "" && *accuracy == "" && *leaderboard == "" {
 		flag.Usage()
 		os.Exit(1)
+	}
+
+	if *leaderboard != "" {
+		databases, err := filepath.Glob(*leaderboard)
+		if err != nil {
+			log.Fatal(err)
+		}
+		studies := make(data.Studies, len(databases))
+		for index, path := range databases {
+			if studies[index], err = data.OpenStudy(path); err != nil {
+				log.Fatal(err)
+			}
+		}
+		board, err := studies.Leaderboard()
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(board)
 	}
 
 	if *details != "" {
@@ -107,7 +129,13 @@ func main() {
 			log.Print("No metrics to calculate, provide one of the -calculate_XXX flags!")
 			os.Exit(2)
 		}
-		if err := study.Calculate(measurements, pool); err != nil {
+		sortedTypes := sort.StringSlice{}
+		for scoreType := range measurements {
+			sortedTypes = append(sortedTypes, string(scoreType))
+		}
+		sort.Sort(sortedTypes)
+		log.Printf("*** Calculating %+v (force=%v)", sortedTypes, *force)
+		if err := study.Calculate(measurements, pool, *force); err != nil {
 			log.Fatal(err)
 		}
 		bar.Finish()

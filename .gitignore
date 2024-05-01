@@ -4,3 +4,7 @@ asan_build
 .vscode
 python/__pycache__/**
 **/METADATA
+# Some files produced by one of the external metrics.
+pesq_results.txt
+analized
+Testing/*

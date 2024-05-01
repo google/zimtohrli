@@ -26,7 +26,7 @@ type Row []string
 type Table []Row
 
 // String returns a string representation of the table with colSpacing blanks between columns.
-func (t Table) String(colSpacing int) string {
+func (t Table) String() string {
 	maxCells := 0
 	for _, row := range t {
 		if len(row) > maxCells {
@@ -43,11 +43,19 @@ func (t Table) String(colSpacing int) string {
 	}
 	out := &bytes.Buffer{}
 	for _, row := range t {
-		for cellIndex, cell := range row {
-			fmt.Fprint(out, cell)
-			for i := len(cell); i < maxCellWidths[cellIndex]+colSpacing; i++ {
-				fmt.Fprint(out, " ")
+		fmt.Fprint(out, "|")
+		for cellIndex, maxCellWidth := range maxCellWidths {
+			if row == nil {
+				for i := 0; i < maxCellWidth+1; i++ {
+					fmt.Fprint(out, "-")
+				}
+			} else {
+				fmt.Fprint(out, row[cellIndex])
+				for i := len(row[cellIndex]); i < maxCellWidth+1; i++ {
+					fmt.Fprint(out, " ")
+				}
 			}
+			fmt.Fprint(out, "|")
 		}
 		fmt.Fprint(out, "\n")
 	}

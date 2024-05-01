@@ -26,10 +26,14 @@ import (
 // ChangeHandler is updated when the worker pool increases the number of submitted, completed, or error jobs.
 type ChangeHandler func(submitted, completed, errors int)
 
+// ErrorHandler is updated when the worker pool encounters an error. The encountered error will be replaced with the return value of the handler.
+type ErrorHandler func(error) error
+
 // Pool is a pool of workers.
 type Pool[T any] struct {
 	Workers  int
 	OnChange ChangeHandler
+	OnError  ErrorHandler
 	FailFast bool
 
 	startOnce sync.Once
@@ -61,16 +65,18 @@ func (p *Pool[T]) init() {
 							p.resultsWaitGroup.Done()
 						}()
 					}); err != nil {
-						if p.FailFast {
-							log.Fatal(err)
+						if err = p.err(err); err != nil {
+							if p.FailFast {
+								log.Fatal(err)
+							}
+							p.errorsWaitGroup.Add(1)
+							go func() {
+								p.errors <- err
+								p.errorsWaitGroup.Done()
+							}()
+							atomic.AddUint32(&p.errorJobs, 1)
+							p.change()
 						}
-						p.errorsWaitGroup.Add(1)
-						go func() {
-							p.errors <- err
-							p.errorsWaitGroup.Done()
-						}()
-						atomic.AddUint32(&p.errorJobs, 1)
-						p.change()
 					}
 					p.jobsWaitGroup.Done()
 					atomic.AddUint32(&p.completedJobs, 1)
@@ -79,6 +85,13 @@ func (p *Pool[T]) init() {
 			}()
 		}
 	})
+}
+
+func (p *Pool[T]) err(err error) error {
+	if p.OnError != nil {
+		return p.OnError(err)
+	}
+	return err
 }
 
 func (p *Pool[T]) change() {

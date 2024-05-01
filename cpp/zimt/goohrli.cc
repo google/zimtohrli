@@ -18,6 +18,7 @@
 #include <cstddef>
 #include <utility>
 
+#include "absl/status/statusor.h"
 #include "absl/types/span.h"
 #include "hwy/aligned_allocator.h"
 #include "hwy/base.h"
