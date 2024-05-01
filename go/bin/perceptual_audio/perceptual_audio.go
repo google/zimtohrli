@@ -13,6 +13,9 @@
 // limitations under the License.
 
 // perceptual_audio creates a study from https://github.com/pranaymanocha/PerceptualAudio/blob/master/dataset/README.md.
+//
+// Download and unpack the dataset ZIP, and provide the unpacked directory
+// as -source when running this binary.
 package main
 
 import (
@@ -56,7 +59,7 @@ func populate(source string, dest string, workers int) error {
 
 	lineReader := bufio.NewReader(res.Body)
 	err = nil
-	bar := progress.New("Recoding")
+	bar := progress.New("Transcoding")
 	pool := worker.Pool[*data.Reference]{
 		Workers:  workers,
 		OnChange: bar.Update,
@@ -95,10 +98,10 @@ func populate(source string, dest string, workers int) error {
 		})
 		lineIndex++
 	}
-	bar.Finish()
 	if err := pool.Error(); err != nil {
 		log.Println(err.Error())
 	}
+	bar.Finish()
 	refs := []*data.Reference{}
 	for ref := range pool.Results() {
 		refs = append(refs, ref)
@@ -112,7 +115,7 @@ func populate(source string, dest string, workers int) error {
 func main() {
 	source := flag.String("source", "", "Directory containing the unpacked http://percepaudio.cs.princeton.edu/icassp2020_perceptual/audio_perception.zip.")
 	destination := flag.String("dest", "", "Destination directory.")
-	workers := flag.Int("workers", runtime.NumCPU(), "Number of workers downloading sounds.")
+	workers := flag.Int("workers", runtime.NumCPU(), "Number of workers transcoding sounds.")
 	flag.Parse()
 	if *source == "" || *destination == "" {
 		flag.Usage()
