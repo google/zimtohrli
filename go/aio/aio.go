@@ -37,7 +37,12 @@ func Fetch(path string, dir string) (string, error) {
 
 // Load loads audio from an ffmpeg-decodable file from a path (which may be a URL).
 func Load(path string) (*audio.Audio, error) {
-	cmd := exec.Command("ffmpeg", "-i", path, "-vn", "-acodec", "pcm_s16le", "-f", "wav", "-ar", "48000", "-")
+	return LoadAtRate(path, 48000)
+}
+
+// Load loads audio from an ffmpeg-decodable file from a path (which may be a URL) and returns it at the given sample rate.
+func LoadAtRate(path string, rate int) (*audio.Audio, error) {
+	cmd := exec.Command("ffmpeg", "-i", path, "-vn", "-acodec", "pcm_s16le", "-f", "wav", "-ar", fmt.Sprint(rate), "-")
 	stdout, stderr := &bytes.Buffer{}, &bytes.Buffer{}
 	cmd.Stdout, cmd.Stderr = stdout, stderr
 	if err := cmd.Run(); err != nil {
