@@ -19,11 +19,13 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"runtime"
 	"sort"
+	"time"
 
 	"github.com/google/zimtohrli/go/data"
 	"github.com/google/zimtohrli/go/goohrli"
@@ -47,14 +49,66 @@ func main() {
 	zimtohrliPerceptualSampleRate := flag.Float64("zimtohrli_perceptual_sample_rate", goohrli.DefaultPerceptualSampleRate(), "Sample rate of the Zimtohrli spectrograms.")
 	correlate := flag.String("correlate", "", "Path to a database directory with a study to correlate scores for.")
 	leaderboard := flag.String("leaderboard", "", "Glob to directories with databases to compute leaderboard for.")
+	report := flag.String("report", "", "Glob to directories with databases to generate a report for.")
 	accuracy := flag.String("accuracy", "", "Path to a database directory with a study to provide JND accuracy for.")
 	workers := flag.Int("workers", runtime.NumCPU(), "Number of concurrent workers for tasks.")
 	failFast := flag.Bool("fail_fast", false, "Whether to panic immediately on any error.")
 	flag.Parse()
 
-	if *details == "" && *calculate == "" && *correlate == "" && *accuracy == "" && *leaderboard == "" {
+	if *details == "" && *calculate == "" && *correlate == "" && *accuracy == "" && *leaderboard == "" && *report == "" {
 		flag.Usage()
 		os.Exit(1)
+	}
+
+	if *report != "" {
+		databases, err := filepath.Glob(*report)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf(`# Zimtohrli correlation report
+
+Created at %s
+
+`, time.Now().Format(time.DateOnly))
+		studies := make(data.Studies, len(databases))
+		for index, path := range databases {
+			fmt.Printf("## %s\n\n", filepath.Base(path))
+			if studies[index], err = data.OpenStudy(path); err != nil {
+				log.Fatal(err)
+			}
+			isJND := false
+			if err := studies[index].ViewEachReference(func(ref *data.Reference) error {
+				for _, dist := range ref.Distortions {
+					if _, found := dist.Scores[data.JND]; found {
+						isJND = true
+					}
+				}
+				return io.EOF
+			}); err != nil {
+				log.Fatal(err)
+			}
+			if isJND {
+				accuracy, err := studies[index].Accuracy()
+				if err != nil {
+					log.Fatal(err)
+				}
+				fmt.Println(accuracy)
+			} else {
+				corrTable, err := studies[index].Correlate()
+				if err != nil {
+					log.Fatal(err)
+				}
+				fmt.Println(corrTable)
+			}
+		}
+
+		fmt.Println("## Global leaderboard across all studies\n")
+
+		board, err := studies.Leaderboard()
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(board)
 	}
 
 	if *leaderboard != "" {
