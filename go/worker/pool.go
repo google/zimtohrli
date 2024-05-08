@@ -129,7 +129,7 @@ func (e Errors) Error() string {
 // any of the jobs produced an error.
 //
 // Must be called after all jobs are added.
-func (p *Pool[T]) Error() Errors {
+func (p *Pool[T]) Error() error {
 	p.init()
 
 	p.jobsWaitGroup.Wait()

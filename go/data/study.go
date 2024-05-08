@@ -16,6 +16,7 @@
 package data
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -23,8 +24,11 @@ import (
 	"log"
 	"math"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
+	"strings"
+	"time"
 
 	"github.com/dgryski/go-onlinestats"
 	"github.com/google/zimtohrli/go/aio"
@@ -85,280 +89,68 @@ type Study struct {
 	db  *sql.DB
 }
 
-// Studies is a slice of studies.
-type Studies []*Study
-
-// MSEScore is MSE for a score type across a set of studies.
-type MSEScore struct {
-	ScoreType ScoreType
-	MSE       float64
-	MinScore  float64
-	MaxScore  float64
-	MeanScore float64
+// ReferenceBundle is a plain data type containing a bunch of references, typicall the content of a study.
+type ReferenceBundle struct {
+	Dir        string
+	References []*Reference
+	ScoreTypes map[ScoreType]int
 }
 
-// MSEScores contains the MSE for multiple score types.
-type MSEScores []MSEScore
+// ReferenceBundles is a slice of ReferenceBundle.
+type ReferenceBundles []*ReferenceBundle
 
-func (m MSEScores) String() string {
-	table := Table{Row{"Score type", "MSE", "Min score", "Max score", "Mean score"}, nil}
-	for _, score := range m {
-		table = append(table, Row{string(score.ScoreType), fmt.Sprintf("%.2f", score.MSE), fmt.Sprintf("%.2f", score.MinScore), fmt.Sprintf("%.2f", score.MaxScore), fmt.Sprintf("%.2f", score.MeanScore)})
+// IsJND returns if this bundle is one with just-noticeable-difference evaluations, and only those.
+func (r *ReferenceBundle) IsJND() bool {
+	_, res := r.ScoreTypes[JND]
+	return res
+}
+
+// SortedTypes returns the score types of a bundle, alphabetically ordered.
+func (r *ReferenceBundle) SortedTypes() ScoreTypes {
+	sorted := ScoreTypes{}
+	for scoreType, _ := range r.ScoreTypes {
+		sorted = append(sorted, scoreType)
 	}
-	return fmt.Sprintf("### Mean square error (1 - Spearman correlation, or 1 - accuracy) per score type\n\n%s", table.String())
+	sort.Sort(sorted)
+	return sorted
 }
 
-func (m MSEScores) Len() int {
-	return len(m)
-}
-
-func (m MSEScores) Less(i, j int) bool {
-	return m[i].MSE < m[j].MSE
-}
-
-func (m MSEScores) Swap(i, j int) {
-	m[i], m[j] = m[j], m[i]
-}
-
-// Leaderboard returns the sorted mean squared errors for each score type that is represented in all studies.
-func (s Studies) Leaderboard() (MSEScores, error) {
-	representedScoreTypes := map[ScoreType]bool{}
-	sumOfSquares := map[ScoreType]float64{}
-	sums := map[ScoreType]float64{}
-	mins := map[ScoreType]float64{}
-	maxs := map[ScoreType]float64{}
-	jndStudies := make([]bool, len(s))
-	for studyIndex, study := range s {
-		studyScoreTypes := map[ScoreType]bool{}
-		if err := study.ViewEachReference(func(ref *Reference) error {
-			for _, dist := range ref.Distortions {
-				for scoreType := range dist.Scores {
-					if scoreType != JND && scoreType != MOS {
-						studyScoreTypes[scoreType] = true
-					}
-				}
-			}
-			return nil
-		}); err != nil {
-			return nil, err
-		}
-		if studyIndex == 0 {
-			representedScoreTypes = studyScoreTypes
-		} else {
-			for previouslyFoundScoreType := range representedScoreTypes {
-				if _, found := studyScoreTypes[previouslyFoundScoreType]; !found {
-					delete(representedScoreTypes, previouslyFoundScoreType)
-				}
-			}
-		}
+// ToBundle returns a reference bundle for this study.
+func (s *Study) ToBundle() (*ReferenceBundle, error) {
+	result := &ReferenceBundle{
+		Dir:        s.dir,
+		ScoreTypes: map[ScoreType]int{},
 	}
-	addScore := func(scoreType ScoreType, score float64) {
-		sums[scoreType] += score
-		if currentMin, found := mins[scoreType]; !found || (found && score < currentMin) {
-			mins[scoreType] = score
-		}
-		if currentMax, found := maxs[scoreType]; !found || (found && score > currentMax) {
-			maxs[scoreType] = score
-		}
-		loss := 1.0 - score
-		sumOfSquares[scoreType] += loss * loss
-	}
-	for studyIndex, study := range s {
-		if jndStudies[studyIndex] {
-			accuracies, err := study.Accuracy()
-			if err != nil {
-				return nil, err
-			}
-			for _, accuracy := range accuracies {
-				if _, found := representedScoreTypes[accuracy.ScoreType]; found {
-					addScore(accuracy.ScoreType, accuracy.Accuracy)
-				}
-			}
-		} else {
-			correlations, err := study.Correlate()
-			if err != nil {
-				return nil, err
-			}
-			for _, row := range correlations {
-				if row[0].ScoreTypeA == MOS {
-					for _, correlation := range row {
-						if _, found := representedScoreTypes[correlation.ScoreTypeB]; found {
-							addScore(correlation.ScoreTypeB, correlation.Score)
-						}
-					}
-				}
-			}
-		}
-	}
-	result := MSEScores{}
-	numStudiesRecpripcal := 1.0 / float64(len(s))
-	for scoreType, squareSum := range sumOfSquares {
-		result = append(result, MSEScore{
-			ScoreType: scoreType,
-			MSE:       squareSum * numStudiesRecpripcal,
-			MeanScore: sums[scoreType] * numStudiesRecpripcal,
-			MinScore:  mins[scoreType],
-			MaxScore:  maxs[scoreType],
-		})
-	}
-	sort.Sort(result)
-	return result, nil
-}
-
-// OpenStudy opens a study from a database directory.
-// If the study doesn't exist, it will be created.
-func OpenStudy(dir string) (*Study, error) {
-	err := os.MkdirAll(dir, 0755)
-	if err != nil && !os.IsExist(err) {
-		return nil, fmt.Errorf("trying to create %q: %v", dir, err)
-	}
-	dbPath := filepath.Join(dir, "db.sqlite3")
-	_, err = os.Stat(dbPath)
-	if os.IsNotExist(err) {
-		if _, err = os.Create(dbPath); err != nil {
-			return nil, err
-		}
-	} else if err != nil {
-		return nil, err
-	}
-	db, err := sql.Open("sqlite3", dbPath)
-	if err != nil {
-		return nil, fmt.Errorf("trying to open %q: %v", dbPath, err)
-	}
-	if _, err := db.Exec("CREATE TABLE IF NOT EXISTS OBJ (ID BLOB PRIMARY KEY, DATA BLOB)"); err != nil {
-		return nil, fmt.Errorf("trying to ensure object table: %v", err)
-	}
-	return &Study{
-		dir: dir,
-		db:  db,
-	}, nil
-}
-
-// Close closes the study.
-func (s *Study) Close() error {
-	return s.db.Close()
-}
-
-// AccuracyScore contains the accuracy for a metric when used to predict audible differences, and the threshold when that accuracy was achieved.
-type AccuracyScore struct {
-	ScoreType ScoreType
-	Threshold float64
-	Accuracy  float64
-}
-
-// AccuracyScores contains the accuracy scores for multiple score types.
-type AccuracyScores []AccuracyScore
-
-func (a AccuracyScores) String() string {
-	table := Table{Row{"Score type", "Accuracy", "Threshold"}}
-	table = append(table, nil)
-	for _, score := range a {
-		table = append(table, Row{string(score.ScoreType), fmt.Sprintf("%.2f", score.Accuracy), fmt.Sprintf("%.2v", score.Threshold)})
-	}
-	return fmt.Sprintf("### Maximal audibility classification accuracy and threshold per score type\n\n%s", table.String())
-}
-
-func (a AccuracyScores) Len() int {
-	return len(a)
-}
-
-func (a AccuracyScores) Less(i, j int) bool {
-	return a[i].Accuracy > a[j].Accuracy
-}
-
-func (a AccuracyScores) Swap(i, j int) {
-	a[i], a[j] = a[j], a[i]
-}
-
-func abs(i int) int {
-	if i < 0 {
-		return -1
-	}
-	return i
-}
-
-func ternarySearch(f func(int) float64, left, right int) int {
-	for abs(right-left) > 2 {
-		third := (right - left) / 3
-		leftThird := left + third
-		rightThird := right - third
-		if f(leftThird) < f(rightThird) {
-			left = leftThird
-		} else {
-			right = rightThird
-		}
-	}
-	return (left + right) / 2
-}
-
-// Accuracy returns the accuracy of each score type when used to predict audible differences.
-func (s *Study) Accuracy() (AccuracyScores, error) {
-	audibleMap := map[ScoreType]sort.Float64Slice{}
-	inaudibleMap := map[ScoreType]sort.Float64Slice{}
-	allMapMap := map[ScoreType]map[float64]struct{}{}
 	if err := s.ViewEachReference(func(ref *Reference) error {
 		for _, dist := range ref.Distortions {
-			jnd, found := dist.Scores[JND]
-			if !found {
-				return fmt.Errorf("%+v doesn't have a JND score", ref)
-			}
-			for scoreType, score := range dist.Scores {
-				if scoreType == JND {
-					continue
-				}
-				scoreAll, found := allMapMap[scoreType]
-				if !found {
-					scoreAll = map[float64]struct{}{}
-					allMapMap[scoreType] = scoreAll
-				}
-				scoreAll[score] = struct{}{}
-				switch jnd {
-				case 0:
-					inaudibleMap[scoreType] = append(inaudibleMap[scoreType], score)
-				case 1:
-					audibleMap[scoreType] = append(audibleMap[scoreType], score)
-				default:
-					return fmt.Errorf("%+v JND isn't 0 or 1", ref)
-				}
+			for scoreType := range dist.Scores {
+				result.ScoreTypes[scoreType] += 1
 			}
 		}
+		result.References = append(result.References, ref)
 		return nil
 	}); err != nil {
 		return nil, err
 	}
-	result := AccuracyScores{}
-	for scoreType := range allMapMap {
-		audible := audibleMap[scoreType]
-		inaudible := inaudibleMap[scoreType]
-		sort.Sort(audible)
-		sort.Sort(inaudible)
-		all := sort.Float64Slice{}
-		for score := range allMapMap[scoreType] {
-			all = append(all, score)
+	max := 0.0
+	var maxType *ScoreType
+	min := 0.0
+	var minType *ScoreType
+	for loopScoreType, count := range result.ScoreTypes {
+		scoreType := loopScoreType
+		fCount := float64(count)
+		if maxType == nil || fCount > max {
+			max = fCount
+			maxType = &scoreType
 		}
-		sort.Sort(all)
-		accuracy := func(index int) float64 {
-			threshold := all[index]
-			audibleBelowThreshold := sort.SearchFloat64s(audible, threshold)
-			inaudibleBelowThreshold := sort.SearchFloat64s(inaudible, threshold)
-			correctAudible, correctInaudible := 0, 0
-			if scoreType.Better() > 0 {
-				correctAudible = audibleBelowThreshold
-				correctInaudible = len(inaudible) - inaudibleBelowThreshold
-			} else {
-				correctAudible = len(audible) - audibleBelowThreshold
-				correctInaudible = inaudibleBelowThreshold
-			}
-			return float64(correctAudible+correctInaudible) / float64(len(audible)+len(inaudible))
+		if minType == nil || fCount < min {
+			min = fCount
+			maxType = &scoreType
 		}
-		bestAccuracyThresholdIndex := ternarySearch(accuracy, 0, len(all)-1)
-		result = append(result, AccuracyScore{
-			ScoreType: scoreType,
-			Threshold: all[bestAccuracyThresholdIndex],
-			Accuracy:  accuracy(bestAccuracyThresholdIndex),
-		})
 	}
-	sort.Sort(result)
+	if (max - min) > max*0.01 {
+		return nil, fmt.Errorf("%q has %v scores and %q has %v scores in %q, more than 5%% missing scores", *minType, min, *maxType, max, s.dir)
+	}
 	return result, nil
 }
 
@@ -414,50 +206,40 @@ func (c CorrelationTable) String() string {
 	return fmt.Sprintf("### Spearman correlation table for all score types\n\n%s\n### Score type MOS Spearman correlation in order\n\n%s", tableResult.String(), listResult.String())
 }
 
-// Correlate returns a table of all scores in the study Spearman correlated to each other.
-func (s *Study) Correlate() (CorrelationTable, error) {
-	representedTypes := map[ScoreType]bool{}
-	if err := s.ViewEachReference(func(ref *Reference) error {
+// Correlation returns the Spearman correlation between score type A and B.
+func (r *ReferenceBundle) Correlation(typeA, typeB ScoreType) (float64, error) {
+	scoresA := []float64{}
+	scoresB := []float64{}
+	for _, ref := range r.References {
 		for _, dist := range ref.Distortions {
-			for scoreType := range dist.Scores {
-				representedTypes[scoreType] = true
-			}
-		}
-		return nil
-	}); err != nil {
-		return nil, err
-	}
-	scores := map[ScoreType][]float64{}
-	if err := s.ViewEachReference(func(ref *Reference) error {
-		for _, dist := range ref.Distortions {
-			for scoreType := range representedTypes {
-				scores[scoreType] = append(scores[scoreType], dist.Scores[scoreType])
-			}
-		}
-		return nil
-	}); err != nil {
-		return nil, err
-	}
-	sortedScoreTypes := ScoreTypes{}
-	for scoreType := range scores {
-		// Can't correlate JND.
-		if scoreType != JND {
-			sortedScoreTypes = append(sortedScoreTypes, scoreType)
+			scoresA = append(scoresA, dist.Scores[typeA])
+			scoresB = append(scoresB, dist.Scores[typeB])
 		}
 	}
-	sort.Sort(sortedScoreTypes)
+	if len(scoresA) != len(scoresB) {
+		return 0, fmt.Errorf("not the same number of %q and %q: %v vs %v", typeA, typeB, len(scoresA), len(scoresB))
+	}
+	res, _ := onlinestats.Spearman(scoresA, scoresB)
+	return math.Abs(res), nil
+}
+
+// Correlate returns a table of all scores in the bundle Spearman correlated to each other.
+func (r *ReferenceBundle) Correlate() (CorrelationTable, error) {
+	if r.IsJND() {
+		return nil, fmt.Errorf("cannot correlate JND references")
+	}
 	result := CorrelationTable{}
-	for _, scoreTypeA := range sortedScoreTypes {
+	for _, typeA := range r.SortedTypes() {
 		row := []CorrelationScore{}
-		for _, scoreTypeB := range sortedScoreTypes {
-			if len(scores[scoreTypeA]) != len(scores[scoreTypeB]) {
-				return nil, fmt.Errorf("not the same number of %q and %q", scoreTypeA, scoreTypeB)
+		for _, typeB := range r.SortedTypes() {
+			corr, err := r.Correlation(typeA, typeB)
+			if err != nil {
+				return nil, err
 			}
-			spearman, _ := onlinestats.Spearman(scores[scoreTypeA], scores[scoreTypeB])
 			row = append(row, CorrelationScore{
-				ScoreTypeA: scoreTypeA,
-				ScoreTypeB: scoreTypeB,
-				Score:      math.Abs(spearman),
+				ScoreTypeA: typeA,
+				ScoreTypeB: typeB,
+				Score:      corr,
 			})
 		}
 		result = append(result, row)
@@ -465,19 +247,376 @@ func (s *Study) Correlate() (CorrelationTable, error) {
 	return result, nil
 }
 
+// AccuracyScore contains the accuracy for a metric when used to predict audible differences, and the threshold when that accuracy was achieved.
+type AccuracyScore struct {
+	ScoreType ScoreType
+	Threshold float64
+	Accuracy  float64
+}
+
+// AccuracyScores contains the accuracy scores for multiple score types.
+type AccuracyScores []AccuracyScore
+
+func (a AccuracyScores) String() string {
+	table := Table{Row{"Score type", "Accuracy", "Threshold"}}
+	table = append(table, nil)
+	for _, score := range a {
+		table = append(table, Row{string(score.ScoreType), fmt.Sprintf("%.2f", score.Accuracy), fmt.Sprintf("%.2v", score.Threshold)})
+	}
+	return fmt.Sprintf("### Maximal audibility classification accuracy and threshold per score type\n\n%s", table.String())
+}
+
+func (a AccuracyScores) Len() int {
+	return len(a)
+}
+
+func (a AccuracyScores) Less(i, j int) bool {
+	return a[i].Accuracy > a[j].Accuracy
+}
+
+func (a AccuracyScores) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
+}
+
+func abs(i int) int {
+	if i < 0 {
+		return -1
+	}
+	return i
+}
+
+func ternarySearch(f func(int) float64, left, right int) int {
+	for abs(right-left) > 2 {
+		third := (right - left) / 3
+		leftThird := left + third
+		rightThird := right - third
+		if f(leftThird) < f(rightThird) {
+			left = leftThird
+		} else {
+			right = rightThird
+		}
+	}
+	return (left + right) / 2
+}
+
+// Accuracy returns the accuracy of each score type when used to predict audible differences.
+func (r *ReferenceBundle) Accuracy() (AccuracyScores, error) {
+	if !r.IsJND() {
+		return nil, fmt.Errorf("cannot compute accuracy on non-JND references")
+	}
+	audibleMap := map[ScoreType]sort.Float64Slice{}
+	inaudibleMap := map[ScoreType]sort.Float64Slice{}
+	allMapMap := map[ScoreType]map[float64]struct{}{}
+	for _, ref := range r.References {
+		for _, dist := range ref.Distortions {
+			jnd, found := dist.Scores[JND]
+			if !found {
+				return nil, fmt.Errorf("%+v doesn't have a JND score", ref)
+			}
+			for scoreType, score := range dist.Scores {
+				if scoreType == JND {
+					continue
+				}
+				scoreAll, found := allMapMap[scoreType]
+				if !found {
+					scoreAll = map[float64]struct{}{}
+					allMapMap[scoreType] = scoreAll
+				}
+				scoreAll[score] = struct{}{}
+				switch jnd {
+				case 0:
+					inaudibleMap[scoreType] = append(inaudibleMap[scoreType], score)
+				case 1:
+					audibleMap[scoreType] = append(audibleMap[scoreType], score)
+				default:
+					return nil, fmt.Errorf("%+v JND isn't 0 or 1", ref)
+				}
+			}
+		}
+	}
+	result := AccuracyScores{}
+	for scoreType := range allMapMap {
+		audible := audibleMap[scoreType]
+		inaudible := inaudibleMap[scoreType]
+		sort.Sort(audible)
+		sort.Sort(inaudible)
+		all := sort.Float64Slice{}
+		for score := range allMapMap[scoreType] {
+			all = append(all, score)
+		}
+		sort.Sort(all)
+		accuracy := func(index int) float64 {
+			threshold := all[index]
+			audibleBelowThreshold := sort.SearchFloat64s(audible, threshold)
+			inaudibleBelowThreshold := sort.SearchFloat64s(inaudible, threshold)
+			correctAudible, correctInaudible := 0, 0
+			if scoreType.Better() > 0 {
+				correctAudible = audibleBelowThreshold
+				correctInaudible = len(inaudible) - inaudibleBelowThreshold
+			} else {
+				correctAudible = len(audible) - audibleBelowThreshold
+				correctInaudible = inaudibleBelowThreshold
+			}
+			return float64(correctAudible+correctInaudible) / float64(len(audible)+len(inaudible))
+		}
+		bestAccuracyThresholdIndex := ternarySearch(accuracy, 0, len(all)-1)
+		result = append(result, AccuracyScore{
+			ScoreType: scoreType,
+			Threshold: all[bestAccuracyThresholdIndex],
+			Accuracy:  accuracy(bestAccuracyThresholdIndex),
+		})
+	}
+	sort.Sort(result)
+	return result, nil
+}
+
+// Studies is a slice of studies.
+type Studies []*Study
+
+// ToBundles returns reference bundles with the content of the studies.
+func (s Studies) ToBundles() (ReferenceBundles, error) {
+	result := make(ReferenceBundles, len(s))
+	var err error
+	for index, study := range s {
+		if result[index], err = study.ToBundle(); err != nil {
+			return nil, err
+		}
+	}
+	return result, nil
+}
+
+func gitIdentity() (*string, error) {
+	if _, err := exec.Command("git", "rev-parse").CombinedOutput(); err != nil {
+		return nil, nil
+	}
+	repo, err := exec.Command("git", "config", "--get", "remote.origin.url").CombinedOutput()
+	if err != nil {
+		return nil, err
+	}
+	desc, err := exec.Command("git", "describe", "--tags").CombinedOutput()
+	if err != nil {
+		return nil, err
+	}
+	branch, err := exec.Command("git", "branch", "--show-current").CombinedOutput()
+	if err != nil {
+		return nil, err
+	}
+	result := fmt.Sprintf("Revision %s, branch %s, origin %s", strings.TrimSpace(string(desc)), strings.TrimSpace(string(branch)), strings.TrimSpace(string(repo)))
+	return &result, nil
+}
+
+// Report returns a Markdown report based on the bundles.
+func (b ReferenceBundles) Report() (string, error) {
+	res := &bytes.Buffer{}
+	fmt.Fprintf(res, `# Zimtohrli correlation report
+
+Created at %s
+	
+`, time.Now().Format(time.DateOnly))
+	id, err := gitIdentity()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if id != nil {
+		fmt.Fprintf(res, "Revision %s\n\n", *id)
+	}
+	for _, bundle := range b {
+		fmt.Fprintf(res, "## %s\n\n", filepath.Base(bundle.Dir))
+		if bundle.IsJND() {
+			accuracy, err := bundle.Accuracy()
+			if err != nil {
+				return "", err
+			}
+			fmt.Fprintln(res, accuracy)
+		} else {
+			corrTable, err := bundle.Correlate()
+			if err != nil {
+				return "", err
+			}
+			fmt.Fprintln(res, corrTable)
+		}
+	}
+
+	fmt.Fprintf(res, "## Global leaderboard across all studies\n\n")
+
+	board, err := b.Leaderboard()
+	if err != nil {
+		return "", err
+	}
+	fmt.Fprint(res, board)
+	return res.String(), nil
+}
+
+// MSEScore is MSE for a score type across a set of studies.
+type MSEScore struct {
+	ScoreType ScoreType
+	MSE       float64
+	MinScore  float64
+	MaxScore  float64
+	MeanScore float64
+}
+
+// MSEScores contains the MSE for multiple score types.
+type MSEScores []MSEScore
+
+func (m MSEScores) String() string {
+	table := Table{Row{"Score type", "MSE", "Min score", "Max score", "Mean score"}, nil}
+	for _, score := range m {
+		table = append(table, Row{string(score.ScoreType), fmt.Sprintf("%.2f", score.MSE), fmt.Sprintf("%.2f", score.MinScore), fmt.Sprintf("%.2f", score.MaxScore), fmt.Sprintf("%.2f", score.MeanScore)})
+	}
+	return fmt.Sprintf("### Mean square error (1 - Spearman correlation, or 1 - accuracy) per score type\n\n%s", table.String())
+}
+
+func (m MSEScores) Len() int {
+	return len(m)
+}
+
+func (m MSEScores) Less(i, j int) bool {
+	return m[i].MSE < m[j].MSE
+}
+
+func (m MSEScores) Swap(i, j int) {
+	m[i], m[j] = m[j], m[i]
+}
+
+// Leaderboard returns the sorted mean squared errors for each score type that is represented in all bundles.
+func (b ReferenceBundles) Leaderboard() (MSEScores, error) {
+	representedScoreTypes := map[ScoreType]int{}
+	for index, bundle := range b {
+		if index == 0 {
+			representedScoreTypes = bundle.ScoreTypes
+		} else {
+			for previouslyFoundScoreType := range representedScoreTypes {
+				if _, found := bundle.ScoreTypes[previouslyFoundScoreType]; !found {
+					delete(representedScoreTypes, previouslyFoundScoreType)
+				}
+			}
+		}
+	}
+
+	sumOfSquares := map[ScoreType]float64{}
+	sums := map[ScoreType]float64{}
+	mins := map[ScoreType]float64{}
+	maxs := map[ScoreType]float64{}
+
+	addScore := func(scoreType ScoreType, score float64) {
+		sums[scoreType] += score
+		if currentMin, found := mins[scoreType]; !found || (found && score < currentMin) {
+			mins[scoreType] = score
+		}
+		if currentMax, found := maxs[scoreType]; !found || (found && score > currentMax) {
+			maxs[scoreType] = score
+		}
+		loss := 1.0 - score
+		sumOfSquares[scoreType] += loss * loss
+	}
+	for _, bundle := range b {
+		if bundle.IsJND() {
+			accuracies, err := bundle.Accuracy()
+			if err != nil {
+				return nil, err
+			}
+			for _, accuracy := range accuracies {
+				if _, found := representedScoreTypes[accuracy.ScoreType]; found {
+					addScore(accuracy.ScoreType, accuracy.Accuracy)
+				}
+			}
+		} else {
+			correlations, err := bundle.Correlate()
+			if err != nil {
+				return nil, err
+			}
+			for _, row := range correlations {
+				if row[0].ScoreTypeA == MOS {
+					for _, correlation := range row {
+						if _, found := representedScoreTypes[correlation.ScoreTypeB]; found {
+							addScore(correlation.ScoreTypeB, correlation.Score)
+						}
+					}
+				}
+			}
+		}
+	}
+	result := MSEScores{}
+	numStudiesRecpripcal := 1.0 / float64(len(b))
+	for scoreType, squareSum := range sumOfSquares {
+		result = append(result, MSEScore{
+			ScoreType: scoreType,
+			MSE:       squareSum * numStudiesRecpripcal,
+			MeanScore: sums[scoreType] * numStudiesRecpripcal,
+			MinScore:  mins[scoreType],
+			MaxScore:  maxs[scoreType],
+		})
+	}
+	sort.Sort(result)
+	return result, nil
+}
+
+// OpenStudies returns the studies contained in the directories defined by the glob.
+func OpenStudies(glob string) (Studies, error) {
+	directories, err := filepath.Glob(glob)
+	if err != nil {
+		return nil, err
+	}
+	result := make(Studies, len(directories))
+	for index, dir := range directories {
+		if result[index], err = OpenStudy(dir); err != nil {
+			return nil, err
+		}
+	}
+	return result, nil
+}
+
+// Close closes the studies.
+func (s Studies) Close() error {
+	for _, study := range s {
+		if err := study.Close(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// OpenStudy opens a study from a database directory.
+// If the study doesn't exist, it will be created.
+func OpenStudy(dir string) (*Study, error) {
+	err := os.MkdirAll(dir, 0755)
+	if err != nil && !os.IsExist(err) {
+		return nil, fmt.Errorf("trying to create %q: %v", dir, err)
+	}
+	dbPath := filepath.Join(dir, "db.sqlite3")
+	_, err = os.Stat(dbPath)
+	if os.IsNotExist(err) {
+		if _, err = os.Create(dbPath); err != nil {
+			return nil, err
+		}
+	} else if err != nil {
+		return nil, err
+	}
+	db, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		return nil, fmt.Errorf("trying to open %q: %v", dbPath, err)
+	}
+	if _, err := db.Exec("CREATE TABLE IF NOT EXISTS OBJ (ID BLOB PRIMARY KEY, DATA BLOB)"); err != nil {
+		return nil, fmt.Errorf("trying to ensure object table: %v", err)
+	}
+	return &Study{
+		dir: dir,
+		db:  db,
+	}, nil
+}
+
+// Close closes the study.
+func (s *Study) Close() error {
+	return s.db.Close()
+}
+
 // Measurement returns distance between sounds.
 type Measurement func(reference, distortion *audio.Audio) (float64, error)
 
 // Calculate computes measurements and populates the scores of the distortions.
-func (s *Study) Calculate(measurements map[ScoreType]Measurement, pool *worker.Pool[any], force bool) error {
-	refs := []*Reference{}
-	if err := s.ViewEachReference(func(ref *Reference) error {
-		refs = append(refs, ref)
-		return nil
-	}); err != nil {
-		return err
-	}
-	for _, loopRef := range refs {
+func (b *ReferenceBundle) Calculate(measurements map[ScoreType]Measurement, pool *worker.Pool[any], force bool) error {
+	for _, loopRef := range b.References {
 		refNeededMeasurements := map[ScoreType]Measurement{}
 		for _, dist := range loopRef.Distortions {
 			for scoreType, measurement := range measurements {
@@ -491,9 +630,9 @@ func (s *Study) Calculate(measurements map[ScoreType]Measurement, pool *worker.P
 		}
 		ref := loopRef
 		pool.Submit(func(func(any)) error {
-			refAudio, err := ref.Load(s.dir)
+			refAudio, err := ref.Load(b.Dir)
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
 			for _, loopDist := range ref.Distortions {
 				distNeededMeasurements := map[ScoreType]Measurement{}
@@ -507,7 +646,7 @@ func (s *Study) Calculate(measurements map[ScoreType]Measurement, pool *worker.P
 				}
 				dist := loopDist
 				pool.Submit(func(func(any)) error {
-					distAudio, err := dist.Load(s.dir)
+					distAudio, err := dist.Load(b.Dir)
 					if err != nil {
 						return err
 					}
@@ -531,13 +670,7 @@ func (s *Study) Calculate(measurements map[ScoreType]Measurement, pool *worker.P
 			return nil
 		})
 	}
-	if err := pool.Error(); err != nil {
-		log.Println(err.Error())
-	}
-	if err := s.Put(refs); err != nil {
-		return err
-	}
-	return nil
+	return pool.Error()
 }
 
 // ViewEachReference returns each reference in the study.
