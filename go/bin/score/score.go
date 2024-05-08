@@ -52,7 +52,11 @@ func gitIdentity() (*string, error) {
 	if err != nil {
 		return nil, err
 	}
-	result := fmt.Sprintf("%s, %s", strings.TrimSpace(string(desc)), strings.TrimSpace(string(repo)))
+	branch, err := exec.Command("git", "branch", "--show-current").CombinedOutput()
+	if err != nil {
+		return nil, err
+	}
+	result := fmt.Sprintf("%s, %s, %s", strings.TrimSpace(string(desc)), strings.TrimSpace(string(branch)), strings.TrimSpace(string(repo)))
 	return &result, nil
 }
 
