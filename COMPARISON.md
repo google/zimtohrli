@@ -2,7 +2,7 @@
 
 Created at 2024-05-08
 
-Revision v0.1.10-3-g212fbc5, git@github.com:google/zimtohrli.git
+Revision v0.1.10-4-gb051cbe, git@github.com:google/zimtohrli.git
 
 ## PEASS_DB
 
@@ -237,19 +237,50 @@ Revision v0.1.10-3-g212fbc5, git@github.com:google/zimtohrli.git
 |PARLAQ     |0.48     |30        |
 |PESQ       |0.48     |1         |
 
+## tcd-voip
+
+### Spearman correlation table for all score types
+
+|          |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |
+|----------|------|-----|-------|-----|-------|------|-----|-------|-------|----------|
+|CDPAM     |1.00  |0.51 |0.68   |0.73 |0.54   |0.55  |0.64 |0.76   |0.79   |0.79      |
+|DPAM      |0.51  |1.00 |0.44   |0.57 |0.44   |0.59  |0.57 |0.71   |0.48   |0.42      |
+|GVPMOS    |0.68  |0.44 |1.00   |0.70 |0.43   |0.45  |0.63 |0.57   |0.67   |0.68      |
+|MOS       |0.73  |0.57 |0.70   |1.00 |0.52   |0.54  |0.84 |0.65   |0.78   |0.65      |
+|PARLAQ    |0.54  |0.44 |0.43   |0.52 |1.00   |0.81  |0.70 |0.36   |0.56   |0.60      |
+|PEAQB     |0.55  |0.59 |0.45   |0.54 |0.81   |1.00  |0.74 |0.45   |0.58   |0.61      |
+|PESQ      |0.64  |0.57 |0.63   |0.84 |0.70   |0.74  |1.00 |0.46   |0.77   |0.65      |
+|ViSQOL    |0.76  |0.71 |0.57   |0.65 |0.36   |0.45  |0.46 |1.00   |0.57   |0.59      |
+|WARP-Q    |0.79  |0.48 |0.67   |0.78 |0.56   |0.58  |0.77 |0.57   |1.00   |0.73      |
+|Zimtohrli |0.79  |0.42 |0.68   |0.65 |0.60   |0.61  |0.65 |0.59   |0.73   |1.00      |
+
+### Score type MOS Spearman correlation in order
+
+|Score type |Spearman correlation |
+|-----------|---------------------|
+|PESQ       |0.84                 |
+|WARP-Q     |0.78                 |
+|CDPAM      |0.73                 |
+|GVPMOS     |0.70                 |
+|ViSQOL     |0.65                 |
+|Zimtohrli  |0.65                 |
+|DPAM       |0.57                 |
+|PEAQB      |0.54                 |
+|PARLAQ     |0.52                 |
+
 ## Global leaderboard across all studies
 
 ### Mean square error (1 - Spearman correlation, or 1 - accuracy) per score type
 
 |Score type |MSE  |Min score |Max score |Mean score |
 |-----------|-----|----------|----------|-----------|
-|Zimtohrli  |0.10 |0.51      |0.72      |0.58       |
-|ViSQOL     |0.10 |0.52      |0.80      |0.59       |
-|PESQ       |0.13 |0.34      |0.76      |0.56       |
-|PARLAQ     |0.15 |0.45      |0.78      |0.53       |
-|CDPAM      |0.15 |0.44      |0.70      |0.52       |
-|PEAQB      |0.19 |0.28      |0.85      |0.50       |
-|DPAM       |0.32 |0.19      |0.54      |0.36       |
-|WARP-Q     |0.34 |0.07      |0.75      |0.38       |
-|GVPMOS     |0.42 |0.01      |0.78      |0.31       |
+|Zimtohrli  |0.11 |0.51      |0.72      |0.59       |
+|ViSQOL     |0.11 |0.52      |0.80      |0.60       |
+|PESQ       |0.12 |0.34      |0.84      |0.59       |
+|CDPAM      |0.14 |0.44      |0.73      |0.54       |
+|PARLAQ     |0.16 |0.45      |0.78      |0.53       |
+|PEAQB      |0.20 |0.28      |0.85      |0.50       |
+|DPAM       |0.31 |0.19      |0.57      |0.38       |
+|WARP-Q     |0.31 |0.07      |0.78      |0.42       |
+|GVPMOS     |0.39 |0.01      |0.78      |0.36       |
 
