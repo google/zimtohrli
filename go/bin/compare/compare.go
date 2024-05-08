@@ -33,6 +33,8 @@ func main() {
 	pipeMetric := flag.String("pipe_metric", "", "Path to a binary that serves metrics via stdin/stdout pipe. Install some of the via 'install_python_metrics.py'.")
 	zimtohrli := flag.Bool("zimtohrli", true, "Whether to measure using Zimtohrli.")
 	outputZimtohrliDistance := flag.Bool("output_zimtohrli_distance", false, "Whether to output the raw Zimtohrli distance instead of a mapped mean opinion score.")
+	zimtohrliPerceptualSampleRate := flag.Float64("zimtohrli_perceptual_sample_rate", goohrli.DefaultPerceptualSampleRate(), "Sample rate of Zimtohrli spectrograms.")
+	zimtohrliFrequencyResolution := flag.Float64("zimtohrli_frequency_resolution", goohrli.DefaultFrequencyResolution(), "Smallest bandwidth of Zimtohrli spectrograms.")
 	perChannel := flag.Bool("per_channel", false, "Whether to output the produced metric per channel instead of a single value for all channels.")
 	flag.Parse()
 
@@ -102,7 +104,8 @@ func main() {
 			return goohrli.MOSFromZimtohrli(f)
 		}
 
-		g := goohrli.New(signalA.Rate, goohrli.DefaultFrequencyResolution())
+		g := goohrli.New(signalA.Rate, *zimtohrliFrequencyResolution)
+		g.SetPerceptualSampleRate(*zimtohrliPerceptualSampleRate)
 		if *perChannel {
 			for channelIndex := range signalA.Samples {
 				measurement := goohrli.Measure(signalA.Samples[channelIndex])

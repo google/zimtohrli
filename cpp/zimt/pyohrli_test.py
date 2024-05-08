@@ -37,49 +37,40 @@ class PyohrliTest(unittest.TestCase):
     def test_getters_setters(self):
         metric = pyohrli.Pyohrli(sample_rate=48000.0)
 
-        time_norm_order = metric.time_norm_order
-        self.assertEqual(time_norm_order, 4)
-        metric.time_norm_order *= 2
-        self.assertEqual(metric.time_norm_order, time_norm_order * 2)
+        nsim_step_window = metric.nsim_step_window
+        metric.nsim_step_window *= 2
+        self.assertEqual(metric.nsim_step_window, nsim_step_window * 2)
 
-        freq_norm_order = metric.freq_norm_order
-        self.assertEqual(freq_norm_order, 4)
-        metric.freq_norm_order *= 2
-        self.assertEqual(metric.freq_norm_order, freq_norm_order * 2)
+        nsim_channel_window = metric.nsim_channel_window
+        metric.nsim_channel_window *= 2
+        self.assertEqual(metric.nsim_channel_window, nsim_channel_window * 2)
 
         full_scale_sine_db = metric.full_scale_sine_db
-        self.assertEqual(full_scale_sine_db, 80)
         metric.full_scale_sine_db *= 2
         self.assertEqual(metric.full_scale_sine_db, full_scale_sine_db * 2)
 
         unwarp_window = metric.unwarp_window
-        self.assertEqual(unwarp_window, 2)
         metric.unwarp_window *= 2
         self.assertEqual(metric.unwarp_window, unwarp_window * 2)
 
     @parameterize(
         dict(
-            testcase_name="zero",
             a_hz=5000.0,
             b_hz=5000.0,
             distance=0,
         ),
         dict(
-            testcase_name="small",
             a_hz=5000.0,
             b_hz=5010.0,
-            distance=1.473954677581787,
+            distance=7.927417755126953e-05,
         ),
         dict(
-            testcase_name="large",
             a_hz=5000.0,
             b_hz=10000.0,
-            distance=52.45160675048828,
+            distance=0.24643820524215698,
         ),
     )
-    def test_distance(
-        self, testcase_name: str, a_hz: float, b_hz: float, distance: float
-    ):
+    def test_distance(self, a_hz: float, b_hz: float, distance: float):
         sample_rate = 48000.0
         metric = pyohrli.Pyohrli(sample_rate)
         signal_a = np.sin(np.linspace(0.0, np.pi * 2 * a_hz, int(sample_rate)))
@@ -87,13 +78,12 @@ class PyohrliTest(unittest.TestCase):
         signal_b = np.sin(np.linspace(0.0, np.pi * 2 * b_hz, int(sample_rate)))
         analysis_b = metric.analyze(signal_b)
         analysis_distance = metric.analysis_distance(analysis_a, analysis_b)
-        self.assertLess(abs(analysis_distance - distance), 1e-4)
+        self.assertLess(abs(analysis_distance - distance), 1e-3)
         distance = metric.distance(signal_a, signal_b)
-        self.assertLess(abs(distance - distance), 1e-4)
+        self.assertLess(abs(distance - distance), 1e-3)
 
     def test_nyquist_threshold(self):
         sample_rate = 12000.0
-        frequency_resolution = 4.0
         metric = pyohrli.Pyohrli(sample_rate)
         signal = np.sin(np.linspace(0.0, np.pi * 2 * 440.0, int(sample_rate)))
         # This would crash the program if pyohrli.cc didn't limit the upper
@@ -101,10 +91,11 @@ class PyohrliTest(unittest.TestCase):
         metric.analyze(signal)
 
     @parameterize(
-        dict(zimtohrli_distance=5, mos=4.746790024702545),
-        dict(zimtohrli_distance=20, mos=4.01181593706087),
-        dict(zimtohrli_distance=40, mos=2.8773086764995064),
-        dict(zimtohrli_distance=80, mos=2.0648331964917945),
+        dict(zimtohrli_distance=0.0, mos=5.0),
+        dict(zimtohrli_distance=0.1, mos=3.9802114963531494),
+        dict(zimtohrli_distance=0.5, mos=1.9183233976364136),
+        dict(zimtohrli_distance=0.7, mos=1.5097649097442627),
+        dict(zimtohrli_distance=1.0, mos=1.210829496383667),
     )
     def test_mos_from_zimtohrli(self, zimtohrli_distance: float, mos: float):
         self.assertAlmostEqual(

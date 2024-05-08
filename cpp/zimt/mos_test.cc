@@ -24,9 +24,9 @@ namespace zimtohrli {
 namespace {
 
 TEST(MOS, MOSFromZimtohrli) {
-  const std::vector<float> zimt_scores = {5, 20, 40, 80};
-  const std::vector<float> mos = {4.746790024702545, 4.01181593706087,
-                                  2.8773086764995064, 2.0648331964917945};
+  const std::vector<float> zimt_scores = {0, 0.1, 0.5, 0.7, 1.0};
+  const std::vector<float> mos = {5.0, 3.9802114963531494, 1.9183233976364136,
+                                  1.5097649097442627, 1.210829496383667};
   for (size_t index = 0; index < zimt_scores.size(); ++index) {
     ASSERT_NEAR(MOSFromZimtohrli(zimt_scores[index]), mos[index], 1e-2);
   }

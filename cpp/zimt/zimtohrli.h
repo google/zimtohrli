@@ -47,14 +47,8 @@ struct SpectrogramDelta {
 
 // Contains results from a distance computation.
 struct Distance {
-  // The norm of relative energy difference between frequency and time steps.
-  //
-  // Equivalent to:
-  // norm(norm(abs(spectrogram_a - spectrogram_b),
-  //           axis=freq_axis,
-  //           order=frequency_norm_order),
-  //      axis=time_axis,
-  //      order=time_norm_order)
+  // The NSIM (https://doi.org/10.1016/j.specom.2011.09.004) between the
+  // Zimtohrli spectrogram of two sounds.
   float value = 0;
   // The maximum difference in Phons between the two spectrograms.
   //
@@ -302,11 +296,11 @@ struct Zimtohrli {
   // The filterbank used to separate the signal in frequency channels.
   std::optional<CamFilterbank> cam_filterbank;
 
-  // The order of the norm across time steps when computing distance.
-  float time_norm_order = 4;
+  // The window in perceptual_sample_rate time steps when compting the NSIM.
+  size_t nsim_step_window = 16;
 
-  // The order of the norm across frequencies when computing distance.
-  float freq_norm_order = 4;
+  // The window in channels when computing the NSIM.
+  size_t nsim_channel_window = 32;
 
   // The reference dB SPL of a sine signal of amplitude 1.
   float full_scale_sine_db = 80;

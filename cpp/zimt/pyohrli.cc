@@ -216,38 +216,40 @@ PyObject* Pyohrli_distance(PyohrliObject* self, PyObject* const* args,
       self->unwarp_window * self->zimtohrli->perceptual_sample_rate);
 }
 
-PyObject* Pyohrli_set_time_norm_order(PyohrliObject* self,
-                                      PyObject* const* args, Py_ssize_t nargs) {
+PyObject* Pyohrli_set_nsim_step_window(PyohrliObject* self,
+                                       PyObject* const* args,
+                                       Py_ssize_t nargs) {
   if (nargs != 1) {
     return BadArgument("not exactly 1 argument provided");
   }
-  self->zimtohrli->time_norm_order = PyFloat_AsDouble(args[0]);
+  self->zimtohrli->nsim_step_window = PyLong_AsSize_t(args[0]);
   Py_RETURN_NONE;
 }
 
-PyObject* Pyohrli_get_time_norm_order(PyohrliObject* self, PyObject* args,
-                                      Py_ssize_t nargs) {
+PyObject* Pyohrli_get_nsim_step_window(PyohrliObject* self, PyObject* args,
+                                       Py_ssize_t nargs) {
   if (nargs != 0) {
     return BadArgument("no arguments should be provided");
   }
-  return PyFloat_FromDouble(self->zimtohrli->time_norm_order);
+  return PyLong_FromSize_t(self->zimtohrli->nsim_step_window);
 }
 
-PyObject* Pyohrli_set_freq_norm_order(PyohrliObject* self,
-                                      PyObject* const* args, Py_ssize_t nargs) {
+PyObject* Pyohrli_set_nsim_channel_window(PyohrliObject* self,
+                                          PyObject* const* args,
+                                          Py_ssize_t nargs) {
   if (nargs != 1) {
     return BadArgument("not exactly 1 argument provided");
   }
-  self->zimtohrli->freq_norm_order = PyFloat_AsDouble(args[0]);
+  self->zimtohrli->nsim_channel_window = PyLong_AsSize_t(args[0]);
   Py_RETURN_NONE;
 }
 
-PyObject* Pyohrli_get_freq_norm_order(PyohrliObject* self, PyObject* args,
-                                      Py_ssize_t nargs) {
+PyObject* Pyohrli_get_nsim_channel_window(PyohrliObject* self, PyObject* args,
+                                          Py_ssize_t nargs) {
   if (nargs != 0) {
     return BadArgument("no arguments should be provided");
   }
-  return PyFloat_FromDouble(self->zimtohrli->freq_norm_order);
+  return PyLong_FromSize_t(self->zimtohrli->nsim_channel_window);
 }
 
 PyObject* Pyohrli_set_full_scale_sine_db(PyohrliObject* self,
@@ -282,14 +284,18 @@ PyMethodDef Pyohrli_methods[] = {
      "Returns the distance between the two provided analyses."},
     {"distance", (PyCFunction)Pyohrli_distance, METH_FASTCALL,
      "Returns the distance between the two provided signals."},
-    {"set_time_norm_order", (PyCFunction)Pyohrli_set_time_norm_order,
-     METH_FASTCALL, "Sets the time norm order of the analysis."},
-    {"get_time_norm_order", (PyCFunction)Pyohrli_get_time_norm_order,
-     METH_FASTCALL, "Returns the time norm order of the analysis."},
-    {"set_freq_norm_order", (PyCFunction)Pyohrli_set_freq_norm_order,
-     METH_FASTCALL, "Sets the frequency norm order of the analysis."},
-    {"get_freq_norm_order", (PyCFunction)Pyohrli_get_freq_norm_order,
-     METH_FASTCALL, "Returns the frequency norm order of the analysis."},
+    {"set_nsim_step_window", (PyCFunction)Pyohrli_set_nsim_step_window,
+     METH_FASTCALL,
+     "Sets the window in perceptual_sample_rate time steps when compting the "
+     "NSIM."},
+    {"get_nsim_step_window", (PyCFunction)Pyohrli_get_nsim_step_window,
+     METH_FASTCALL,
+     "Returns the window in perceptual_sample_rate time steps when compting "
+     "the NSIM."},
+    {"set_nsim_channel_window", (PyCFunction)Pyohrli_set_nsim_channel_window,
+     METH_FASTCALL, "Sets the window in channels when computing the NSIM."},
+    {"get_nsim_channel_window", (PyCFunction)Pyohrli_get_nsim_channel_window,
+     METH_FASTCALL, "Returns the window in channels when computing the NSIM."},
     {"set_full_scale_sine_db", (PyCFunction)Pyohrli_set_full_scale_sine_db,
      METH_FASTCALL,
      "Sets the assumed intensity in dB SPL of a 1kHz sine wave with amplitude "

@@ -40,6 +40,15 @@ func DefaultPerceptualSampleRate() float64 {
 	return float64(C.DefaultPerceptualSampleRate())
 }
 
+// DefaultNSIMStepWindow returns the default NSIM step window.
+func DefaultNSIMStepWindow() int {
+	return int(C.DefaultNSIMStepWindow())
+}
+
+func DefaultNSIMChannelWindow() int {
+	return int(C.DefaultNSIMChannelWindow())
+}
+
 // EnergyAndMaxAbsAmplitude is holds the energy and maximum absolute amplitude of a measurement.
 type EnergyAndMaxAbsAmplitude struct {
 	EnergyDBFS      float32
@@ -99,6 +108,17 @@ func New(sampleRate float64, frequencyResolution float64) *Goohrli {
 	return result
 }
 
+func (g *Goohrli) String() string {
+	return fmt.Sprintf("%+v", map[string]any{
+		"SampleRate":           g.sampleRate,
+		"FrequencyResolution":  g.frequencyResolution,
+		"UnwarpWindow":         g.UnwarpWindow,
+		"PerceptualSampleRate": g.GetPerceptualSampleRate(),
+		"NSIMStepWindow":       g.GetNSIMStepWindow(),
+		"NSIMChannelWindow":    g.GetNSIMChannelWindow(),
+	})
+}
+
 // SampleRate returns the expected sample rate of input audio.
 func (g *Goohrli) SampleRate() float64 { return g.sampleRate }
 
@@ -114,13 +134,23 @@ func (g *Goohrli) NormalizedAudioDistance(audioA, audioB *audio.Audio) (float64,
 	if len(audioA.Samples) != len(audioB.Samples) {
 		return 0, fmt.Errorf("the audio files don't have the same number of channels: %v, %v", len(audioA.Samples), len(audioB.Samples))
 	}
+	if len(audioA.Samples) == 0 {
+		return 0, fmt.Errorf("the audio files don't have any channels")
+	}
 	for channelIndex := range audioA.Samples {
 		measurement := Measure(audioA.Samples[channelIndex])
 		NormalizeAmplitude(measurement.MaxAbsAmplitude, audioB.Samples[channelIndex])
 		dist := float64(g.Distance(audioA.Samples[channelIndex], audioB.Samples[channelIndex]))
+		if math.IsNaN(dist) {
+			return 0, fmt.Errorf("%v.Distance(...) returned %v", g, dist)
+		}
 		sumOfSquares += dist * dist
 	}
-	return math.Sqrt(sumOfSquares / float64(len(audioA.Samples))), nil
+	result := math.Sqrt(sumOfSquares / float64(len(audioA.Samples)))
+	if math.IsNaN(result) {
+		return 0, fmt.Errorf("math.Sqrt(%v / %v) is %v", sumOfSquares, len(audioA.Samples), result)
+	}
+	return result, nil
 }
 
 // Analysis is a Go wrapper around zimthrli::Analysis.
@@ -153,33 +183,33 @@ func (g *Goohrli) Distance(signalA []float32, signalB []float32) float64 {
 	return float64(C.AnalysisDistance(g.zimtohrli, analysisA, analysisB, C.int(float64(g.GetPerceptualSampleRate())*g.UnwarpWindow.Seconds())))
 }
 
-// GetTimeNormOrder returns the order of the norm across time steps when computing Zimtohrli distance.
-func (g *Goohrli) GetTimeNormOrder() float32 {
-	return float32(C.GetTimeNormOrder(g.zimtohrli))
+// GetNSIMStepWIndow returns the window in perceptual_sample_rate time steps when compting the NSIM.
+func (g *Goohrli) GetNSIMStepWindow() int {
+	return int(C.GetNSIMStepWindow(g.zimtohrli))
 }
 
-// SetTimeNormOrder sets the order of the norm across time steps when computing Zimtohrli distance.
-func (g *Goohrli) SetTimeNormOrder(f float32) {
-	C.SetTimeNormOrder(g.zimtohrli, C.float(f))
+// SetNSIMStepWindow sets the window in perceptual_sample_rate time steps when compting the NSIM.
+func (g *Goohrli) SetNSIMStepWindow(s int) {
+	C.SetNSIMStepWindow(g.zimtohrli, C.int(s))
 }
 
-// GetFreqNormOrder returns the order of the norm across frequency channels when computing Zimtohrli distance.
-func (g *Goohrli) GetFreqNormOrder() float32 {
-	return float32(C.GetFreqNormOrder(g.zimtohrli))
+// GetNSIMChannelWindow returns the window in channels when computing the NSIM.
+func (g *Goohrli) GetNSIMChannelWindow() int {
+	return int(C.GetNSIMChannelWindow(g.zimtohrli))
 }
 
-// SetFreqNormOrder sets the order of the norm across frequency channels when computing Zimtohrli distance.
-func (g *Goohrli) SetFreqNormOrder(f float32) {
-	C.SetFreqNormOrder(g.zimtohrli, C.float(f))
+// SetNSIMChannelWindow sets the window in channels when computing the NSIM.
+func (g *Goohrli) SetNSIMChannelWindow(s int) {
+	C.SetNSIMChannelWindow(g.zimtohrli, C.int(s))
 }
 
 // GetPerceptualSampleRate returns the perceptual sample rate used, corresponding to human hearing sensitivity to differences in timing.
-func (g *Goohrli) GetPerceptualSampleRate() float32 {
-	return float32(C.GetPerceptualSampleRate(g.zimtohrli))
+func (g *Goohrli) GetPerceptualSampleRate() float64 {
+	return float64(C.GetPerceptualSampleRate(g.zimtohrli))
 }
 
 // SetPerceptualSampleRate sets the perceptual sample rate used.
-func (g *Goohrli) SetPerceptualSampleRate(f float32) {
+func (g *Goohrli) SetPerceptualSampleRate(f float64) {
 	C.SetPerceptualSampleRate(g.zimtohrli, C.float(f))
 }
 

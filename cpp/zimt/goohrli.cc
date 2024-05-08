@@ -35,6 +35,12 @@ float DefaultPerceptualSampleRate() {
   return zimtohrli::Zimtohrli{}.perceptual_sample_rate;
 }
 
+int DefaultNSIMStepWindow() { return zimtohrli::Zimtohrli{}.nsim_step_window; }
+
+int DefaultNSIMChannelWindow() {
+  return zimtohrli::Zimtohrli{}.nsim_channel_window;
+}
+
 EnergyAndMaxAbsAmplitude Measure(const float* signal, int size) {
   hwy::AlignedNDArray<float, 1> signal_array({static_cast<size_t>(size)});
   hwy::CopyBytes(signal, signal_array.data(), size * sizeof(float));
@@ -99,20 +105,24 @@ float AnalysisDistance(Zimtohrli zimtohrli, Analysis a, Analysis b,
       .value;
 }
 
-float GetTimeNormOrder(Zimtohrli zimtohrli) {
-  return static_cast<zimtohrli::Zimtohrli*>(zimtohrli)->time_norm_order;
+int GetNSIMStepWindow(Zimtohrli zimtohrli) {
+  return static_cast<int>(
+      static_cast<zimtohrli::Zimtohrli*>(zimtohrli)->nsim_step_window);
 }
 
-void SetTimeNormOrder(Zimtohrli zimtohrli, float f) {
-  static_cast<zimtohrli::Zimtohrli*>(zimtohrli)->time_norm_order = f;
+void SetNSIMStepWindow(Zimtohrli zimtohrli, int s) {
+  static_cast<zimtohrli::Zimtohrli*>(zimtohrli)->nsim_step_window =
+      static_cast<size_t>(s);
 }
 
-float GetFreqNormOrder(Zimtohrli zimtohrli) {
-  return static_cast<zimtohrli::Zimtohrli*>(zimtohrli)->freq_norm_order;
+int GetNSIMChannelWindow(Zimtohrli zimtohrli) {
+  return static_cast<int>(
+      static_cast<zimtohrli::Zimtohrli*>(zimtohrli)->nsim_channel_window);
 }
 
-void SetFreqNormOrder(Zimtohrli zimtohrli, float f) {
-  static_cast<zimtohrli::Zimtohrli*>(zimtohrli)->freq_norm_order = f;
+void SetNSIMChannelWindow(Zimtohrli zimtohrli, int s) {
+  static_cast<zimtohrli::Zimtohrli*>(zimtohrli)->nsim_channel_window =
+      static_cast<size_t>(s);
 }
 
 float GetPerceptualSampleRate(Zimtohrli zimtohrli) {

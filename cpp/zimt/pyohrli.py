@@ -113,22 +113,22 @@ class Pyohrli:
         self._cc_pyohrli.set_full_scale_sine_db(value)
 
     @property
-    def time_norm_order(self) -> float:
-        """Order of the norm across time steps when computing the distance score."""
-        return self._cc_pyohrli.get_time_norm_order()
+    def nsim_step_window(self) -> float:
+        """Order of the window in perceptual_sample_rate time steps when compting the NSIM."""
+        return self._cc_pyohrli.get_nsim_step_window()
 
-    @time_norm_order.setter
-    def time_norm_order(self, value: float):
-        self._cc_pyohrli.set_time_norm_order(value)
+    @nsim_step_window.setter
+    def nsim_step_window(self, value: float):
+        self._cc_pyohrli.set_nsim_step_window(value)
 
     @property
-    def freq_norm_order(self) -> float:
-        """Order of the norm across frequency channels."""
-        return self._cc_pyohrli.get_freq_norm_order()
+    def nsim_channel_window(self) -> float:
+        """Order of the window in channels when computing the NSIM."""
+        return self._cc_pyohrli.get_nsim_channel_window()
 
-    @freq_norm_order.setter
-    def freq_norm_order(self, value: float):
-        self._cc_pyohrli.set_freq_norm_order(value)
+    @nsim_channel_window.setter
+    def nsim_channel_window(self, value: float):
+        self._cc_pyohrli.set_nsim_channel_window(value)
 
     @property
     def unwarp_window(self) -> float:

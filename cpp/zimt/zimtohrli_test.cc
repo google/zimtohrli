@@ -36,17 +36,13 @@ namespace {
 
 Distance Dist(const Zimtohrli& z,
               const hwy::AlignedNDArray<float, 2>& spectrogram_a,
-              const hwy::AlignedNDArray<float, 2>& spectrogram_b) {
-  Distance result;
-  float sum = 0;
+              const hwy::AlignedNDArray<float, 2>& spectrogram_b,
+              float want_distance) {
+  Distance result{.value = want_distance};
   for (size_t sample_index = 0; sample_index < spectrogram_a.shape()[0];
        ++sample_index) {
-    float sample_sum = 0;
     for (size_t channel_index = 0; channel_index < spectrogram_a.shape()[1];
          ++channel_index) {
-      sample_sum += pow(spectrogram_a[{sample_index}][channel_index] -
-                            spectrogram_b[{sample_index}][channel_index],
-                        z.freq_norm_order);
       const float spec_a_linear =
           pow(10, spectrogram_a[{sample_index}][channel_index] / 20);
       const float spec_b_linear =
@@ -77,9 +73,7 @@ Distance Dist(const Zimtohrli& z,
             spectrogram_b[{sample_index}][channel_index];
       }
     }
-    sum += pow(pow(sample_sum, 1 / z.freq_norm_order), z.time_norm_order);
   }
-  result.value = pow(sum / spectrogram_a.shape()[0], 1 / z.time_norm_order);
   return result;
 }
 
@@ -129,9 +123,9 @@ TEST(Zimtohrli, DTWDistanceTest) {
   Zimtohrli z = {.cam_filterbank = cam.CreateFilterbank(48000)};
   EXPECT_NEAR(
       z.Distance(false, spectrogram_a, spectrogram_b, std::nullopt).value,
-      0.795f, 1e-2f);
-  EXPECT_NEAR(z.Distance(false, spectrogram_a, spectrogram_b, 4).value, 0.653f,
-              1e-2f);
+      0.01090317964553833f, 1e-2f);
+  EXPECT_NEAR(z.Distance(false, spectrogram_a, spectrogram_b, 4).value,
+              0.0080544948577880859f, 1e-2f);
 }
 
 TEST(Zimtohrli, DistanceTest) {
@@ -143,17 +137,17 @@ TEST(Zimtohrli, DistanceTest) {
   spectrogram_b[{0}] = {1, 1};
   CheckDistanceNear(z.Distance(/* verbose */ true, spectrogram_a, spectrogram_b,
                                std::nullopt),
-                    Dist(z, spectrogram_a, spectrogram_b));
+                    Dist(z, spectrogram_a, spectrogram_b, 0.54945051670074463));
 
   spectrogram_b[{1}] = {4, 8};
   CheckDistanceNear(z.Distance(/* verbose */ true, spectrogram_a, spectrogram_b,
                                std::nullopt),
-                    Dist(z, spectrogram_a, spectrogram_b));
+                    Dist(z, spectrogram_a, spectrogram_b, 0.75766336917877197));
 
   spectrogram_b[{0}] = {-30, 0};
   CheckDistanceNear(z.Distance(/* verbose */ true, spectrogram_a, spectrogram_b,
                                std::nullopt),
-                    Dist(z, spectrogram_a, spectrogram_b));
+                    Dist(z, spectrogram_a, spectrogram_b, 0.99729388952255249));
 
   spectrogram_a = hwy::AlignedNDArray<float, 2>({64, 64});
   spectrogram_b = hwy::AlignedNDArray<float, 2>({64, 64});
@@ -168,9 +162,10 @@ TEST(Zimtohrli, DistanceTest) {
           sin(spectrogram_a[{sample_index}][channel_index]);
     }
   }
-  CheckDistanceNear(z.Distance(/* verbose */ true, spectrogram_a, spectrogram_b,
-                               std::nullopt),
-                    Dist(z, spectrogram_a, spectrogram_b));
+  CheckDistanceNear(
+      z.Distance(/* verbose */ true, spectrogram_a, spectrogram_b,
+                 std::nullopt),
+      Dist(z, spectrogram_a, spectrogram_b, 0.022919178009033203));
 }
 
 void CreateAudio(float sample_rate,

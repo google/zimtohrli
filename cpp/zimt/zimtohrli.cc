@@ -28,6 +28,7 @@
 #include "zimt/dtw.h"
 #include "zimt/filterbank.h"
 #include "zimt/masking.h"
+#include "zimt/nsim.h"
 
 // This file uses a lot of magic from the SIMD library Highway.
 // In simplified terms, it will compile the code for multiple architectures
@@ -136,27 +137,26 @@ Distance HwyDistance(const Zimtohrli& z,
                      const hwy::AlignedNDArray<float, 2>& spectrogram_a,
                      const hwy::AlignedNDArray<float, 2>& spectrogram_b,
                      const std::vector<std::pair<size_t, size_t>>& time_pairs) {
-  const Vec log_10_div_20 = Set(d, log(10) / 20);
-  const Vec twenty_vec = Set(d, 20);
-  Distance result;
-  const size_t num_channels = spectrogram_a.shape()[1];
-  const Vec epsilon_vec = Set(d, z.epsilon);
-  hwy::AlignedNDArray<float, 1> sample_norms({time_pairs.size()});
-  hwy::AlignedNDArray<float, 1> channel_values({num_channels});
-  float max_sample_norm = std::numeric_limits<float>::min();
-  for (size_t time_index = 0; time_index < time_pairs.size(); ++time_index) {
-    const std::pair<size_t, size_t> sample_pair = time_pairs[time_index];
-    float max_channel_energy = std::numeric_limits<float>::min();
-    for (size_t channel_index = 0; channel_index < num_channels;
-         channel_index += Lanes(d)) {
-      const Vec spec_a_db =
-          Load(d, spectrogram_a[{sample_pair.first}].data() + channel_index);
-      const Vec spec_b_db =
-          Load(d, spectrogram_b[{sample_pair.second}].data() + channel_index);
-      const Vec db_diff = AbsDiff(spec_a_db, spec_b_db);
-      Store(db_diff, d, channel_values.data() + channel_index);
-      max_channel_energy = std::max(max_channel_energy, ReduceMax(d, db_diff));
-      if constexpr (verbose) {
+  // Since NSIM is a similarity measure, where 1.0 is "perfectly similar", we
+  // subtract it from 1.0 to get a distance metric instead.
+  Distance result{
+      .value = 1.0f -
+               NSIM(spectrogram_a, spectrogram_b, time_pairs,
+                    std::min(spectrogram_a.shape()[0], z.nsim_step_window),
+                    std::min(spectrogram_a.shape()[1], z.nsim_channel_window))};
+  if constexpr (verbose) {
+    const Vec log_10_div_20 = Set(d, log(10) / 20);
+    const Vec twenty_vec = Set(d, 20);
+    const size_t num_channels = spectrogram_a.shape()[1];
+    const Vec epsilon_vec = Set(d, z.epsilon);
+    for (size_t time_index = 0; time_index < time_pairs.size(); ++time_index) {
+      const std::pair<size_t, size_t> t = time_pairs[time_index];
+      for (size_t channel_index = 0; channel_index < num_channels;
+           channel_index += Lanes(d)) {
+        const Vec spec_a_db =
+            Load(d, spectrogram_a[{t.first}].data() + channel_index);
+        const Vec spec_b_db =
+            Load(d, spectrogram_b[{t.second}].data() + channel_index);
         const auto manage_local_maximum = [&](const Vec& vec,
                                               SpectrogramDelta& target) {
           if (ReduceMax(d, vec) > target.value) {
@@ -167,11 +167,11 @@ Distance HwyDistance(const Zimtohrli& z,
                 const size_t local_channel_index = channel_index + index;
                 target.value = lane_values[{}][index];
                 target.spectrogram_a_value =
-                    spectrogram_a[{sample_pair.first}][local_channel_index];
+                    spectrogram_a[{t.first}][local_channel_index];
                 target.spectrogram_b_value =
-                    spectrogram_b[{sample_pair.second}][local_channel_index];
-                target.sample_a_index = sample_pair.first;
-                target.sample_b_index = sample_pair.second;
+                    spectrogram_b[{t.second}][local_channel_index];
+                target.sample_a_index = t.first;
+                target.sample_b_index = t.second;
                 target.channel_index = local_channel_index;
               }
             }
@@ -191,13 +191,7 @@ Distance HwyDistance(const Zimtohrli& z,
         manage_local_maximum(delta_db_vec, result.max_relative_delta);
       }
     }
-    const float sample_norm = HwyNorm</*mean=*/false>(
-        channel_values[{}], z.freq_norm_order, max_channel_energy);
-    sample_norms[{}][time_index] = sample_norm;
-    max_sample_norm = std::max(max_sample_norm, sample_norm);
   }
-  result.value = HwyNorm</*mean=*/true>(sample_norms[{}], z.time_norm_order,
-                                        max_sample_norm);
   return result;
 }
 

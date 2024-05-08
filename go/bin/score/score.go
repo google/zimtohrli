@@ -44,17 +44,54 @@ func main() {
 	calculatePipeMetric := flag.String("calculate_pipe", "", "Path to a binary that serves metrics via stdin/stdout pipe. Install some of the via 'install_python_metrics.py'.")
 	zimtohrliFrequencyResolution := flag.Float64("zimtohrli_frequency_resolution", goohrli.DefaultFrequencyResolution(), "Smallest bandwidth of the Zimtohrli filterbank.")
 	zimtohrliPerceptualSampleRate := flag.Float64("zimtohrli_perceptual_sample_rate", goohrli.DefaultPerceptualSampleRate(), "Sample rate of the Zimtohrli spectrograms.")
+	zimtohrliNSIMStepWindow := flag.Int("zimtohrli_nsim_step_window", goohrli.DefaultNSIMStepWindow(), "Window size in perceptual sample rate steps when computing NSIM.")
+	zimtohrliNSIMChannelWindow := flag.Int("zimtohrli_nsim_channel_window", goohrli.DefaultNSIMChannelWindow(), "Window size in channels when computing NSIM.")
 	correlate := flag.String("correlate", "", "Path to a database directory with a study to correlate scores for.")
 	leaderboard := flag.String("leaderboard", "", "Glob to directories with databases to compute leaderboard for.")
 	report := flag.String("report", "", "Glob to directories with databases to generate a report for.")
 	accuracy := flag.String("accuracy", "", "Path to a database directory with a study to provide JND accuracy for.")
+	optimize := flag.String("optimize", "", "Glob to directories with databases to optimize for.")
+	optimizeLogfile := flag.String("optimize_logfile", "", "File to write optimization events to.")
+	optimizeStartStep := flag.Float64("optimize_start_step", 1, "Start step for the simulated annealing.")
+	optimizeNumSteps := flag.Float64("optimize_num_steps", 500, "Number of steps for the simulated annealing.")
 	workers := flag.Int("workers", runtime.NumCPU(), "Number of concurrent workers for tasks.")
 	failFast := flag.Bool("fail_fast", false, "Whether to panic immediately on any error.")
 	flag.Parse()
 
-	if *details == "" && *calculate == "" && *correlate == "" && *accuracy == "" && *leaderboard == "" && *report == "" {
+	if *details == "" && *calculate == "" && *correlate == "" && *accuracy == "" && *leaderboard == "" && *report == "" && *optimize == "" {
 		flag.Usage()
 		os.Exit(1)
+	}
+
+	if *optimize != "" {
+		studies, err := data.OpenStudies(*optimize)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer studies.Close()
+		if len(studies) == 0 {
+			log.Fatal(fmt.Errorf("no studies found in %q", *optimize))
+		}
+		bundles, err := studies.ToBundles()
+		if err != nil {
+			log.Fatal(err)
+		}
+		optimizeLog := func(ev data.OptimizationEvent) {}
+		if *optimizeLogfile != "" {
+			f, err := os.OpenFile(*optimizeLogfile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+			if err != nil {
+				log.Fatal(err)
+			}
+			optimizeLog = func(ev data.OptimizationEvent) {
+				b, _ := json.Marshal(ev)
+				f.WriteString(string(b) + "\n")
+				f.Sync()
+			}
+		}
+		err = bundles.Optimize(*optimizeStartStep, *optimizeNumSteps, optimizeLog)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	if *report != "" {
@@ -63,6 +100,9 @@ func main() {
 			log.Fatal(err)
 		}
 		defer studies.Close()
+		if len(studies) == 0 {
+			log.Fatal(fmt.Errorf("no studies found in %q", *report))
+		}
 		bundles, err := studies.ToBundles()
 		if err != nil {
 			log.Fatal(err)
@@ -80,6 +120,9 @@ func main() {
 			log.Fatal(err)
 		}
 		defer studies.Close()
+		if len(studies) == 0 {
+			log.Fatal(fmt.Errorf("no studies found in %q", *leaderboard))
+		}
 		bundles, err := studies.ToBundles()
 		if err != nil {
 			log.Fatal(err)
@@ -123,7 +166,9 @@ func main() {
 		measurements := map[data.ScoreType]data.Measurement{}
 		if *calculateZimtohrli {
 			z := goohrli.New(sampleRate, *zimtohrliFrequencyResolution)
-			z.SetPerceptualSampleRate(float32(*zimtohrliPerceptualSampleRate))
+			z.SetPerceptualSampleRate(*zimtohrliPerceptualSampleRate)
+			z.SetNSIMStepWindow(*zimtohrliNSIMStepWindow)
+			z.SetNSIMChannelWindow(*zimtohrliNSIMChannelWindow)
 			measurements[data.Zimtohrli] = z.NormalizedAudioDistance
 		}
 		if *calculateViSQOL {
@@ -147,7 +192,7 @@ func main() {
 			sortedTypes = append(sortedTypes, string(scoreType))
 		}
 		sort.Sort(sortedTypes)
-		log.Printf("*** Calculating %+v (force=%v)", sortedTypes, *force)
+		log.Printf("*** Calculating %+v for %q (force=%v)", sortedTypes, *calculate, *force)
 		bundle, err := study.ToBundle()
 		if err != nil {
 			log.Fatal(err)
