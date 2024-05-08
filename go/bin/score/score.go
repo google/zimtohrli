@@ -22,9 +22,11 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/google/zimtohrli/go/data"
@@ -37,6 +39,22 @@ import (
 const (
 	sampleRate = 48000
 )
+
+func gitIdentity() (*string, error) {
+	if _, err := exec.Command("git", "rev-parse").CombinedOutput(); err != nil {
+		return nil, nil
+	}
+	repo, err := exec.Command("git", "config", "--get", "remote.origin.url").CombinedOutput()
+	if err != nil {
+		return nil, err
+	}
+	desc, err := exec.Command("git", "describe", "--tags").CombinedOutput()
+	if err != nil {
+		return nil, err
+	}
+	result := fmt.Sprintf("%s, %s", strings.TrimSpace(string(desc)), strings.TrimSpace(string(repo)))
+	return &result, nil
+}
 
 func main() {
 	details := flag.String("details", "", "Path to database directory with a study to show the details from.")
@@ -70,6 +88,13 @@ func main() {
 Created at %s
 
 `, time.Now().Format(time.DateOnly))
+		id, err := gitIdentity()
+		if err != nil {
+			log.Fatal(err)
+		}
+		if id != nil {
+			fmt.Printf("Revision %s\n\n", *id)
+		}
 		studies := make(data.Studies, len(databases))
 		for index, path := range databases {
 			fmt.Printf("## %s\n\n", filepath.Base(path))
@@ -102,7 +127,7 @@ Created at %s
 			}
 		}
 
-		fmt.Println("## Global leaderboard across all studies\n")
+		fmt.Printf("## Global leaderboard across all studies\n\n")
 
 		board, err := studies.Leaderboard()
 		if err != nil {
