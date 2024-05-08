@@ -26,8 +26,6 @@ add_library(zimtohrli_base STATIC
     cpp/zimt/masking.h
     cpp/zimt/mos.cc
     cpp/zimt/mos.h
-    cpp/zimt/nsim.cc
-    cpp/zimt/nsim.h
     cpp/zimt/zimtohrli.cc
     cpp/zimt/zimtohrli.h
 )

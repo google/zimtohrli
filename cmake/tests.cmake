@@ -7,7 +7,6 @@ add_executable(zimtohrli_test
     cpp/zimt/loudness_test.cc
     cpp/zimt/masking_test.cc
     cpp/zimt/mos_test.cc
-    cpp/zimt/nsim_test.cc
     cpp/zimt/zimtohrli_test.cc
     cpp/zimt/test_file_paths.cc
 )
