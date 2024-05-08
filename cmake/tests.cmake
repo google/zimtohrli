@@ -54,7 +54,6 @@ add_executable(zimtohrli_benchmark
     cpp/zimt/filterbank_test.cc
     cpp/zimt/loudness_test.cc
     cpp/zimt/masking_test.cc
-    cpp/zimt/nsim_test.cc
     cpp/zimt/zimtohrli_test.cc
 )
 target_link_libraries(zimtohrli_benchmark zimtohrli_base gtest gmock benchmark_main)
