@@ -19,15 +19,10 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"os"
-	"os/exec"
-	"path/filepath"
 	"runtime"
 	"sort"
-	"strings"
-	"time"
 
 	"github.com/google/zimtohrli/go/data"
 	"github.com/google/zimtohrli/go/goohrli"
@@ -39,26 +34,6 @@ import (
 const (
 	sampleRate = 48000
 )
-
-func gitIdentity() (*string, error) {
-	if _, err := exec.Command("git", "rev-parse").CombinedOutput(); err != nil {
-		return nil, nil
-	}
-	repo, err := exec.Command("git", "config", "--get", "remote.origin.url").CombinedOutput()
-	if err != nil {
-		return nil, err
-	}
-	desc, err := exec.Command("git", "describe", "--tags").CombinedOutput()
-	if err != nil {
-		return nil, err
-	}
-	branch, err := exec.Command("git", "branch", "--show-current").CombinedOutput()
-	if err != nil {
-		return nil, err
-	}
-	result := fmt.Sprintf("%s, %s, %s", strings.TrimSpace(string(desc)), strings.TrimSpace(string(branch)), strings.TrimSpace(string(repo)))
-	return &result, nil
-}
 
 func main() {
 	details := flag.String("details", "", "Path to database directory with a study to show the details from.")
@@ -83,75 +58,33 @@ func main() {
 	}
 
 	if *report != "" {
-		databases, err := filepath.Glob(*report)
+		studies, err := data.OpenStudies(*report)
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf(`# Zimtohrli correlation report
-
-Created at %s
-
-`, time.Now().Format(time.DateOnly))
-		id, err := gitIdentity()
+		defer studies.Close()
+		bundles, err := studies.ToBundles()
 		if err != nil {
 			log.Fatal(err)
 		}
-		if id != nil {
-			fmt.Printf("Revision %s\n\n", *id)
-		}
-		studies := make(data.Studies, len(databases))
-		for index, path := range databases {
-			fmt.Printf("## %s\n\n", filepath.Base(path))
-			if studies[index], err = data.OpenStudy(path); err != nil {
-				log.Fatal(err)
-			}
-			isJND := false
-			if err := studies[index].ViewEachReference(func(ref *data.Reference) error {
-				for _, dist := range ref.Distortions {
-					if _, found := dist.Scores[data.JND]; found {
-						isJND = true
-					}
-				}
-				return io.EOF
-			}); err != nil {
-				log.Fatal(err)
-			}
-			if isJND {
-				accuracy, err := studies[index].Accuracy()
-				if err != nil {
-					log.Fatal(err)
-				}
-				fmt.Println(accuracy)
-			} else {
-				corrTable, err := studies[index].Correlate()
-				if err != nil {
-					log.Fatal(err)
-				}
-				fmt.Println(corrTable)
-			}
-		}
-
-		fmt.Printf("## Global leaderboard across all studies\n\n")
-
-		board, err := studies.Leaderboard()
+		report, err := bundles.Report()
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Println(board)
+		fmt.Println(report)
 	}
 
 	if *leaderboard != "" {
-		databases, err := filepath.Glob(*leaderboard)
+		studies, err := data.OpenStudies(*leaderboard)
 		if err != nil {
 			log.Fatal(err)
 		}
-		studies := make(data.Studies, len(databases))
-		for index, path := range databases {
-			if studies[index], err = data.OpenStudy(path); err != nil {
-				log.Fatal(err)
-			}
+		defer studies.Close()
+		bundles, err := studies.ToBundles()
+		if err != nil {
+			log.Fatal(err)
 		}
-		board, err := studies.Leaderboard()
+		board, err := bundles.Leaderboard()
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -164,14 +97,11 @@ Created at %s
 			log.Fatal(err)
 		}
 		defer study.Close()
-		refs := []*data.Reference{}
-		if err := study.ViewEachReference(func(ref *data.Reference) error {
-			refs = append(refs, ref)
-			return nil
-		}); err != nil {
+		bundle, err := study.ToBundle()
+		if err != nil {
 			log.Fatal(err)
 		}
-		b, err := json.MarshalIndent(refs, "", "  ")
+		b, err := json.MarshalIndent(bundle, "", "  ")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -218,7 +148,15 @@ Created at %s
 		}
 		sort.Sort(sortedTypes)
 		log.Printf("*** Calculating %+v (force=%v)", sortedTypes, *force)
-		if err := study.Calculate(measurements, pool, *force); err != nil {
+		bundle, err := study.ToBundle()
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err := bundle.Calculate(measurements, pool, *force); err != nil {
+			log.Printf("%#v", err)
+			log.Fatal(err)
+		}
+		if err := study.Put(bundle.References); err != nil {
 			log.Fatal(err)
 		}
 		bar.Finish()
@@ -230,7 +168,11 @@ Created at %s
 			log.Fatal(err)
 		}
 		defer study.Close()
-		corrTable, err := study.Correlate()
+		bundle, err := study.ToBundle()
+		if err != nil {
+			log.Fatal(err)
+		}
+		corrTable, err := bundle.Correlate()
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -243,7 +185,11 @@ Created at %s
 			log.Fatal(err)
 		}
 		defer study.Close()
-		accuracy, err := study.Accuracy()
+		bundle, err := study.ToBundle()
+		if err != nil {
+			log.Fatal(err)
+		}
+		accuracy, err := bundle.Accuracy()
 		if err != nil {
 			log.Fatal(err)
 		}
