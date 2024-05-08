@@ -43,20 +43,24 @@ func TestMOSFromZimtohrli(t *testing.T) {
 		wantMOS      float64
 	}{
 		{
-			zimtDistance: 5,
-			wantMOS:      4.746790024702545,
+			zimtDistance: 0,
+			wantMOS:      5.0,
 		},
 		{
-			zimtDistance: 20,
-			wantMOS:      4.01181593706087,
+			zimtDistance: 0.1,
+			wantMOS:      3.9802114963531494,
 		},
 		{
-			zimtDistance: 40,
-			wantMOS:      2.8773086764995064,
+			zimtDistance: 0.5,
+			wantMOS:      1.9183233976364136,
 		},
 		{
-			zimtDistance: 80,
-			wantMOS:      2.0648331964917945,
+			zimtDistance: 0.7,
+			wantMOS:      1.5097649097442627,
+		},
+		{
+			zimtDistance: 1.0,
+			wantMOS:      1.210829496383667,
 		},
 	} {
 		if mos := MOSFromZimtohrli(tc.zimtDistance); math.Abs(mos-tc.wantMOS) > 1e-2 {
@@ -68,22 +72,16 @@ func TestMOSFromZimtohrli(t *testing.T) {
 func TestGettersSetters(t *testing.T) {
 	g := New(48000.0, 4.0)
 
-	timeNormOrder := g.GetTimeNormOrder()
-	if timeNormOrder != 4 {
-		t.Errorf("TimeNormOrder = %v, want %v", timeNormOrder, 4)
-	}
-	g.SetTimeNormOrder(timeNormOrder * 2)
-	if g.GetTimeNormOrder() != timeNormOrder*2 {
-		t.Errorf("TimeNormOrder = %v, want %v", g.GetTimeNormOrder(), timeNormOrder*2)
+	nsimStepWindow := g.GetNSIMStepWindow()
+	g.SetNSIMStepWindow(nsimStepWindow * 2)
+	if g.GetNSIMStepWindow() != nsimStepWindow*2 {
+		t.Errorf("NSIMStepWindow = %v, want %v", g.GetNSIMStepWindow(), nsimStepWindow*2)
 	}
 
-	freqNormOrder := g.GetFreqNormOrder()
-	if freqNormOrder != 4 {
-		t.Errorf("FreqNormOrder = %v, want %v", freqNormOrder, 4)
-	}
-	g.SetFreqNormOrder(freqNormOrder * 2)
-	if g.GetFreqNormOrder() != freqNormOrder*2 {
-		t.Errorf("FreqNormOrder = %v, want %v", g.GetFreqNormOrder(), freqNormOrder*2)
+	nsimChannelWindow := g.GetNSIMChannelWindow()
+	g.SetNSIMChannelWindow(nsimChannelWindow * 2)
+	if g.GetNSIMChannelWindow() != nsimChannelWindow*2 {
+		t.Errorf("NSIMChannelWindow = %v, want %v", g.GetNSIMChannelWindow(), nsimChannelWindow*2)
 	}
 }
 
@@ -101,12 +99,12 @@ func TestGoohrli(t *testing.T) {
 		{
 			freqA:    5000,
 			freqB:    5010,
-			distance: 1.4678096771240234,
+			distance: 0.0001035928726196289,
 		},
 		{
 			freqA:    5000,
 			freqB:    10000,
-			distance: 55.7608528137207,
+			distance: 0.23286527395248413,
 		},
 	} {
 		sampleRate := 48000.0

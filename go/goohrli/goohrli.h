@@ -33,6 +33,12 @@ float DefaultFrequencyResolution();
 // Returns the default perceptual sample rate.
 float DefaultPerceptualSampleRate();
 
+// Returns the default NSIM step window.
+int DefaultNSIMStepWindow();
+
+// Returns the default NSIM channel window;
+int DefaultNSIMChannelWindow();
+
 // void* representation of zimtohrli::Zimtohrli.
 typedef void* Zimtohrli;
 
@@ -80,21 +86,19 @@ void FreeAnalysis(Analysis a);
 float AnalysisDistance(Zimtohrli zimtohrli, Analysis a, Analysis b,
                        int unwarp_window_samples);
 
-// Returns the order of the norm across time steps when computing Zimtohrli
-// distance.
-float GetTimeNormOrder(Zimtohrli zimtohrli);
+// Returns the window in perceptual_sample_rate time steps when compting the
+// NSIM.
+int GetNSIMStepWindow(Zimtohrli zimtohrli);
 
-// Sets the order of the norm across time steps when computing Zimtohrli
-// distance.
-void SetTimeNormOrder(Zimtohrli zimtohrli, float f);
+// Sets the window in perceptual_sample_rate time steps when compting the
+// NSIM.
+void SetNSIMStepWindow(Zimtohrli zimtohrli, int s);
 
-// Returns the order of the norm across frequency channels when computing
-// Zimtohrli distance.
-float GetFreqNormOrder(Zimtohrli zimtohrli);
+// Returns the window in channels when computing the NSIM.
+int GetNSIMChannelWindow(Zimtohrli zimtohrli);
 
-// Sets the order of the norm across frequency channels when computing Zimtohrli
-// distance.
-void SetFreqNormOrder(Zimtohrli zimtohrli, float f);
+// Sets the window in channels when computing the NSIM.
+void SetNSIMChannelWindow(Zimtohrli zimtohrli, int s);
 
 // Returns the perceptual sample rate used, corresponding to human hearing
 // sensitivity to timing differences.

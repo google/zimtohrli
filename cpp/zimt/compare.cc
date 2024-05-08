@@ -75,10 +75,6 @@ ABSL_FLAG(bool, truncate, false,
 ABSL_FLAG(float, unwarp_window, 2.0f,
           "unwarp window length in seconds, must be greater than 0 if truncate "
           "is false and the files are of different lengths");
-ABSL_FLAG(float, freq_norm_order, zimtohrli::Zimtohrli{}.freq_norm_order,
-          "order of the per-step-norm across frequencies");
-ABSL_FLAG(float, time_norm_order, zimtohrli::Zimtohrli{}.time_norm_order,
-          "order of the norm across all time steps");
 ABSL_FLAG(bool, normalize_amplitude, true,
           "whether to normalize the amplitude of all B sounds to the same max "
           "amplitude as the A sound");
@@ -278,8 +274,6 @@ int Main(int argc, char* argv[]) {
       .perceptual_sample_rate = absl::GetFlag(FLAGS_perceptual_sample_rate),
       .cam_filterbank =
           cam.CreateFilterbank(static_cast<float>(file_a->Info().samplerate)),
-      .time_norm_order = absl::GetFlag(FLAGS_time_norm_order),
-      .freq_norm_order = absl::GetFlag(FLAGS_freq_norm_order),
       .full_scale_sine_db = absl::GetFlag(FLAGS_full_scale_sine_db),
   };
 

@@ -23,9 +23,11 @@ import (
 	"io"
 	"log"
 	"math"
+	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -33,6 +35,8 @@ import (
 	"github.com/dgryski/go-onlinestats"
 	"github.com/google/zimtohrli/go/aio"
 	"github.com/google/zimtohrli/go/audio"
+	"github.com/google/zimtohrli/go/goohrli"
+	"github.com/google/zimtohrli/go/progress"
 	"github.com/google/zimtohrli/go/worker"
 
 	_ "github.com/mattn/go-sqlite3" // To open sqlite3-databases.
@@ -115,6 +119,16 @@ func (r *ReferenceBundle) SortedTypes() ScoreTypes {
 	return sorted
 }
 
+// Add adds a reference to a bundle.
+func (r *ReferenceBundle) Add(ref *Reference) {
+	for _, dist := range ref.Distortions {
+		for scoreType := range dist.Scores {
+			r.ScoreTypes[scoreType] += 1
+		}
+	}
+	r.References = append(r.References, ref)
+}
+
 // ToBundle returns a reference bundle for this study.
 func (s *Study) ToBundle() (*ReferenceBundle, error) {
 	result := &ReferenceBundle{
@@ -122,12 +136,7 @@ func (s *Study) ToBundle() (*ReferenceBundle, error) {
 		ScoreTypes: map[ScoreType]int{},
 	}
 	if err := s.ViewEachReference(func(ref *Reference) error {
-		for _, dist := range ref.Distortions {
-			for scoreType := range dist.Scores {
-				result.ScoreTypes[scoreType] += 1
-			}
-		}
-		result.References = append(result.References, ref)
+		result.Add(ref)
 		return nil
 	}); err != nil {
 		return nil, err
@@ -299,72 +308,71 @@ func ternarySearch(f func(int) float64, left, right int) int {
 	return (left + right) / 2
 }
 
-// Accuracy returns the accuracy of each score type when used to predict audible differences.
-func (r *ReferenceBundle) Accuracy() (AccuracyScores, error) {
+func (r *ReferenceBundle) AccuracyAndThreshold(scoreType ScoreType) (float64, float64, error) {
 	if !r.IsJND() {
-		return nil, fmt.Errorf("cannot compute accuracy on non-JND references")
+		return 0, 0, fmt.Errorf("cannot compute accuracy on non-JND references")
 	}
-	audibleMap := map[ScoreType]sort.Float64Slice{}
-	inaudibleMap := map[ScoreType]sort.Float64Slice{}
-	allMapMap := map[ScoreType]map[float64]struct{}{}
+	audible := sort.Float64Slice{}
+	inaudible := sort.Float64Slice{}
+	allMap := map[float64]struct{}{}
 	for _, ref := range r.References {
 		for _, dist := range ref.Distortions {
 			jnd, found := dist.Scores[JND]
 			if !found {
-				return nil, fmt.Errorf("%+v doesn't have a JND score", ref)
+				return 0, 0, fmt.Errorf("%+v doesn't have a JND score", ref)
 			}
-			for scoreType, score := range dist.Scores {
-				if scoreType == JND {
-					continue
-				}
-				scoreAll, found := allMapMap[scoreType]
-				if !found {
-					scoreAll = map[float64]struct{}{}
-					allMapMap[scoreType] = scoreAll
-				}
-				scoreAll[score] = struct{}{}
-				switch jnd {
-				case 0:
-					inaudibleMap[scoreType] = append(inaudibleMap[scoreType], score)
-				case 1:
-					audibleMap[scoreType] = append(audibleMap[scoreType], score)
-				default:
-					return nil, fmt.Errorf("%+v JND isn't 0 or 1", ref)
-				}
+			score := dist.Scores[scoreType]
+			allMap[score] = struct{}{}
+			switch jnd {
+			case 0:
+				inaudible = append(inaudible, score)
+			case 1:
+				audible = append(audible, score)
+			default:
+				return 0, 0, fmt.Errorf("%+v JND isn't 0 or 1", ref)
 			}
 		}
 	}
+	sort.Sort(audible)
+	sort.Sort(inaudible)
+	all := sort.Float64Slice{}
+	for score := range allMap {
+		all = append(all, score)
+	}
+	sort.Sort(all)
+	accuracy := func(index int) float64 {
+		threshold := all[index]
+		audibleBelowThreshold := sort.SearchFloat64s(audible, threshold)
+		inaudibleBelowThreshold := sort.SearchFloat64s(inaudible, threshold)
+		correctAudible, correctInaudible := 0, 0
+		if scoreType.Better() > 0 {
+			correctAudible = audibleBelowThreshold
+			correctInaudible = len(inaudible) - inaudibleBelowThreshold
+		} else {
+			correctAudible = len(audible) - audibleBelowThreshold
+			correctInaudible = inaudibleBelowThreshold
+		}
+		return float64(correctAudible+correctInaudible) / float64(len(audible)+len(inaudible))
+	}
+	bestAccuracyThresholdIndex := ternarySearch(accuracy, 0, len(all)-1)
+	return accuracy(bestAccuracyThresholdIndex), all[bestAccuracyThresholdIndex], nil
+}
+
+// Accuracy returns the accuracy of each score type when used to predict audible differences.
+func (r *ReferenceBundle) Accuracy() (AccuracyScores, error) {
 	result := AccuracyScores{}
-	for scoreType := range allMapMap {
-		audible := audibleMap[scoreType]
-		inaudible := inaudibleMap[scoreType]
-		sort.Sort(audible)
-		sort.Sort(inaudible)
-		all := sort.Float64Slice{}
-		for score := range allMapMap[scoreType] {
-			all = append(all, score)
-		}
-		sort.Sort(all)
-		accuracy := func(index int) float64 {
-			threshold := all[index]
-			audibleBelowThreshold := sort.SearchFloat64s(audible, threshold)
-			inaudibleBelowThreshold := sort.SearchFloat64s(inaudible, threshold)
-			correctAudible, correctInaudible := 0, 0
-			if scoreType.Better() > 0 {
-				correctAudible = audibleBelowThreshold
-				correctInaudible = len(inaudible) - inaudibleBelowThreshold
-			} else {
-				correctAudible = len(audible) - audibleBelowThreshold
-				correctInaudible = inaudibleBelowThreshold
+	for scoreType := range r.ScoreTypes {
+		if scoreType != JND {
+			accuracy, threshold, err := r.AccuracyAndThreshold(scoreType)
+			if err != nil {
+				return nil, err
 			}
-			return float64(correctAudible+correctInaudible) / float64(len(audible)+len(inaudible))
+			result = append(result, AccuracyScore{
+				ScoreType: scoreType,
+				Threshold: threshold,
+				Accuracy:  accuracy,
+			})
 		}
-		bestAccuracyThresholdIndex := ternarySearch(accuracy, 0, len(all)-1)
-		result = append(result, AccuracyScore{
-			ScoreType: scoreType,
-			Threshold: all[bestAccuracyThresholdIndex],
-			Accuracy:  accuracy(bestAccuracyThresholdIndex),
-		})
 	}
 	sort.Sort(result)
 	return result, nil
@@ -383,6 +391,167 @@ func (s Studies) ToBundles() (ReferenceBundles, error) {
 		}
 	}
 	return result, nil
+}
+
+func (r ReferenceBundles) CalculateZimtohrliMSE(z *goohrli.Goohrli) (float64, error) {
+	sumOfSquares := 0.0
+	for _, bundle := range r {
+		bar := progress.New(fmt.Sprintf("Calculating for %v", filepath.Base(bundle.Dir)))
+		pool := &worker.Pool[any]{
+			Workers:  runtime.NumCPU(),
+			OnChange: bar.Update,
+		}
+		if err := bundle.Calculate(map[ScoreType]Measurement{Zimtohrli: z.NormalizedAudioDistance}, pool, true); err != nil {
+			return 0, err
+		}
+		if bundle.IsJND() {
+			accuracy, _, err := bundle.AccuracyAndThreshold(Zimtohrli)
+			if err != nil {
+				return 0, err
+			}
+			sumOfSquares += 1 - accuracy*accuracy
+
+		} else {
+			correlation, err := bundle.Correlation(Zimtohrli, MOS)
+			if err != nil {
+				return 0, err
+			}
+			sumOfSquares += 1 - correlation*correlation
+		}
+		bar.Finish()
+	}
+	return sumOfSquares / float64(len(r)), nil
+}
+
+func mutateFloat(f, min, max float64, rng *rand.Rand, temp float64) float64 {
+	r := temp * rng.NormFloat64()
+	if r == 0 {
+		return f
+	} else if r > 0 {
+		f *= (1 + r)
+	} else {
+		f /= (1 - r)
+	}
+	if f < min {
+		f = min
+	}
+	if f > max {
+		f = max
+	}
+	return f
+}
+
+func mutateInt(i, min, max int, rng *rand.Rand, temp float64) int {
+	if float64(i)*temp < 1 {
+		i += (rng.Int() % 3) - 1
+		if i < min {
+			i = min
+		}
+		if i > max {
+			i = max
+		}
+		return i
+	}
+	return int(mutateFloat(float64(i), float64(min), float64(max), rng, temp))
+}
+
+const sampleRate = 48000
+
+func mutate(z *goohrli.Goohrli, rng *rand.Rand, temp float64) *goohrli.Goohrli {
+	result := goohrli.New(sampleRate, mutateFloat(z.FrequencyResolution(), 1, 50, rng, temp))
+	result.SetNSIMChannelWindow(mutateInt(z.GetNSIMChannelWindow(), 1, 128, rng, temp))
+	result.SetNSIMStepWindow(mutateInt(z.GetNSIMStepWindow(), 1, 128, rng, temp))
+	result.SetPerceptualSampleRate(mutateFloat(z.GetPerceptualSampleRate(), 20, 500, rng, temp))
+	return result
+}
+
+func toParameters(z *goohrli.Goohrli) map[string]float64 {
+	return map[string]float64{
+		"FrequencyResolution":  z.FrequencyResolution(),
+		"PerceptualSampleRate": z.GetPerceptualSampleRate(),
+		"NSIMStepWindow":       float64(z.GetNSIMStepWindow()),
+		"NSIMChannelWindow":    float64(z.GetNSIMChannelWindow()),
+	}
+}
+
+func (r ReferenceBundles) References() int {
+	res := 0
+	for _, bundle := range r {
+		res += len(bundle.References)
+	}
+	return res
+}
+
+func (r ReferenceBundles) Split(rng *rand.Rand, split float64) (ReferenceBundles, ReferenceBundles) {
+	left := ReferenceBundles{}
+	right := ReferenceBundles{}
+	for _, bundle := range r {
+		newLeft := &ReferenceBundle{
+			Dir:        bundle.Dir,
+			References: nil,
+			ScoreTypes: map[ScoreType]int{},
+		}
+		left = append(left, newLeft)
+		newRight := &ReferenceBundle{
+			Dir:        bundle.Dir,
+			References: nil,
+			ScoreTypes: map[ScoreType]int{},
+		}
+		right = append(right, newRight)
+		numLeft := int(split * float64(len(bundle.References)))
+		indices := rng.Perm(len(bundle.References))
+		for _, index := range indices[:numLeft] {
+			newLeft.Add(bundle.References[index])
+		}
+		for _, index := range indices[numLeft:] {
+			newRight.Add(bundle.References[index])
+		}
+	}
+	return left, right
+}
+
+type OptimizationEvent struct {
+	Parameters map[string]float64
+	Step       int
+	Loss       float64
+	Temp       float64
+}
+
+func (r ReferenceBundles) Optimize(startStep, numSteps float64, logger func(OptimizationEvent)) error {
+	rng := rand.New(rand.NewSource(0))
+	z := goohrli.New(sampleRate, goohrli.DefaultFrequencyResolution())
+	loss, err := r.CalculateZimtohrliMSE(z)
+	if err != nil {
+		return err
+	}
+	log.Printf("Created initial solution %+v with loss %.2f", toParameters(z), loss)
+	for step := startStep; step < numSteps; step++ {
+		temp := 1.0 - (step+1)/numSteps
+		newZ := mutate(z, rng, temp)
+		log.Printf("Created new solution %+v", toParameters(newZ))
+		newLoss, err := r.CalculateZimtohrliMSE(newZ)
+		if err != nil {
+			return err
+		}
+		log.Printf("Step %v, temp %v, old loss %.2f, new loss %.2f", step, temp, loss, newLoss)
+		logger(OptimizationEvent{Parameters: toParameters(z), Step: int(step), Loss: newLoss, Temp: temp})
+		if newLoss < loss {
+			z = newZ
+			loss = newLoss
+			log.Printf("*** Accepting better solution: %+v", toParameters(z))
+		} else {
+			acceptanceProb := math.Exp(-(newLoss - loss) / temp)
+			dice := rng.Float64()
+			if dice < acceptanceProb {
+				z = newZ
+				loss = newLoss
+				log.Printf("*** Accepting poorer solution due to acceptanceProb=%.2f > dice=%.2f: %+v", acceptanceProb, dice, toParameters(z))
+			} else {
+				log.Print("Discarding poorer solution")
+			}
+		}
+	}
+	return nil
 }
 
 func gitIdentity() (*string, error) {
@@ -418,7 +587,7 @@ Created at %s
 		log.Fatal(err)
 	}
 	if id != nil {
-		fmt.Fprintf(res, "Revision %s\n\n", *id)
+		fmt.Fprintf(res, "%s\n\n", *id)
 	}
 	for _, bundle := range b {
 		fmt.Fprintf(res, "## %s\n\n", filepath.Base(bundle.Dir))
