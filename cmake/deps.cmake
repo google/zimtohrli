@@ -33,8 +33,8 @@ FetchContent_Declare(portaudio
     GIT_REPOSITORY https://github.com/PortAudio/portaudio.git
     GIT_TAG v19.7.0
 )
-target_compile_options(libprotobuf PRIVATE -Wno-deprecated-declarations)
 FetchContent_MakeAvailable(portaudio)
+target_compile_options(portaudio PRIVATE -Wno-deprecated-declarations)
 
 FetchContent_Declare(googletest
      EXCLUDE_FROM_ALL
