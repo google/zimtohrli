@@ -1,8 +1,8 @@
 # Zimtohrli correlation report
 
-Created at 2024-05-08
-
-Revision v0.1.10-7-gca8a43c, main, git@github.com:google/zimtohrli.git
+Created at 2024-05-15
+	
+Revision Revision v0.1.10-10-g2813c18, branch main, origin git@github.com:google/zimtohrli.git
 
 ## PEASS_DB
 
@@ -274,13 +274,13 @@ Revision v0.1.10-7-gca8a43c, main, git@github.com:google/zimtohrli.git
 
 |Score type |MSE  |Min score |Max score |Mean score |
 |-----------|-----|----------|----------|-----------|
-|ViSQOL     |0.11 |0.52      |0.80      |0.60       |
-|PESQ       |0.12 |0.34      |0.84      |0.59       |
-|Zimtohrli  |0.13 |0.47      |0.72      |0.56       |
-|CDPAM      |0.14 |0.44      |0.73      |0.54       |
-|PARLAQ     |0.16 |0.45      |0.78      |0.53       |
-|PEAQB      |0.20 |0.28      |0.85      |0.50       |
-|DPAM       |0.31 |0.19      |0.57      |0.38       |
-|WARP-Q     |0.31 |0.07      |0.78      |0.42       |
-|GVPMOS     |0.39 |0.01      |0.78      |0.36       |
+|ViSQOL     |0.09 |0.52      |0.80      |0.62       |
+|PESQ       |0.10 |0.48      |0.84      |0.61       |
+|Zimtohrli  |0.10 |0.56      |0.74      |0.59       |
+|CDPAM      |0.12 |0.44      |0.73      |0.57       |
+|PARLAQ     |0.15 |0.47      |0.78      |0.54       |
+|PEAQB      |0.18 |0.28      |0.85      |0.51       |
+|DPAM       |0.28 |0.19      |0.69      |0.42       |
+|WARP-Q     |0.28 |0.07      |0.78      |0.45       |
+|GVPMOS     |0.32 |0.01      |0.78      |0.40       |
 
