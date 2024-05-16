@@ -129,14 +129,14 @@ func (b *Bar) Update(total, completed, errors int) {
 		timeUsed := now.Sub(b.lastRender)
 		currentCompletedSpeed := float64(completed-b.completed) / float64(timeUsed)
 		currentFractionSpeed := (fraction - (float64(b.completed) / float64(b.total))) / float64(timeUsed)
-		minutesUsed := float64(timeUsed) / float64(time.Minute)
-		w := math.Exp(-minutesUsed)
+		secondsUsed := float64(timeUsed) / float64(time.Second)
+		w := math.Exp(-0.1 * secondsUsed)
 		b.emaCompletedSpeed = b.emaCompletedSpeed*w + currentCompletedSpeed*(1-w)
 		b.emaFractionSpeed = b.emaFractionSpeed*w + currentFractionSpeed*(1-w)
 	}
 	eta := time.Duration((1 - fraction) / b.emaFractionSpeed)
 	round := time.Minute
-	if eta < time.Minute {
+	if eta < 2*time.Minute {
 		round = time.Second
 	}
 	suffix := fmt.Sprintf(" %.2f/s ETA: %s", b.emaCompletedSpeed*float64(time.Second), eta.Round(round))
