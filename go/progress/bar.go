@@ -114,12 +114,15 @@ func (b *Bar) filler(prefix, suffix string) string {
 func (b *Bar) Update(total, completed, errors int) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
+	if completed < b.completed {
+		return
+	}
 
 	prefix := fmt.Sprintf("%s, %d/%d/%d ", b.name, completed, errors, total)
 
 	now := time.Now()
 	fraction := float64(completed) / float64(total)
-	if timeLived := now.Sub(b.created); timeLived < 10*time.Second {
+	if timeLived := now.Sub(b.created); timeLived < 2*time.Second {
 		b.emaCompletedSpeed = float64(completed) / float64(timeLived)
 		b.emaFractionSpeed = fraction / float64(timeLived)
 	} else {
@@ -127,9 +130,9 @@ func (b *Bar) Update(total, completed, errors int) {
 		currentCompletedSpeed := float64(completed-b.completed) / float64(timeUsed)
 		currentFractionSpeed := (fraction - (float64(b.completed) / float64(b.total))) / float64(timeUsed)
 		minutesUsed := float64(timeUsed) / float64(time.Minute)
-		smoothingM1 := math.Pow(0.5, minutesUsed)
-		b.emaCompletedSpeed = (1-smoothingM1)*currentCompletedSpeed + smoothingM1*b.emaCompletedSpeed
-		b.emaFractionSpeed = (1-smoothingM1)*currentFractionSpeed + smoothingM1*b.emaFractionSpeed
+		w := math.Exp(-minutesUsed)
+		b.emaCompletedSpeed = b.emaCompletedSpeed*w + currentCompletedSpeed*(1-w)
+		b.emaFractionSpeed = b.emaFractionSpeed*w + currentFractionSpeed*(1-w)
 	}
 	eta := time.Duration((1 - fraction) / b.emaFractionSpeed)
 	round := time.Minute

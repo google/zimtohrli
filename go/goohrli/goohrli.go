@@ -22,32 +22,15 @@ package goohrli
 */
 import "C"
 import (
+	"encoding/json"
 	"fmt"
 	"math"
+	"reflect"
 	"runtime"
 	"time"
 
 	"github.com/google/zimtohrli/go/audio"
 )
-
-// DefaultFrequencyResolution returns the default frequency resolution corresponding to the minimum width (at the low frequency end) of the Zimtohrli filter bank.
-func DefaultFrequencyResolution() float64 {
-	return float64(C.DefaultFrequencyResolution())
-}
-
-// DefaultPerceptualSampleRate returns the default perceptual sample rate corresponding to the human hearing sensitivity to timing changes.
-func DefaultPerceptualSampleRate() float64 {
-	return float64(C.DefaultPerceptualSampleRate())
-}
-
-// DefaultNSIMStepWindow returns the default NSIM step window.
-func DefaultNSIMStepWindow() int {
-	return int(C.DefaultNSIMStepWindow())
-}
-
-func DefaultNSIMChannelWindow() int {
-	return int(C.DefaultNSIMChannelWindow())
-}
 
 // EnergyAndMaxAbsAmplitude is holds the energy and maximum absolute amplitude of a measurement.
 type EnergyAndMaxAbsAmplitude struct {
@@ -81,55 +64,172 @@ func MOSFromZimtohrli(zimtohrliDistance float64) float64 {
 
 // Goohrli is a Go wrapper around zimtohrli::Zimtohrli.
 type Goohrli struct {
-	zimtohrli           C.Zimtohrli
-	sampleRate          float64
-	frequencyResolution float64
-
-	// UnwarpWindow is the duration of a window when unwarping the timeline using dynamic time warp.
-	UnwarpWindow time.Duration
+	zimtohrli C.Zimtohrli
 }
 
 // New returns a new Goohrli for the given parameters.
-//
-// sampleRate is the sample rate of input audio.
-//
-// frequencyResolution is the width of the lowest frequency channel, i.e. the expected frequency
-// resolution of human hearing.
-func New(sampleRate float64, frequencyResolution float64) *Goohrli {
+func New(params Parameters) *Goohrli {
+	cParams := C.DefaultZimtohrliParameters()
+	cParams.SampleRate = C.float(params.SampleRate)
+	cParams.FrequencyResolution = C.float(params.FrequencyResolution)
 	result := &Goohrli{
-		zimtohrli:           C.CreateZimtohrli(C.float(sampleRate), C.float(frequencyResolution)),
-		sampleRate:          sampleRate,
-		frequencyResolution: frequencyResolution,
-		UnwarpWindow:        2 * time.Second,
+		zimtohrli: C.CreateZimtohrli(cParams),
 	}
+	result.Set(params)
 	runtime.SetFinalizer(result, func(g *Goohrli) {
 		C.FreeZimtohrli(g.zimtohrli)
 	})
 	return result
 }
 
-func (g *Goohrli) String() string {
-	return fmt.Sprintf("%+v", map[string]any{
-		"SampleRate":           g.sampleRate,
-		"FrequencyResolution":  g.frequencyResolution,
-		"UnwarpWindow":         g.UnwarpWindow,
-		"PerceptualSampleRate": g.GetPerceptualSampleRate(),
-		"NSIMStepWindow":       g.GetNSIMStepWindow(),
-		"NSIMChannelWindow":    g.GetNSIMChannelWindow(),
-	})
+type Duration struct {
+	time.Duration
 }
 
-// SampleRate returns the expected sample rate of input audio.
-func (g *Goohrli) SampleRate() float64 { return g.sampleRate }
+func (d Duration) MarshalJSON() ([]byte, error) {
+	return json.Marshal(d.Duration.String())
+}
 
-// FrequencyResolution returns the configured frequency resolution.
-func (g *Goohrli) FrequencyResolution() float64 { return g.frequencyResolution }
+func (d *Duration) UnmarshalJSON(b []byte) error {
+	timeString := ""
+	if err := json.Unmarshal(b, &timeString); err != nil {
+		return err
+	}
+	timeDuration, err := time.ParseDuration(timeString)
+	if err != nil {
+		return err
+	}
+	d.Duration = timeDuration
+	return nil
+}
+
+// Parameters contains the parameters used by a Goohrli instance.
+type Parameters struct {
+	SampleRate           float64
+	FrequencyResolution  float64
+	PerceptualSampleRate float64
+	ApplyMasking         bool
+	FullScaleSineDB      float64
+	ApplyLoudness        bool
+	UnwarpWindow         Duration
+	NSIMStepWindow       int
+	NSIMChannelWindow    int
+	MaskingLowerZeroAt20 float64
+	MaskingLowerZeroAt80 float64
+	MaskingUpperZeroAt20 float64
+	MaskingUpperZeroAt80 float64
+	MaskingOnsetWidth    float64
+	MaskingOnsetPeak     float64
+	MaskingMaxMask       float64
+}
+
+var durationType = reflect.TypeOf(time.Second)
+
+// Update assumes the argument is JSON and updates the parameters with the fields present in the provided JSON object.
+func (p *Parameters) Update(b []byte) error {
+	updateMap := map[string]any{}
+	if err := json.Unmarshal(b, &updateMap); err != nil {
+		return err
+	}
+	val := reflect.ValueOf(p).Elem()
+	for k, v := range updateMap {
+		fieldVal := val.FieldByName(k)
+		if fieldVal.IsZero() {
+			return fmt.Errorf("provided unknown field %q", k)
+		}
+		switch fieldVal.Kind() {
+		case reflect.Float64:
+			fieldVal.SetFloat(v.(float64))
+		case reflect.Bool:
+			fieldVal.SetBool(v.(bool))
+		case reflect.Int:
+			fieldVal.SetInt(int64(v.(float64)))
+		default:
+			if fieldVal.Type() == durationType {
+				d, err := time.ParseDuration(v.(string))
+				if err != nil {
+					return fmt.Errorf("unable to parse duration field %q", v)
+				}
+				fieldVal.Set(reflect.ValueOf(d))
+			}
+		}
+	}
+	return nil
+}
+
+func goFromCParameters(cParams C.ZimtohrliParameters) Parameters {
+	return Parameters{
+		SampleRate:           float64(cParams.SampleRate),
+		FrequencyResolution:  float64(cParams.FrequencyResolution),
+		PerceptualSampleRate: float64(cParams.PerceptualSampleRate),
+		ApplyMasking:         cParams.ApplyMasking != 0,
+		FullScaleSineDB:      float64(cParams.FullScaleSineDB),
+		ApplyLoudness:        cParams.ApplyLoudness != 0,
+		UnwarpWindow:         Duration{time.Duration(float64(time.Second) * float64(cParams.UnwarpWindowSeconds))},
+		NSIMStepWindow:       int(cParams.NSIMStepWindow),
+		NSIMChannelWindow:    int(cParams.NSIMChannelWindow),
+		MaskingLowerZeroAt20: float64(cParams.MaskingLowerZeroAt20),
+		MaskingLowerZeroAt80: float64(cParams.MaskingLowerZeroAt80),
+		MaskingUpperZeroAt20: float64(cParams.MaskingUpperZeroAt20),
+		MaskingUpperZeroAt80: float64(cParams.MaskingUpperZeroAt80),
+		MaskingOnsetWidth:    float64(cParams.MaskingOnsetWidth),
+		MaskingOnsetPeak:     float64(cParams.MaskingOnsetPeak),
+		MaskingMaxMask:       float64(cParams.MaskingMaxMask),
+	}
+}
+
+// DefaultParameters returns the default Zimtohrli parameters.
+func DefaultParameters(sampleRate float64) Parameters {
+	cParams := C.DefaultZimtohrliParameters()
+	cParams.SampleRate = C.float(sampleRate)
+	return goFromCParameters(cParams)
+}
+
+// Parameters returns the parameters controlling the behavior of this instance.
+func (g *Goohrli) Parameters() Parameters {
+	return goFromCParameters(C.GetZimtohrliParameters(g.zimtohrli))
+}
+
+// Set updates the parameters controlling the behavior of this instance.
+//
+// SampleRate and FrequencyResolution can't be updated and will be ignored in this method.
+func (g *Goohrli) Set(params Parameters) {
+	var cParams C.ZimtohrliParameters
+	cParams.PerceptualSampleRate = C.float(params.PerceptualSampleRate)
+	if params.ApplyMasking {
+		cParams.ApplyMasking = 1
+	} else {
+		cParams.ApplyMasking = 0
+	}
+	cParams.FullScaleSineDB = C.float(params.FullScaleSineDB)
+	if params.ApplyLoudness {
+		cParams.ApplyLoudness = 1
+	} else {
+		cParams.ApplyLoudness = 0
+	}
+	cParams.UnwarpWindowSeconds = C.float(float64(params.UnwarpWindow.Duration) / float64(time.Second))
+	cParams.NSIMStepWindow = C.int(params.NSIMStepWindow)
+	cParams.NSIMChannelWindow = C.int(params.NSIMChannelWindow)
+	cParams.MaskingLowerZeroAt20 = C.float(params.MaskingLowerZeroAt20)
+	cParams.MaskingLowerZeroAt80 = C.float(params.MaskingLowerZeroAt80)
+	cParams.MaskingUpperZeroAt20 = C.float(params.MaskingUpperZeroAt20)
+	cParams.MaskingUpperZeroAt80 = C.float(params.MaskingUpperZeroAt80)
+	cParams.MaskingOnsetWidth = C.float(params.MaskingOnsetWidth)
+	cParams.MaskingOnsetPeak = C.float(params.MaskingOnsetPeak)
+	cParams.MaskingMaxMask = C.float(params.MaskingMaxMask)
+	C.SetZimtohrliParameters(g.zimtohrli, cParams)
+}
+
+func (g *Goohrli) String() string {
+	return fmt.Sprintf("%+v", g.Parameters())
+}
 
 // NormalizedAudioDistance returns the distance between the audio files after normalizing their amplitudes for the same max amplitude.
 func (g *Goohrli) NormalizedAudioDistance(audioA, audioB *audio.Audio) (float64, error) {
 	sumOfSquares := 0.0
-	if g.sampleRate != audioA.Rate || g.sampleRate != audioB.Rate {
-		return 0, fmt.Errorf("one of the audio files doesn't have the expected sample rate %v: %v, %v", g.sampleRate, audioA.Rate, audioB.Rate)
+	params := g.Parameters()
+	if params.SampleRate != audioA.Rate || params.SampleRate != audioB.Rate {
+		return 0, fmt.Errorf("one of the audio files doesn't have the expected sample rate %v: %v, %v", params.SampleRate, audioA.Rate, audioB.Rate)
 	}
 	if len(audioA.Samples) != len(audioB.Samples) {
 		return 0, fmt.Errorf("the audio files don't have the same number of channels: %v, %v", len(audioA.Samples), len(audioB.Samples))
@@ -171,7 +271,7 @@ func (g *Goohrli) Analyze(signal []float32) *Analysis {
 
 // AnalysisDistance returns the Zimtohrli distance between two analyses.
 func (g *Goohrli) AnalysisDistance(analysisA *Analysis, analysisB *Analysis) float32 {
-	return float32(C.AnalysisDistance(g.zimtohrli, analysisA.analysis, analysisB.analysis, C.int(float64(g.GetPerceptualSampleRate())*g.UnwarpWindow.Seconds())))
+	return float32(C.AnalysisDistance(g.zimtohrli, analysisA.analysis, analysisB.analysis))
 }
 
 // Distance returns the Zimtohrli distance between two signals.
@@ -180,37 +280,7 @@ func (g *Goohrli) Distance(signalA []float32, signalB []float32) float64 {
 	defer C.FreeAnalysis(analysisA)
 	analysisB := C.Analyze(g.zimtohrli, (*C.float)(&signalB[0]), C.int(len(signalB)))
 	defer C.FreeAnalysis(analysisB)
-	return float64(C.AnalysisDistance(g.zimtohrli, analysisA, analysisB, C.int(float64(g.GetPerceptualSampleRate())*g.UnwarpWindow.Seconds())))
-}
-
-// GetNSIMStepWIndow returns the window in perceptual_sample_rate time steps when compting the NSIM.
-func (g *Goohrli) GetNSIMStepWindow() int {
-	return int(C.GetNSIMStepWindow(g.zimtohrli))
-}
-
-// SetNSIMStepWindow sets the window in perceptual_sample_rate time steps when compting the NSIM.
-func (g *Goohrli) SetNSIMStepWindow(s int) {
-	C.SetNSIMStepWindow(g.zimtohrli, C.int(s))
-}
-
-// GetNSIMChannelWindow returns the window in channels when computing the NSIM.
-func (g *Goohrli) GetNSIMChannelWindow() int {
-	return int(C.GetNSIMChannelWindow(g.zimtohrli))
-}
-
-// SetNSIMChannelWindow sets the window in channels when computing the NSIM.
-func (g *Goohrli) SetNSIMChannelWindow(s int) {
-	C.SetNSIMChannelWindow(g.zimtohrli, C.int(s))
-}
-
-// GetPerceptualSampleRate returns the perceptual sample rate used, corresponding to human hearing sensitivity to differences in timing.
-func (g *Goohrli) GetPerceptualSampleRate() float64 {
-	return float64(C.GetPerceptualSampleRate(g.zimtohrli))
-}
-
-// SetPerceptualSampleRate sets the perceptual sample rate used.
-func (g *Goohrli) SetPerceptualSampleRate(f float64) {
-	C.SetPerceptualSampleRate(g.zimtohrli, C.float(f))
+	return float64(C.AnalysisDistance(g.zimtohrli, analysisA, analysisB))
 }
 
 // ViSQOL is a Go wrapper around zimtohrli::ViSQOL.

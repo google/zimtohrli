@@ -233,16 +233,12 @@ struct Zimtohrli {
   //
   // If verbose is false only the `norm` field in the result will be populated.
   //
-  // If unwarp_window_samples has a value, will run a ChainDTW with that window
-  // and only compare matching time steps of the spectrograms.
-  //
   // Assumes that any padding built into the spectrogram arrays (the
   // values between spectrogram.shape() and spectrogram.memory_shape()) is
   // populated with zeros.
-  struct Distance Distance(bool verbose,
-                           const hwy::AlignedNDArray<float, 2>& spectrogram_a,
-                           const hwy::AlignedNDArray<float, 2>& spectrogram_b,
-                           std::optional<size_t> unwarp_window_samples) const;
+  struct Distance Distance(
+      bool verbose, const hwy::AlignedNDArray<float, 2>& spectrogram_a,
+      const hwy::AlignedNDArray<float, 2>& spectrogram_b) const;
 
   // Convenience method to analyze a signal.
   //
@@ -281,13 +277,9 @@ struct Zimtohrli {
   //
   // frames_b_span is a span of (num_audio_channels, num_samples)-shaped
   // arrays of samples between -1 and 1.
-  //
-  // If unwarp_window_samples has a value, will run a ChainDTW with that window
-  // and only compare matching time steps of the spectrograms.
-  Comparison Compare(
-      const hwy::AlignedNDArray<float, 2>& frames_a,
-      absl::Span<const hwy::AlignedNDArray<float, 2>* const> frames_b_span,
-      std::optional<size_t> unwarp_window_samples);
+  Comparison Compare(const hwy::AlignedNDArray<float, 2>& frames_a,
+                     absl::Span<const hwy::AlignedNDArray<float, 2>* const>
+                         frames_b_span) const;
 
   // Sample rate corresponding to the human hearing sensitivity to timing
   // differences.
@@ -302,6 +294,11 @@ struct Zimtohrli {
   // The window in channels when computing the NSIM.
   size_t nsim_channel_window = 32;
 
+  // The window of the dynamic time warp that matches audio signals.
+  //
+  // If zero no dynamic time warp will be performed.
+  float unwarp_window_seconds = 2;
+
   // The reference dB SPL of a sine signal of amplitude 1.
   float full_scale_sine_db = 80;
 
@@ -314,6 +311,12 @@ struct Zimtohrli {
 
   // Perceptual intensity model.
   Loudness loudness;
+
+  // Whether the masking model is applied when creating spectrograms.
+  bool apply_masking = true;
+
+  // Whether the loudness model is applied when creating spectrograms.
+  bool apply_loudness = true;
 };
 
 }  // namespace zimtohrli

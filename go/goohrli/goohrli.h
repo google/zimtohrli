@@ -27,23 +27,35 @@
 extern "C" {
 #endif
 
-// Returns the default frequency resolution.
-float DefaultFrequencyResolution();
+// Contains the parameters controlling Zimtohrli behavior.
+typedef struct ZimtohrliParameters {
+  float SampleRate;
+  float FrequencyResolution;
+  float PerceptualSampleRate;
+  int ApplyMasking;
+  float FullScaleSineDB;
+  int ApplyLoudness;
+  float UnwarpWindowSeconds;
+  int NSIMStepWindow;
+  int NSIMChannelWindow;
+  float MaskingLowerZeroAt20;
+  float MaskingLowerZeroAt80;
+  float MaskingUpperZeroAt20;
+  float MaskingUpperZeroAt80;
+  float MaskingOnsetWidth;
+  float MaskingOnsetPeak;
+  float MaskingMaxMask;
 
-// Returns the default perceptual sample rate.
-float DefaultPerceptualSampleRate();
+} ZimtohrliParameters;
 
-// Returns the default NSIM step window.
-int DefaultNSIMStepWindow();
-
-// Returns the default NSIM channel window;
-int DefaultNSIMChannelWindow();
+// Returns the default parameters.
+ZimtohrliParameters DefaultZimtohrliParameters();
 
 // void* representation of zimtohrli::Zimtohrli.
 typedef void* Zimtohrli;
 
 // Returns a zimtohrli::Zimtohrli for the given parameters.
-Zimtohrli CreateZimtohrli(float sample_rate, float frequency_resolution);
+Zimtohrli CreateZimtohrli(ZimtohrliParameters params);
 
 // Deletes a zimtohrli::Zimtohrli.
 void FreeZimtohrli(Zimtohrli z);
@@ -82,30 +94,18 @@ float MOSFromZimtohrli(float zimtohrli_distance);
 void FreeAnalysis(Analysis a);
 
 // Returns the Zimtohrli distance between two analyses using the provided
-// zimtohrli::Zimtohrli and the unwarp window length.
-float AnalysisDistance(Zimtohrli zimtohrli, Analysis a, Analysis b,
-                       int unwarp_window_samples);
+// zimtohrli::Zimtohrli.
+float AnalysisDistance(Zimtohrli zimtohrli, Analysis a, Analysis b);
 
-// Returns the window in perceptual_sample_rate time steps when compting the
-// NSIM.
-int GetNSIMStepWindow(Zimtohrli zimtohrli);
+// Sets the parameters.
+//
+// Sample rate and frequency resolution can only be set when an instance is
+// created and will be ignored in this function.
+void SetZimtohrliParameters(Zimtohrli zimtohrli,
+                            ZimtohrliParameters parameters);
 
-// Sets the window in perceptual_sample_rate time steps when compting the
-// NSIM.
-void SetNSIMStepWindow(Zimtohrli zimtohrli, int s);
-
-// Returns the window in channels when computing the NSIM.
-int GetNSIMChannelWindow(Zimtohrli zimtohrli);
-
-// Sets the window in channels when computing the NSIM.
-void SetNSIMChannelWindow(Zimtohrli zimtohrli, int s);
-
-// Returns the perceptual sample rate used, corresponding to human hearing
-// sensitivity to timing differences.
-float GetPerceptualSampleRate(Zimtohrli zimtohrli);
-
-// Sets the perceptual sample rate used.
-void SetPerceptualSampleRate(Zimtohrli zimtohrli, float f);
+// Returns the parameters.
+ZimtohrliParameters GetZimtohrliParameters(Zimtohrli zimtohrli);
 
 // void* representation of zimtohrli::ViSQOL.
 typedef void* ViSQOL;

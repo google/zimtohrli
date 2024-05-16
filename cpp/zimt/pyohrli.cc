@@ -59,7 +59,6 @@ struct PyohrliObject {
   PyObject_HEAD
   zimtohrli::Zimtohrli *zimtohrli;
   // clang-format on
-  float unwarp_window;
 };
 
 int Pyohrli_init(PyohrliObject* self, PyObject* args, PyObject* kwds) {
@@ -79,7 +78,6 @@ int Pyohrli_init(PyohrliObject* self, PyObject* args, PyObject* kwds) {
                     std::min(sample_rate * 0.5f, default_cam.high_threshold_hz),
             }
                 .CreateFilterbank(sample_rate)};
-    self->unwarp_window = 2.0f;
   } catch (const std::bad_alloc&) {
     PyErr_SetNone(PyExc_MemoryError);
     return -1;
@@ -172,10 +170,9 @@ PyObject* Pyohrli_analyze(PyohrliObject* self, PyObject* const* args,
 // afterwards.
 PyObject* Distance(const zimtohrli::Zimtohrli& zimtohrli,
                    const zimtohrli::Analysis& analysis_a,
-                   const zimtohrli::Analysis& analysis_b,
-                   size_t unwarp_window) {
-  const zimtohrli::Distance distance = zimtohrli.Distance(
-      false, analysis_a.spectrogram, analysis_b.spectrogram, unwarp_window);
+                   const zimtohrli::Analysis& analysis_b) {
+  const zimtohrli::Distance distance =
+      zimtohrli.Distance(false, analysis_a.spectrogram, analysis_b.spectrogram);
   return PyFloat_FromDouble(distance.value);
 }
 
@@ -190,10 +187,8 @@ PyObject* Pyohrli_analysis_distance(PyohrliObject* self, PyObject* const* args,
   if (!Py_IS_TYPE(args[1], &AnalysisType)) {
     return BadArgument("argument 1 is not an Analysis instance");
   }
-  return Distance(
-      *self->zimtohrli, *((AnalysisObject*)args[0])->analysis,
-      *((AnalysisObject*)args[1])->analysis,
-      self->unwarp_window * self->zimtohrli->perceptual_sample_rate);
+  return Distance(*self->zimtohrli, *((AnalysisObject*)args[0])->analysis,
+                  *((AnalysisObject*)args[1])->analysis);
 }
 
 PyObject* Pyohrli_distance(PyohrliObject* self, PyObject* const* args,
@@ -211,71 +206,8 @@ PyObject* Pyohrli_distance(PyohrliObject* self, PyObject* const* args,
   if (!analysis_b.has_value()) {
     return nullptr;
   }
-  return Distance(
-      *self->zimtohrli, analysis_a.value(), analysis_b.value(),
-      self->unwarp_window * self->zimtohrli->perceptual_sample_rate);
+  return Distance(*self->zimtohrli, analysis_a.value(), analysis_b.value());
 }
-
-PyObject* Pyohrli_set_nsim_step_window(PyohrliObject* self,
-                                       PyObject* const* args,
-                                       Py_ssize_t nargs) {
-  if (nargs != 1) {
-    return BadArgument("not exactly 1 argument provided");
-  }
-  self->zimtohrli->nsim_step_window = PyLong_AsSize_t(args[0]);
-  Py_RETURN_NONE;
-}
-
-PyObject* Pyohrli_get_nsim_step_window(PyohrliObject* self, PyObject* args,
-                                       Py_ssize_t nargs) {
-  if (nargs != 0) {
-    return BadArgument("no arguments should be provided");
-  }
-  return PyLong_FromSize_t(self->zimtohrli->nsim_step_window);
-}
-
-PyObject* Pyohrli_set_nsim_channel_window(PyohrliObject* self,
-                                          PyObject* const* args,
-                                          Py_ssize_t nargs) {
-  if (nargs != 1) {
-    return BadArgument("not exactly 1 argument provided");
-  }
-  self->zimtohrli->nsim_channel_window = PyLong_AsSize_t(args[0]);
-  Py_RETURN_NONE;
-}
-
-PyObject* Pyohrli_get_nsim_channel_window(PyohrliObject* self, PyObject* args,
-                                          Py_ssize_t nargs) {
-  if (nargs != 0) {
-    return BadArgument("no arguments should be provided");
-  }
-  return PyLong_FromSize_t(self->zimtohrli->nsim_channel_window);
-}
-
-PyObject* Pyohrli_set_full_scale_sine_db(PyohrliObject* self,
-                                         PyObject* const* args,
-                                         Py_ssize_t nargs) {
-  if (nargs != 1) {
-    return BadArgument("not exactly 1 argument provided");
-  }
-  self->zimtohrli->full_scale_sine_db = PyFloat_AsDouble(args[0]);
-  Py_RETURN_NONE;
-}
-
-PyObject* Pyohrli_get_full_scale_sine_db(PyohrliObject* self, PyObject* args,
-                                         Py_ssize_t nargs) {
-  if (nargs != 0) {
-    return BadArgument("no arguments should be provided");
-  }
-  return PyFloat_FromDouble(self->zimtohrli->full_scale_sine_db);
-}
-
-PyMemberDef Pyohrli_members[] = {
-    {"unwarp_window", T_FLOAT, offsetof(PyohrliObject, unwarp_window), 0,
-     "Unwarp window, the duration in seconds of a window when unwarping the "
-     "timeline using dynamic time warp"},
-    {nullptr} /* Sentinel */
-};
 
 PyMethodDef Pyohrli_methods[] = {
     {"analyze", (PyCFunction)Pyohrli_analyze, METH_FASTCALL,
@@ -284,26 +216,6 @@ PyMethodDef Pyohrli_methods[] = {
      "Returns the distance between the two provided analyses."},
     {"distance", (PyCFunction)Pyohrli_distance, METH_FASTCALL,
      "Returns the distance between the two provided signals."},
-    {"set_nsim_step_window", (PyCFunction)Pyohrli_set_nsim_step_window,
-     METH_FASTCALL,
-     "Sets the window in perceptual_sample_rate time steps when compting the "
-     "NSIM."},
-    {"get_nsim_step_window", (PyCFunction)Pyohrli_get_nsim_step_window,
-     METH_FASTCALL,
-     "Returns the window in perceptual_sample_rate time steps when compting "
-     "the NSIM."},
-    {"set_nsim_channel_window", (PyCFunction)Pyohrli_set_nsim_channel_window,
-     METH_FASTCALL, "Sets the window in channels when computing the NSIM."},
-    {"get_nsim_channel_window", (PyCFunction)Pyohrli_get_nsim_channel_window,
-     METH_FASTCALL, "Returns the window in channels when computing the NSIM."},
-    {"set_full_scale_sine_db", (PyCFunction)Pyohrli_set_full_scale_sine_db,
-     METH_FASTCALL,
-     "Sets the assumed intensity in dB SPL of a 1kHz sine wave with amplitude "
-     "1."},
-    {"get_full_scale_sine_db", (PyCFunction)Pyohrli_get_full_scale_sine_db,
-     METH_FASTCALL,
-     "Returns the assumed intensity in dB SPL of a 1kHz sine wave with "
-     "amplitude 1."},
     {nullptr} /* Sentinel */
 };
 
@@ -319,7 +231,6 @@ PyTypeObject PyohrliType = {
     .tp_doc =
         PyDoc_STR("Python wrapper around the C++ zimtohrli::Zimtohrli type."),
     .tp_methods = Pyohrli_methods,
-    .tp_members = Pyohrli_members,
     .tp_init = (initproc)Pyohrli_init,
     .tp_new = PyType_GenericNew,
 };

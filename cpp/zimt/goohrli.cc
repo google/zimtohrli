@@ -23,23 +23,10 @@
 #include "hwy/aligned_allocator.h"
 #include "hwy/base.h"
 #include "zimt/cam.h"
+#include "zimt/masking.h"
 #include "zimt/mos.h"
 #include "zimt/visqol.h"
 #include "zimt/zimtohrli.h"
-
-float DefaultFrequencyResolution() {
-  return zimtohrli::Cam{}.minimum_bandwidth_hz;
-}
-
-float DefaultPerceptualSampleRate() {
-  return zimtohrli::Zimtohrli{}.perceptual_sample_rate;
-}
-
-int DefaultNSIMStepWindow() { return zimtohrli::Zimtohrli{}.nsim_step_window; }
-
-int DefaultNSIMChannelWindow() {
-  return zimtohrli::Zimtohrli{}.nsim_channel_window;
-}
 
 EnergyAndMaxAbsAmplitude Measure(const float* signal, int size) {
   hwy::AlignedNDArray<float, 1> signal_array({static_cast<size_t>(size)});
@@ -67,11 +54,13 @@ float MOSFromZimtohrli(float zimtohrli_distance) {
   return zimtohrli::MOSFromZimtohrli(zimtohrli_distance);
 }
 
-Zimtohrli CreateZimtohrli(float sample_rate, float frequency_resolution) {
-  zimtohrli::Cam cam{.minimum_bandwidth_hz = frequency_resolution};
-  cam.high_threshold_hz = std::min(cam.high_threshold_hz, sample_rate);
-  return new zimtohrli::Zimtohrli{.cam_filterbank =
-                                      cam.CreateFilterbank(sample_rate)};
+Zimtohrli CreateZimtohrli(ZimtohrliParameters params) {
+  zimtohrli::Cam cam{.minimum_bandwidth_hz = params.FrequencyResolution};
+  cam.high_threshold_hz = std::min(cam.high_threshold_hz, params.SampleRate);
+  zimtohrli::Zimtohrli* result = new zimtohrli::Zimtohrli{
+      .cam_filterbank = cam.CreateFilterbank(params.SampleRate)};
+  SetZimtohrliParameters(result, params);
+  return result;
 }
 
 void FreeZimtohrli(Zimtohrli zimtohrli) {
@@ -94,43 +83,79 @@ Analysis Analyze(Zimtohrli zimtohrli, float* data, int size) {
 
 void FreeAnalysis(Analysis a) { delete static_cast<zimtohrli::Analysis*>(a); }
 
-float AnalysisDistance(Zimtohrli zimtohrli, Analysis a, Analysis b,
-                       int unwarp_window_samples) {
+float AnalysisDistance(Zimtohrli zimtohrli, Analysis a, Analysis b) {
   zimtohrli::Zimtohrli* z = static_cast<zimtohrli::Zimtohrli*>(zimtohrli);
   zimtohrli::Analysis* analysis_a = static_cast<zimtohrli::Analysis*>(a);
   zimtohrli::Analysis* analysis_b = static_cast<zimtohrli::Analysis*>(b);
-  return z
-      ->Distance(false, analysis_a->spectrogram, analysis_b->spectrogram,
-                 static_cast<size_t>(unwarp_window_samples))
+  return z->Distance(false, analysis_a->spectrogram, analysis_b->spectrogram)
       .value;
 }
 
-int GetNSIMStepWindow(Zimtohrli zimtohrli) {
-  return static_cast<int>(
-      static_cast<zimtohrli::Zimtohrli*>(zimtohrli)->nsim_step_window);
+ZimtohrliParameters GetZimtohrliParameters(Zimtohrli zimtohrli) {
+  zimtohrli::Zimtohrli* z = static_cast<zimtohrli::Zimtohrli*>(zimtohrli);
+  ZimtohrliParameters result;
+  result.SampleRate = z->cam_filterbank->sample_rate;
+  const hwy::AlignedNDArray<float, 2>& thresholds =
+      z->cam_filterbank->thresholds_hz;
+  result.FrequencyResolution = thresholds[{2}][0] - thresholds[{0}][0];
+  result.PerceptualSampleRate = z->perceptual_sample_rate;
+  result.ApplyMasking = z->apply_masking;
+  result.FullScaleSineDB = z->full_scale_sine_db;
+  result.ApplyLoudness = z->apply_loudness;
+  result.UnwarpWindowSeconds = z->unwarp_window_seconds;
+  result.NSIMStepWindow = z->nsim_step_window;
+  result.NSIMChannelWindow = z->nsim_channel_window;
+  const zimtohrli::Masking& m = z->masking;
+  result.MaskingLowerZeroAt20 = m.lower_zero_at_20;
+  result.MaskingLowerZeroAt80 = m.lower_zero_at_80;
+  result.MaskingUpperZeroAt20 = m.upper_zero_at_20;
+  result.MaskingUpperZeroAt80 = m.upper_zero_at_80;
+  result.MaskingOnsetWidth = m.onset_width;
+  result.MaskingOnsetPeak = m.onset_peak;
+  result.MaskingMaxMask = m.max_mask;
+  return result;
 }
 
-void SetNSIMStepWindow(Zimtohrli zimtohrli, int s) {
-  static_cast<zimtohrli::Zimtohrli*>(zimtohrli)->nsim_step_window =
-      static_cast<size_t>(s);
+void SetZimtohrliParameters(Zimtohrli zimtohrli,
+                            ZimtohrliParameters parameters) {
+  zimtohrli::Zimtohrli* z = static_cast<zimtohrli::Zimtohrli*>(zimtohrli);
+  z->perceptual_sample_rate = parameters.PerceptualSampleRate;
+  z->apply_masking = parameters.ApplyMasking != 0;
+  z->full_scale_sine_db = parameters.FullScaleSineDB;
+  z->apply_loudness = parameters.ApplyLoudness != 0;
+  z->nsim_step_window = parameters.NSIMStepWindow;
+  z->nsim_channel_window = parameters.NSIMChannelWindow;
+  z->unwarp_window_seconds = parameters.UnwarpWindowSeconds;
+  z->masking.lower_zero_at_20 = parameters.MaskingLowerZeroAt20;
+  z->masking.lower_zero_at_80 = parameters.MaskingLowerZeroAt80;
+  z->masking.upper_zero_at_20 = parameters.MaskingUpperZeroAt20;
+  z->masking.upper_zero_at_80 = parameters.MaskingUpperZeroAt80;
+  z->masking.onset_width = parameters.MaskingOnsetWidth;
+  z->masking.onset_peak = parameters.MaskingOnsetPeak;
+  z->masking.max_mask = parameters.MaskingMaxMask;
 }
 
-int GetNSIMChannelWindow(Zimtohrli zimtohrli) {
-  return static_cast<int>(
-      static_cast<zimtohrli::Zimtohrli*>(zimtohrli)->nsim_channel_window);
-}
-
-void SetNSIMChannelWindow(Zimtohrli zimtohrli, int s) {
-  static_cast<zimtohrli::Zimtohrli*>(zimtohrli)->nsim_channel_window =
-      static_cast<size_t>(s);
-}
-
-float GetPerceptualSampleRate(Zimtohrli zimtohrli) {
-  return static_cast<zimtohrli::Zimtohrli*>(zimtohrli)->perceptual_sample_rate;
-}
-
-void SetPerceptualSampleRate(Zimtohrli zimtohrli, float f) {
-  static_cast<zimtohrli::Zimtohrli*>(zimtohrli)->perceptual_sample_rate = f;
+ZimtohrliParameters DefaultZimtohrliParameters() {
+  zimtohrli::Zimtohrli default_zimtohrli;
+  ZimtohrliParameters result;
+  result.SampleRate = -1;
+  result.FrequencyResolution = zimtohrli::Cam{}.minimum_bandwidth_hz;
+  result.PerceptualSampleRate = default_zimtohrli.perceptual_sample_rate;
+  result.ApplyMasking = default_zimtohrli.apply_masking;
+  result.FullScaleSineDB = default_zimtohrli.full_scale_sine_db;
+  result.ApplyLoudness = default_zimtohrli.apply_loudness;
+  result.UnwarpWindowSeconds = default_zimtohrli.unwarp_window_seconds;
+  result.NSIMStepWindow = default_zimtohrli.nsim_step_window;
+  result.NSIMChannelWindow = default_zimtohrli.nsim_channel_window;
+  zimtohrli::Masking m;
+  result.MaskingLowerZeroAt20 = m.lower_zero_at_20;
+  result.MaskingLowerZeroAt80 = m.lower_zero_at_80;
+  result.MaskingUpperZeroAt20 = m.upper_zero_at_20;
+  result.MaskingUpperZeroAt80 = m.upper_zero_at_80;
+  result.MaskingOnsetWidth = m.onset_width;
+  result.MaskingOnsetPeak = m.onset_peak;
+  result.MaskingMaxMask = m.max_mask;
+  return result;
 }
 
 ViSQOL CreateViSQOL() { return new zimtohrli::ViSQOL(); }

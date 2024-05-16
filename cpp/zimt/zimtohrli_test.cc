@@ -120,11 +120,12 @@ TEST(Zimtohrli, DTWDistanceTest) {
     spectrogram_b[{sample_index}][0] = b_values[sample_index];
   }
   const Cam cam{.minimum_bandwidth_hz = 1};
-  Zimtohrli z = {.cam_filterbank = cam.CreateFilterbank(48000)};
-  EXPECT_NEAR(
-      z.Distance(false, spectrogram_a, spectrogram_b, std::nullopt).value,
-      0.01090317964553833f, 1e-2f);
-  EXPECT_NEAR(z.Distance(false, spectrogram_a, spectrogram_b, 4).value,
+  Zimtohrli z = {.cam_filterbank = cam.CreateFilterbank(48000),
+                 .unwarp_window_seconds = 0};
+  EXPECT_NEAR(z.Distance(false, spectrogram_a, spectrogram_b).value,
+              0.01090317964553833f, 1e-2f);
+  z.unwarp_window_seconds = 4.0 / 48000.0;
+  EXPECT_NEAR(z.Distance(false, spectrogram_a, spectrogram_b).value,
               0.0080544948577880859f, 1e-2f);
 }
 
@@ -132,22 +133,23 @@ TEST(Zimtohrli, DistanceTest) {
   hwy::AlignedNDArray<float, 2> spectrogram_a({2, 2});
   hwy::AlignedNDArray<float, 2> spectrogram_b({2, 2});
   const Cam cam{.minimum_bandwidth_hz = 1};
-  Zimtohrli z = {.cam_filterbank = cam.CreateFilterbank(48000)};
+  Zimtohrli z = {.cam_filterbank = cam.CreateFilterbank(48000),
+                 .unwarp_window_seconds = 0};
 
   spectrogram_b[{0}] = {1, 1};
-  CheckDistanceNear(z.Distance(/* verbose */ true, spectrogram_a, spectrogram_b,
-                               std::nullopt),
-                    Dist(z, spectrogram_a, spectrogram_b, 0.54945051670074463));
+  CheckDistanceNear(
+      z.Distance(/* verbose */ true, spectrogram_a, spectrogram_b),
+      Dist(z, spectrogram_a, spectrogram_b, 0.54945051670074463));
 
   spectrogram_b[{1}] = {4, 8};
-  CheckDistanceNear(z.Distance(/* verbose */ true, spectrogram_a, spectrogram_b,
-                               std::nullopt),
-                    Dist(z, spectrogram_a, spectrogram_b, 0.75766336917877197));
+  CheckDistanceNear(
+      z.Distance(/* verbose */ true, spectrogram_a, spectrogram_b),
+      Dist(z, spectrogram_a, spectrogram_b, 0.75766336917877197));
 
   spectrogram_b[{0}] = {-30, 0};
-  CheckDistanceNear(z.Distance(/* verbose */ true, spectrogram_a, spectrogram_b,
-                               std::nullopt),
-                    Dist(z, spectrogram_a, spectrogram_b, 0.99729388952255249));
+  CheckDistanceNear(
+      z.Distance(/* verbose */ true, spectrogram_a, spectrogram_b),
+      Dist(z, spectrogram_a, spectrogram_b, 0.99729388952255249));
 
   spectrogram_a = hwy::AlignedNDArray<float, 2>({64, 64});
   spectrogram_b = hwy::AlignedNDArray<float, 2>({64, 64});
@@ -163,8 +165,7 @@ TEST(Zimtohrli, DistanceTest) {
     }
   }
   CheckDistanceNear(
-      z.Distance(/* verbose */ true, spectrogram_a, spectrogram_b,
-                 std::nullopt),
+      z.Distance(/* verbose */ true, spectrogram_a, spectrogram_b),
       Dist(z, spectrogram_a, spectrogram_b, 0.022919178009033203));
 }
 
@@ -318,6 +319,7 @@ TEST(Zimtohrli, ComparisonTest) {
       static_cast<size_t>(sample_rate * seconds_of_audio);
   const Cam cam{.minimum_bandwidth_hz = 1};
   Zimtohrli z = {.cam_filterbank = cam.CreateFilterbank(sample_rate),
+                 .unwarp_window_seconds = 0,
                  .full_scale_sine_db = full_scale_sine_db};
   const size_t channel_0 = 600;
   const float channel_0_hz = z.cam_filterbank->thresholds_hz[{1}][channel_0];
@@ -338,7 +340,7 @@ TEST(Zimtohrli, ComparisonTest) {
   Analysis analysis_a = z.Analyze(audio_a[{0}], channels);
   Analysis analysis_b = z.Analyze(audio_b[0][{0}], channels);
 
-  Comparison comparison = z.Compare(audio_a, audio_b_pointers, std::nullopt);
+  Comparison comparison = z.Compare(audio_a, audio_b_pointers);
 
   CheckNear(analysis_a.energy_channels_db,
             comparison.analysis_a[0].energy_channels_db);
@@ -468,8 +470,10 @@ void BM_SpectrogramDistanceVsSeconds(benchmark::State& state) {
   const size_t sample_rate = 48000;
   const float seconds_of_audio = static_cast<float>(state.range(0));
   const Cam cam;
-  Zimtohrli z1 = {.cam_filterbank = cam.CreateFilterbank(sample_rate)};
-  Zimtohrli z2 = {.cam_filterbank = cam.CreateFilterbank(sample_rate)};
+  Zimtohrli z1 = {.cam_filterbank = cam.CreateFilterbank(sample_rate),
+                  .unwarp_window_seconds = 0};
+  Zimtohrli z2 = {.cam_filterbank = cam.CreateFilterbank(sample_rate),
+                  .unwarp_window_seconds = 0};
   hwy::AlignedNDArray<float, 1> signal(
       {static_cast<size_t>(sample_rate * seconds_of_audio)});
   hwy::AlignedNDArray<float, 2> channels(
@@ -488,7 +492,7 @@ void BM_SpectrogramDistanceVsSeconds(benchmark::State& state) {
                    partial_energy_channels_db, spectrogram1);
     z2.Spectrogram(signal[{}], channels, energy_channels_db,
                    partial_energy_channels_db, spectrogram2);
-    z1.Distance(false, spectrogram1, spectrogram2, std::nullopt);
+    z1.Distance(false, spectrogram1, spectrogram2);
   }
   state.SetItemsProcessed(signal.size() * state.iterations());
 }
@@ -499,8 +503,10 @@ void BM_SpectrogramDistanceVsResolution(benchmark::State& state) {
   const float seconds_of_audio = 1;
   Cam cam;
   cam.minimum_bandwidth_hz = static_cast<float>(state.range(0));
-  Zimtohrli z1{.cam_filterbank = cam.CreateFilterbank(sample_rate)};
-  Zimtohrli z2{.cam_filterbank = cam.CreateFilterbank(sample_rate)};
+  Zimtohrli z1{.cam_filterbank = cam.CreateFilterbank(sample_rate),
+               .unwarp_window_seconds = 0};
+  Zimtohrli z2{.cam_filterbank = cam.CreateFilterbank(sample_rate),
+               .unwarp_window_seconds = 0};
   hwy::AlignedNDArray<float, 1> signal(
       {static_cast<size_t>(sample_rate * seconds_of_audio)});
   hwy::AlignedNDArray<float, 2> channels(
@@ -519,7 +525,7 @@ void BM_SpectrogramDistanceVsResolution(benchmark::State& state) {
                    partial_energy_channels_db, spectrogram1);
     z2.Spectrogram(signal[{}], channels, energy_channels_db,
                    partial_energy_channels_db, spectrogram2);
-    z1.Distance(false, spectrogram1, spectrogram2, std::nullopt);
+    z1.Distance(false, spectrogram1, spectrogram2);
   }
   state.SetItemsProcessed(signal.size() * state.iterations());
 }
@@ -558,9 +564,11 @@ TEST(Zimtohrli, FindMaxDistortionTest) {
   // Initialize two Zimtohrli instances with default values.
   const Cam cam{.minimum_bandwidth_hz = 1};
   Zimtohrli z1{.cam_filterbank = cam.CreateFilterbank(sample_rate),
+               .unwarp_window_seconds = 0,
                .full_scale_sine_db = full_scale_sine_db};
   FilterbankState z1_state = z1.cam_filterbank->filter.NewState();
   Zimtohrli z2{.cam_filterbank = cam.CreateFilterbank(sample_rate),
+               .unwarp_window_seconds = 0,
                .full_scale_sine_db = full_scale_sine_db};
   FilterbankState z2_state = z2.cam_filterbank->filter.NewState();
 
@@ -596,8 +604,7 @@ TEST(Zimtohrli, FindMaxDistortionTest) {
                    sizeof(float) * chunk.shape()[1]);
     z2.Spectrogram(chunk[{0}], z2_state, channels, energy_channels_db,
                    partial_energy_channels_db, spectrogram2);
-    const float distance =
-        z1.Distance(false, spectrogram1, spectrogram2, std::nullopt).value;
+    const float distance = z1.Distance(false, spectrogram1, spectrogram2).value;
     if (distance > max_distance) {
       max_distance = distance;
       max_distance_time = static_cast<float>(offset) / sample_rate;

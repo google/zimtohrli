@@ -34,25 +34,6 @@ def parameterize(*kwargs):
 
 class PyohrliTest(unittest.TestCase):
 
-    def test_getters_setters(self):
-        metric = pyohrli.Pyohrli(sample_rate=48000.0)
-
-        nsim_step_window = metric.nsim_step_window
-        metric.nsim_step_window *= 2
-        self.assertEqual(metric.nsim_step_window, nsim_step_window * 2)
-
-        nsim_channel_window = metric.nsim_channel_window
-        metric.nsim_channel_window *= 2
-        self.assertEqual(metric.nsim_channel_window, nsim_channel_window * 2)
-
-        full_scale_sine_db = metric.full_scale_sine_db
-        metric.full_scale_sine_db *= 2
-        self.assertEqual(metric.full_scale_sine_db, full_scale_sine_db * 2)
-
-        unwarp_window = metric.unwarp_window
-        metric.unwarp_window *= 2
-        self.assertEqual(metric.unwarp_window, unwarp_window * 2)
-
     @parameterize(
         dict(
             a_hz=5000.0,
