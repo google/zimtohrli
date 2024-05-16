@@ -112,12 +112,11 @@ struct DistanceData {
                const hwy::AlignedNDArray<float, 2>& thresholds_hz,
                const hwy::AlignedNDArray<float, 2>& a,
                const hwy::AlignedNDArray<float, 2>& b, const std::string& unit,
-               float perceptual_sample_rate,
-               std::optional<size_t> unwarp_window_samples)
+               float perceptual_sample_rate)
       : previous_step(previous_step),
         a(&a),
         b(&b),
-        distance(z.Distance(true, a, b, unwarp_window_samples)),
+        distance(z.Distance(true, a, b)),
         unit(unit),
         thresholds_hz(&thresholds_hz),
         perceptual_sample_rate(perceptual_sample_rate) {}
@@ -274,18 +273,12 @@ int Main(int argc, char* argv[]) {
       .perceptual_sample_rate = absl::GetFlag(FLAGS_perceptual_sample_rate),
       .cam_filterbank =
           cam.CreateFilterbank(static_cast<float>(file_a->Info().samplerate)),
+      .unwarp_window_seconds = absl::GetFlag(FLAGS_unwarp_window),
       .full_scale_sine_db = absl::GetFlag(FLAGS_full_scale_sine_db),
   };
 
   // Run a more optimized code path if the user doesn't want either UX or
   // verbose output.
-  std::optional<size_t> unwarp_window_samples;
-  if (absl::GetFlag(FLAGS_unwarp_window) > 0) {
-    unwarp_window_samples = static_cast<size_t>(
-        z.perceptual_sample_rate * absl::GetFlag(FLAGS_unwarp_window));
-  } else {
-    unwarp_window_samples = std::nullopt;
-  }
   const bool truncate = absl::GetFlag(FLAGS_truncate);
   if (truncate && file_a->Frames().shape()[1] != min_length) {
     file_a->Frames().truncate({file_a->Frames().shape()[0], min_length});
@@ -295,7 +288,7 @@ int Main(int argc, char* argv[]) {
     if (truncate) {
       file_b.Frames().truncate({file_b.Frames().shape()[0], min_length});
       file_b.Info().frames = min_length;
-    } else if (!unwarp_window_samples.has_value()) {
+    } else if (absl::GetFlag(FLAGS_unwarp_window) == 0) {
       CHECK_EQ(file_a->Info().frames, file_b.Info().frames)
           << "use --truncate=true or --unwarp_window=[something > 0]";
     }
@@ -344,8 +337,7 @@ int Main(int argc, char* argv[]) {
                       energy_channels_db_b, partial_energy_channels_db_b,
                       spectrogram_b);
         const float distance =
-            z.Distance(false, file_a_spectrograms[channel_index], spectrogram_b,
-                       unwarp_window_samples)
+            z.Distance(false, file_a_spectrograms[channel_index], spectrogram_b)
                 .value;
         if (per_channel) {
           std::cout << GetMetric(distance) << std::endl;
@@ -370,8 +362,7 @@ int Main(int argc, char* argv[]) {
   for (const AudioFile& file_b : file_b_vector) {
     frames_b.push_back(&file_b.Frames());
   }
-  Comparison comparison =
-      z.Compare(file_a->Frames(), frames_b, unwarp_window_samples);
+  Comparison comparison = z.Compare(file_a->Frames(), frames_b);
 
   if (ux) {
     UX ux;
@@ -381,7 +372,7 @@ int Main(int argc, char* argv[]) {
               .thresholds_hz = std::move(z.cam_filterbank->thresholds_hz),
               .full_scale_sine_db = full_scale_sine_db,
               .perceptual_sample_rate = z.perceptual_sample_rate,
-              .unwarp_window = unwarp_window_samples});
+              .unwarp_window = absl::GetFlag(FLAGS_unwarp_window)});
     return 0;
   }
 
@@ -398,7 +389,7 @@ int Main(int argc, char* argv[]) {
             z, nullptr, z.cam_filterbank->thresholds_hz,
             comparison.analysis_a[channel_index].energy_channels_db,
             comparison.analysis_b[b_index][channel_index].energy_channels_db,
-            "dB SPL", z.perceptual_sample_rate, unwarp_window_samples);
+            "dB SPL", z.perceptual_sample_rate);
         std::cout << "    Raw channel distance: " << raw_channel_distance
                   << std::endl;
 
@@ -407,7 +398,7 @@ int Main(int argc, char* argv[]) {
             comparison.analysis_a[channel_index].partial_energy_channels_db,
             comparison.analysis_b[b_index][channel_index]
                 .partial_energy_channels_db,
-            "dB SPL", z.perceptual_sample_rate, unwarp_window_samples);
+            "dB SPL", z.perceptual_sample_rate);
         std::cout << "    Masked channel distance: " << masked_channel_distance
                   << std::endl;
 
@@ -415,7 +406,7 @@ int Main(int argc, char* argv[]) {
             z, &masked_channel_distance, z.cam_filterbank->thresholds_hz,
             comparison.analysis_a[channel_index].spectrogram,
             comparison.analysis_b[b_index][channel_index].spectrogram, "Phons",
-            z.perceptual_sample_rate, unwarp_window_samples);
+            z.perceptual_sample_rate);
         std::cout << "    Phons channel distance: " << phons_channel_distance
                   << std::endl;
 

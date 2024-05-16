@@ -154,11 +154,14 @@ func (s *Study) ToBundle() (*ReferenceBundle, error) {
 		}
 		if minType == nil || fCount < min {
 			min = fCount
-			maxType = &scoreType
+			minType = &scoreType
 		}
 	}
+	if maxType == nil || minType == nil {
+		return nil, fmt.Errorf("%q has no score types?", s.dir)
+	}
 	if (max - min) > max*0.01 {
-		return nil, fmt.Errorf("%q has %v scores and %q has %v scores in %q, more than 5%% missing scores", *minType, min, *maxType, max, s.dir)
+		log.Printf("%q has %v scores and %q has %v scores in %q, more than 5%% missing scores", *minType, min, *maxType, max, s.dir)
 	}
 	return result, nil
 }
@@ -409,14 +412,16 @@ func (r ReferenceBundles) CalculateZimtohrliMSE(z *goohrli.Goohrli) (float64, er
 			if err != nil {
 				return 0, err
 			}
-			sumOfSquares += 1 - accuracy*accuracy
+			e := (1 - accuracy)
+			sumOfSquares += e * e
 
 		} else {
 			correlation, err := bundle.Correlation(Zimtohrli, MOS)
 			if err != nil {
 				return 0, err
 			}
-			sumOfSquares += 1 - correlation*correlation
+			e := (1 - correlation)
+			sumOfSquares += e * e
 		}
 		bar.Finish()
 	}
@@ -424,13 +429,13 @@ func (r ReferenceBundles) CalculateZimtohrliMSE(z *goohrli.Goohrli) (float64, er
 }
 
 func mutateFloat(f, min, max float64, rng *rand.Rand, temp float64) float64 {
-	r := temp * rng.NormFloat64()
-	if r == 0 {
+	r := math.Sqrt(temp) * rng.NormFloat64() * 0.2 * (max - min)
+	if f == min || r > 0 {
+		f += math.Abs(r)
+	} else if f == max || r < 0 {
+		f -= math.Abs(r)
+	} else if r == 0 {
 		return f
-	} else if r > 0 {
-		f *= (1 + r)
-	} else {
-		f /= (1 - r)
 	}
 	if f < min {
 		f = min
@@ -458,20 +463,17 @@ func mutateInt(i, min, max int, rng *rand.Rand, temp float64) int {
 const sampleRate = 48000
 
 func mutate(z *goohrli.Goohrli, rng *rand.Rand, temp float64) *goohrli.Goohrli {
-	result := goohrli.New(sampleRate, mutateFloat(z.FrequencyResolution(), 1, 50, rng, temp))
-	result.SetNSIMChannelWindow(mutateInt(z.GetNSIMChannelWindow(), 1, 128, rng, temp))
-	result.SetNSIMStepWindow(mutateInt(z.GetNSIMStepWindow(), 1, 128, rng, temp))
-	result.SetPerceptualSampleRate(mutateFloat(z.GetPerceptualSampleRate(), 20, 500, rng, temp))
+	params := z.Parameters()
+	params.MaskingLowerZeroAt20 = mutateFloat(params.MaskingLowerZeroAt20, -6, -0.5, rng, temp)
+	params.MaskingLowerZeroAt80 = mutateFloat(params.MaskingLowerZeroAt80, -6, -0.5, rng, temp)
+	params.MaskingUpperZeroAt20 = mutateFloat(params.MaskingUpperZeroAt20, 1, 10, rng, temp)
+	params.MaskingUpperZeroAt80 = mutateFloat(params.MaskingUpperZeroAt80, 1, 15, rng, temp)
+	params.MaskingOnsetWidth = mutateFloat(params.MaskingOnsetWidth, 2, 15, rng, temp)
+	params.MaskingOnsetPeak = mutateFloat(params.MaskingOnsetPeak, 1, 15, rng, temp)
+	params.MaskingMaxMask = mutateFloat(params.MaskingMaxMask, 1, 30, rng, temp)
+	params.FullScaleSineDB = mutateFloat(params.FullScaleSineDB, 60, 90, rng, temp)
+	result := goohrli.New(params)
 	return result
-}
-
-func toParameters(z *goohrli.Goohrli) map[string]float64 {
-	return map[string]float64{
-		"FrequencyResolution":  z.FrequencyResolution(),
-		"PerceptualSampleRate": z.GetPerceptualSampleRate(),
-		"NSIMStepWindow":       float64(z.GetNSIMStepWindow()),
-		"NSIMChannelWindow":    float64(z.GetNSIMChannelWindow()),
-	}
 }
 
 func (r ReferenceBundles) References() int {
@@ -511,7 +513,7 @@ func (r ReferenceBundles) Split(rng *rand.Rand, split float64) (ReferenceBundles
 }
 
 type OptimizationEvent struct {
-	Parameters map[string]float64
+	Parameters goohrli.Parameters
 	Step       int
 	Loss       float64
 	Temp       float64
@@ -519,33 +521,34 @@ type OptimizationEvent struct {
 
 func (r ReferenceBundles) Optimize(startStep, numSteps float64, logger func(OptimizationEvent)) error {
 	rng := rand.New(rand.NewSource(0))
-	z := goohrli.New(sampleRate, goohrli.DefaultFrequencyResolution())
+	z := goohrli.New(goohrli.DefaultParameters(sampleRate))
 	loss, err := r.CalculateZimtohrliMSE(z)
 	if err != nil {
 		return err
 	}
-	log.Printf("Created initial solution %+v with loss %.2f", toParameters(z), loss)
+	logger(OptimizationEvent{Parameters: z.Parameters(), Step: 0, Loss: loss, Temp: 1})
+	log.Printf("Created initial solution %v with loss %.2f", z, loss)
 	for step := startStep; step < numSteps; step++ {
 		temp := 1.0 - (step+1)/numSteps
 		newZ := mutate(z, rng, temp)
-		log.Printf("Created new solution %+v", toParameters(newZ))
+		log.Printf("Created new solution %+v", newZ)
 		newLoss, err := r.CalculateZimtohrliMSE(newZ)
 		if err != nil {
 			return err
 		}
 		log.Printf("Step %v, temp %v, old loss %.2f, new loss %.2f", step, temp, loss, newLoss)
-		logger(OptimizationEvent{Parameters: toParameters(z), Step: int(step), Loss: newLoss, Temp: temp})
+		logger(OptimizationEvent{Parameters: newZ.Parameters(), Step: int(step), Loss: newLoss, Temp: temp})
 		if newLoss < loss {
 			z = newZ
 			loss = newLoss
-			log.Printf("*** Accepting better solution: %+v", toParameters(z))
+			log.Print("*** Accepting better solution")
 		} else {
 			acceptanceProb := math.Exp(-(newLoss - loss) / temp)
 			dice := rng.Float64()
 			if dice < acceptanceProb {
 				z = newZ
 				loss = newLoss
-				log.Printf("*** Accepting poorer solution due to acceptanceProb=%.2f > dice=%.2f: %+v", acceptanceProb, dice, toParameters(z))
+				log.Printf("*** Accepting poorer solution due to acceptanceProb=%.2f > dice=%.2f", acceptanceProb, dice)
 			} else {
 				log.Print("Discarding poorer solution")
 			}
@@ -721,6 +724,19 @@ func (b ReferenceBundles) Leaderboard() (MSEScores, error) {
 	return result, nil
 }
 
+// OpenBundles is a shortcut to opening multiple bundles from a glob.
+func OpenBundles(glob string) (ReferenceBundles, error) {
+	studies, err := OpenStudies(glob)
+	if err != nil {
+		return nil, err
+	}
+	defer studies.Close()
+	if len(studies) == 0 {
+		return nil, fmt.Errorf("no studies found in %v", glob)
+	}
+	return studies.ToBundles()
+}
+
 // OpenStudies returns the studies contained in the directories defined by the glob.
 func OpenStudies(glob string) (Studies, error) {
 	directories, err := filepath.Glob(glob)
@@ -732,6 +748,9 @@ func OpenStudies(glob string) (Studies, error) {
 		if result[index], err = OpenStudy(dir); err != nil {
 			return nil, err
 		}
+	}
+	if len(result) == 0 {
+		return nil, fmt.Errorf("no studies found in %v", glob)
 	}
 	return result, nil
 }

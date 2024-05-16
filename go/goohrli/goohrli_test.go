@@ -69,19 +69,26 @@ func TestMOSFromZimtohrli(t *testing.T) {
 	}
 }
 
-func TestGettersSetters(t *testing.T) {
-	g := New(48000.0, 4.0)
+func TestParams(t *testing.T) {
+	g := New(DefaultParameters(48000))
 
-	nsimStepWindow := g.GetNSIMStepWindow()
-	g.SetNSIMStepWindow(nsimStepWindow * 2)
-	if g.GetNSIMStepWindow() != nsimStepWindow*2 {
-		t.Errorf("NSIMStepWindow = %v, want %v", g.GetNSIMStepWindow(), nsimStepWindow*2)
-	}
+	params := g.Parameters()
+	params.ApplyLoudness = false
+	params.ApplyMasking = false
+	params.FrequencyResolution *= 0.5
+	params.FullScaleSineDB *= 0.5
+	params.NSIMChannelWindow *= 2
+	params.NSIMStepWindow *= 2
+	params.PerceptualSampleRate *= 0.5
+	params.SampleRate *= 0.5
+	params.UnwarpWindow.Duration *= 2
 
-	nsimChannelWindow := g.GetNSIMChannelWindow()
-	g.SetNSIMChannelWindow(nsimChannelWindow * 2)
-	if g.GetNSIMChannelWindow() != nsimChannelWindow*2 {
-		t.Errorf("NSIMChannelWindow = %v, want %v", g.GetNSIMChannelWindow(), nsimChannelWindow*2)
+	g.Set(params)
+	newParams := g.Parameters()
+	params.FrequencyResolution = newParams.FrequencyResolution
+	params.SampleRate = newParams.SampleRate
+	if !reflect.DeepEqual(newParams, params) {
+		t.Errorf("Expected updated parameters to be %+v, got %+v", params, newParams)
 	}
 }
 
@@ -107,17 +114,17 @@ func TestGoohrli(t *testing.T) {
 			distance: 0.23286527395248413,
 		},
 	} {
-		sampleRate := 48000.0
-		frequencyResolution := 4.0
-		g := New(sampleRate, frequencyResolution)
-		soundA := make([]float32, int(sampleRate))
+		params := DefaultParameters(48000)
+		params.FrequencyResolution = 4.0
+		g := New(params)
+		soundA := make([]float32, int(params.SampleRate))
 		for index := 0; index < len(soundA); index++ {
-			soundA[index] = float32(math.Sin(2 * math.Pi * tc.freqA * float64(index) / sampleRate))
+			soundA[index] = float32(math.Sin(2 * math.Pi * tc.freqA * float64(index) / params.SampleRate))
 		}
 		analysisA := g.Analyze(soundA)
-		soundB := make([]float32, int(sampleRate))
+		soundB := make([]float32, int(params.SampleRate))
 		for index := 0; index < len(soundB); index++ {
-			soundB[index] = float32(math.Sin(2 * math.Pi * tc.freqB * float64(index) / sampleRate))
+			soundB[index] = float32(math.Sin(2 * math.Pi * tc.freqB * float64(index) / params.SampleRate))
 		}
 		analysisB := g.Analyze(soundB)
 		analysisDistance := float64(g.AnalysisDistance(analysisA, analysisB))

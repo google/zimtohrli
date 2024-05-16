@@ -16,10 +16,12 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"os"
+	"reflect"
 
 	"github.com/google/zimtohrli/go/aio"
 	"github.com/google/zimtohrli/go/goohrli"
@@ -33,8 +35,13 @@ func main() {
 	pipeMetric := flag.String("pipe_metric", "", "Path to a binary that serves metrics via stdin/stdout pipe. Install some of the via 'install_python_metrics.py'.")
 	zimtohrli := flag.Bool("zimtohrli", true, "Whether to measure using Zimtohrli.")
 	outputZimtohrliDistance := flag.Bool("output_zimtohrli_distance", false, "Whether to output the raw Zimtohrli distance instead of a mapped mean opinion score.")
-	zimtohrliPerceptualSampleRate := flag.Float64("zimtohrli_perceptual_sample_rate", goohrli.DefaultPerceptualSampleRate(), "Sample rate of Zimtohrli spectrograms.")
-	zimtohrliFrequencyResolution := flag.Float64("zimtohrli_frequency_resolution", goohrli.DefaultFrequencyResolution(), "Smallest bandwidth of Zimtohrli spectrograms.")
+	zimtohrliParameters := goohrli.DefaultParameters(-1)
+	zimtohrliParameters.SampleRate = 48000
+	b, err := json.Marshal(zimtohrliParameters)
+	if err != nil {
+		log.Panic(err)
+	}
+	zimtohrliParametersJSON := flag.String("zimtohrli_parameters", string(b), "Zimtohrli model parameters.")
 	perChannel := flag.Bool("per_channel", false, "Whether to output the produced metric per channel instead of a single value for all channels.")
 	flag.Parse()
 
@@ -43,11 +50,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	signalA, err := aio.Load(*pathA)
+	signalA, err := aio.LoadAtRate(*pathA, int(zimtohrliParameters.SampleRate))
 	if err != nil {
 		log.Panic(err)
 	}
-	signalB, err := aio.Load(*pathB)
+	signalB, err := aio.LoadAtRate(*pathB, int(zimtohrliParameters.SampleRate))
 	if err != nil {
 		log.Panic(err)
 	}
@@ -104,8 +111,14 @@ func main() {
 			return goohrli.MOSFromZimtohrli(f)
 		}
 
-		g := goohrli.New(signalA.Rate, *zimtohrliFrequencyResolution)
-		g.SetPerceptualSampleRate(*zimtohrliPerceptualSampleRate)
+		if err := zimtohrliParameters.Update([]byte(*zimtohrliParametersJSON)); err != nil {
+			log.Panic(err)
+		}
+		if !reflect.DeepEqual(zimtohrliParameters, goohrli.DefaultParameters(zimtohrliParameters.SampleRate)) {
+			log.Printf("Using %+v", zimtohrliParameters)
+		}
+		zimtohrliParameters.SampleRate = signalA.Rate
+		g := goohrli.New(zimtohrliParameters)
 		if *perChannel {
 			for channelIndex := range signalA.Samples {
 				measurement := goohrli.Measure(signalA.Samples[channelIndex])

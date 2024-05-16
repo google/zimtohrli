@@ -263,16 +263,16 @@ HWY_EXPORT(HwySubtractDb);
 
 Distance Zimtohrli::Distance(
     bool verbose, const hwy::AlignedNDArray<float, 2>& spectrogram_a,
-    const hwy::AlignedNDArray<float, 2>& spectrogram_b,
-    std::optional<size_t> unwarp_window_samples) const {
-  if (!unwarp_window_samples.has_value()) {
+    const hwy::AlignedNDArray<float, 2>& spectrogram_b) const {
+  if (unwarp_window_seconds == 0) {
     CHECK_EQ(spectrogram_a.shape()[0], spectrogram_b.shape()[0]);
   }
   CHECK_EQ(spectrogram_a.shape()[1], spectrogram_b.shape()[1]);
   std::vector<std::pair<size_t, size_t>> time_pairs;
-  if (unwarp_window_samples) {
-    time_pairs =
-        ChainDTW(spectrogram_a, spectrogram_b, unwarp_window_samples.value());
+  if (unwarp_window_seconds != 0) {
+    time_pairs = ChainDTW(spectrogram_a, spectrogram_b,
+                          static_cast<size_t>(unwarp_window_seconds *
+                                              cam_filterbank->sample_rate));
   } else {
     time_pairs.reserve(spectrogram_a.shape()[0]);
     for (size_t index = 0; index < spectrogram_a.shape()[0]; ++index) {
@@ -306,10 +306,21 @@ void Zimtohrli::Spectrogram(
   cam_filterbank->filter.Filter(signal, state, channels);
   ComputeEnergy(channels, energy_channels_db);
   ToDb(energy_channels_db, full_scale_sine_db, epsilon, energy_channels_db);
-  masking.PartialLoudness(energy_channels_db, cam_filterbank->cam_delta,
-                          partial_energy_channels_db);
-  loudness.PhonsFromSPL(partial_energy_channels_db,
-                        cam_filterbank->thresholds_hz, spectrogram);
+  if (apply_masking) {
+    masking.PartialLoudness(energy_channels_db, cam_filterbank->cam_delta,
+                            partial_energy_channels_db);
+  } else {
+    hwy::CopyBytes(energy_channels_db.data(), partial_energy_channels_db.data(),
+                   energy_channels_db.memory_size() * sizeof(float));
+  }
+  if (apply_loudness) {
+    loudness.PhonsFromSPL(partial_energy_channels_db,
+                          cam_filterbank->thresholds_hz, spectrogram);
+
+  } else {
+    hwy::CopyBytes(partial_energy_channels_db.data(), spectrogram.data(),
+                   partial_energy_channels_db.memory_size() * sizeof(float));
+  }
 }
 
 void Zimtohrli::Spectrogram(
@@ -371,13 +382,13 @@ AnalysisDTW::AnalysisDTW(size_t length) {
 
 Comparison Zimtohrli::Compare(
     const hwy::AlignedNDArray<float, 2>& frames_a,
-    absl::Span<const hwy::AlignedNDArray<float, 2>* const> frames_b_span,
-    std::optional<size_t> unwarp_window_samples) {
+    absl::Span<const hwy::AlignedNDArray<float, 2>* const> frames_b_span)
+    const {
   for (const auto& frames_b : frames_b_span) {
-    if (!unwarp_window_samples.has_value()) {
+    if (unwarp_window_seconds == 0) {
       CHECK_EQ(frames_a.shape()[0], frames_b->shape()[0]);
-      CHECK_EQ(frames_a.shape()[1], frames_b->shape()[1]);
     }
+    CHECK_EQ(frames_a.shape()[1], frames_b->shape()[1]);
   }
   const size_t num_audio_channels = frames_a.shape()[0];
   std::vector<hwy::AlignedNDArray<float, 2>> audio_delta_vector;
@@ -403,10 +414,11 @@ Comparison Zimtohrli::Compare(
           Analyze((*frames_b_span[b_index])[{audio_channel_index}], channels_b);
 
       const AnalysisDTW current_analysis_dtw =
-          unwarp_window_samples.has_value()
-              ? AnalysisDTW(current_analysis_a, current_analysis_b,
-                            unwarp_window_samples.value())
-              : AnalysisDTW(current_analysis_a.spectrogram.shape()[0]);
+          unwarp_window_seconds == 0
+              ? AnalysisDTW(current_analysis_a.spectrogram.shape()[0])
+              : AnalysisDTW(current_analysis_a, current_analysis_b,
+                            static_cast<size_t>(unwarp_window_seconds *
+                                                cam_filterbank->sample_rate));
 
       const hwy::AlignedNDArray<float, 2>& frames_b = *frames_b_span[b_index];
       if (audio_channel_index == 0) {
