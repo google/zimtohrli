@@ -13,8 +13,6 @@ jobs:
     steps:
     - name: Install dependencies
       run: sudo apt install -y libogg-dev libvorbis-dev libflac-dev cmake ninja-build libasound2-dev libglfw3-dev libopus-dev
-    - name: Install modern xxd
-      run: (curl -O http://ftp.us.debian.org/debian/pool/main/v/vim/xxd_9.0.1378-2_amd64.deb && sudo dpkg -i xxd_9.0.1378-2_amd64.deb)
     - name: Check out code
       uses: actions/checkout@v3
     - name: Configure
