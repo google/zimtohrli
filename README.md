@@ -18,6 +18,16 @@ models.
 
 For more details about how Zimtohrli works, see [zimtohrli.ipynb](zimtohrli.ipynb).
 
+## Performance
+
+Zimtohrli is able to compare sounds at ~10x real time for 48kHz sample rate using
+a single modern CPU core, but exact times may vary based on the settings used.
+
+For correlation performance with a few datasets see [COMPARISON.md](COMPARISON.md).
+
+Most of those datasets can be acquired using the tools [coresvnet](go/bin/coresvnet), [perceptual_audio](go/bin/perceptual_audio), [sebass_db](go/bin/sebass_db), and [tcd_voip](go/bin/tcd_voip).
+A couple of them are unpublished and can't be downloaded.
+
 ## Compatibility
 
 Zimtohrli is a project under development, and is built and tested in a Debian-like environment.
