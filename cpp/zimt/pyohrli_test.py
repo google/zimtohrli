@@ -59,7 +59,6 @@ class PyohrliTest(unittest.TestCase):
         signal_b = np.sin(np.linspace(0.0, np.pi * 2 * b_hz, int(sample_rate)))
         analysis_b = metric.analyze(signal_b)
         analysis_distance = metric.analysis_distance(analysis_a, analysis_b)
-        print(f"{analysis_distance=}")
         self.assertLess(abs(analysis_distance - distance), 1e-3)
         distance = metric.distance(signal_a, signal_b)
         self.assertLess(abs(distance - distance), 1e-3)
