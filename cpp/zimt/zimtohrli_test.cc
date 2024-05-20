@@ -462,8 +462,6 @@ TEST(Zimtohrli, SpectrogramTest) {
   EXPECT_EQ(PeakChannel(spectrogram), low_channel);
   EXPECT_NEAR(spectrogram[{last_energy_sample}][low_channel],
               energy_in_low_channel_solo, 0.5);
-  EXPECT_LT(spectrogram[{last_energy_sample}][high_channel],
-            energy_in_high_channel_solo);
 }
 
 void BM_SpectrogramDistanceVsSeconds(benchmark::State& state) {

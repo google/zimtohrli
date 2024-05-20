@@ -200,90 +200,17 @@ void HwyFullMasking(const Masking& m,
   }
 }
 
-// Reusable logic to efficiently compute masked amount.
-struct MaskedAmountCalculator {
-  MaskedAmountCalculator(const Masking& m) {
-    // This epsilon shouldn't change the behavior of the function, so it's not a
-    // parameter.
-    epsilon_vec = Set(d, 1e6);
-    zero = Zero(d);
-    onset_peak = Set(d, m.onset_peak);
-    onset_width = Set(d, m.onset_width);
-    onset_width_reciprocal = Set(d, 1 / m.onset_width);
-    neg_onset_width_reciprocal = Neg(onset_width_reciprocal);
-    max_mask = Set(d, m.max_mask);
-    neg_max_mask_reciprocal = Set(d, -1 / m.max_mask);
-  }
-
-  Vec Calculate(const Vec& full_mask_level, const Vec& probe_level) {
-    const Vec onset_delta = Min(epsilon_vec, Sub(onset_peak, full_mask_level));
-    const Vec onset_slope = Mul(onset_delta, onset_width_reciprocal);
-    const Vec onset_offset =
-        MulAdd(full_mask_level, neg_onset_width_reciprocal, full_mask_level);
-    const Vec onset_crossing = Add(full_mask_level, onset_width);
-    const Vec max_mask_slope =
-        Div(Min(onset_peak, full_mask_level),
-            Neg(Sub(Add(full_mask_level, max_mask), onset_crossing)));
-    const Vec max_mask_offset = Add(full_mask_level, max_mask);
-    return Min(
-        full_mask_level,
-        Max(zero,
-            Min(Max(Mul(Sub(probe_level, onset_offset), onset_slope),
-                    Mul(Sub(probe_level, max_mask_offset), max_mask_slope)),
-                Mul(Sub(Sub(probe_level, full_mask_level), max_mask),
-                    Mul(full_mask_level, neg_max_mask_reciprocal)))));
-  }
-
-  Vec epsilon_vec;
-  Vec zero;
-  Vec onset_peak;
-  Vec onset_width;
-  Vec onset_width_reciprocal;
-  Vec neg_onset_width_reciprocal;
-  Vec max_mask;
-  Vec neg_max_mask_reciprocal;
-};
-
-void HwyMaskedAmount(const Masking& m,
-                     const hwy::AlignedNDArray<float, 3>& full_masking_db,
-                     const hwy::AlignedNDArray<float, 2>& probe_energy_db,
-                     hwy::AlignedNDArray<float, 3>& masked_amount_db) {
-  MaskedAmountCalculator calculator(m);
-  const size_t num_samples = full_masking_db.shape()[0];
-  const size_t num_channels = full_masking_db.shape()[2];
-  for (size_t sample_index = 0; sample_index < num_samples; ++sample_index) {
-    for (size_t masked_channel_index = 0; masked_channel_index < num_channels;
-         ++masked_channel_index) {
-      for (size_t masker_channel_index = 0; masker_channel_index < num_channels;
-           masker_channel_index += Lanes(d)) {
-        const Vec full_mask_level = Load(
-            d, full_masking_db[{sample_index, masked_channel_index}].data() +
-                   masker_channel_index);
-        const Vec probe_level =
-            Set(d, probe_energy_db[{sample_index}][masked_channel_index]);
-        Store(calculator.Calculate(full_mask_level, probe_level), d,
-              masked_amount_db[{sample_index, masked_channel_index}].data() +
-                  masker_channel_index);
-      }
-    }
-  }
-}
-
-void HwyPartialLoudness(const Masking& m,
-                        const hwy::AlignedNDArray<float, 2>& energy_channels_db,
-                        float cam_delta,
-                        hwy::AlignedNDArray<float, 2>& partial_loudness_db) {
+void HwyCutFullyMasked(const Masking& m,
+                       const hwy::AlignedNDArray<float, 2>& energy_channels_db,
+                       float cam_delta,
+                       hwy::AlignedNDArray<float, 2>& non_masked_db) {
   FullMaskingCalculator full_masking_calculator(m, cam_delta);
-  MaskedAmountCalculator masked_amount_calculator(m);
   const size_t num_samples = energy_channels_db.shape()[0];
   const size_t num_channels = energy_channels_db.shape()[1];
-  const auto log_ten_mul_point_1_vec = Set(d, log(10) * 0.1);
+  hwy::AlignedNDArray<float, 2> max_masked(energy_channels_db.shape());
   for (size_t sample_index = 0; sample_index < num_samples; ++sample_index) {
     for (size_t probe_channel_index = 0; probe_channel_index < num_channels;
          ++probe_channel_index) {
-      float masked_amount_sum_with_offset = 0;
-      const Vec probe_level_db =
-          Set(d, energy_channels_db[{sample_index}][probe_channel_index]);
       for (size_t masker_channel_index = 0; masker_channel_index < num_channels;
            masker_channel_index += Lanes(d)) {
         const Vec masker_level_db =
@@ -292,23 +219,23 @@ void HwyPartialLoudness(const Masking& m,
         const Vec full_masking_db = full_masking_calculator.Calculate(
             masker_level_db, static_cast<float>(probe_channel_index) -
                                  static_cast<float>(masker_channel_index));
-        const Vec masked_amount_db =
-            masked_amount_calculator.Calculate(full_masking_db, probe_level_db);
-        // y = 10^(x / 10)
-        // ln(y) = (x / 10) * ln(10)
-        // ln(y) = x * ln(10) * 0.1
-        // y = exp(x * ln(10) * 0.1)
-        const auto masked_amounts_linear_with_offset =
-            Exp(d, Mul(masked_amount_db, log_ten_mul_point_1_vec));
-        masked_amount_sum_with_offset +=
-            ReduceSum(d, masked_amounts_linear_with_offset);
+        max_masked[{sample_index}][probe_channel_index] =
+            std::max(max_masked[{sample_index}][probe_channel_index],
+                     ReduceMax(d, full_masking_db));
       }
-      // Subtracting num_channels rounded up to Lanes(d) to compensate for
-      // linear 0 being dB 1.
-      partial_loudness_db[{sample_index}][probe_channel_index] =
-          energy_channels_db[{sample_index}][probe_channel_index] -
-          10 * log10(masked_amount_sum_with_offset + 1 -
-                     hwy::RoundUpTo(num_channels, Lanes(d)));
+    }
+  }
+  for (size_t sample_index = 0; sample_index < num_samples; ++sample_index) {
+    const float* energy_channels_db_data =
+        energy_channels_db[{sample_index}].data();
+    const float* max_masked_data = max_masked[{sample_index}].data();
+    float* non_masked_db_data = non_masked_db[{sample_index}].data();
+    for (size_t channel_index = 0; channel_index < num_channels;
+         channel_index += Lanes(d)) {
+      const Vec max_masking = Load(d, max_masked_data + channel_index);
+      const Vec probe = Load(d, energy_channels_db_data + channel_index);
+      Store(IfThenElse(Ge(max_masking, probe), Sub(probe, max_masking), probe),
+            d, non_masked_db_data + channel_index);
     }
   }
 }
@@ -325,8 +252,7 @@ HWY_EXPORT(HwyComputeEnergy);
 HWY_EXPORT(HwyToDb);
 HWY_EXPORT(HwyToLinear);
 HWY_EXPORT(HwyFullMasking);
-HWY_EXPORT(HwyMaskedAmount);
-HWY_EXPORT(HwyPartialLoudness);
+HWY_EXPORT(HwyCutFullyMasked);
 
 void ComputeEnergy(const hwy::AlignedNDArray<float, 2>& sample_channels,
                    hwy::AlignedNDArray<float, 2>& energy_channels) {
@@ -364,38 +290,15 @@ void Masking::FullMasking(
   (*this, energy_channels_db, cam_delta, full_masking_db);
 }
 
-void Masking::MaskedAmount(
-    const hwy::AlignedNDArray<float, 3>& full_masking_db,
-    const hwy::AlignedNDArray<float, 2>& probe_energy_db,
-    hwy::AlignedNDArray<float, 3>& masked_amount_db) const {
-  // Check same number of samples in all arguments.
-  CHECK_EQ(full_masking_db.shape()[0], probe_energy_db.shape()[0]);
-  CHECK_EQ(masked_amount_db.shape()[0], probe_energy_db.shape()[0]);
-
-  // Check same number of channels in all arguments.
-  CHECK_EQ(full_masking_db.shape()[1], masked_amount_db.shape()[1]);
-  CHECK_EQ(full_masking_db.shape()[1], probe_energy_db.shape()[1]);
-
-  // Check same number of channels in axis 1 and 2.
-  CHECK_EQ(full_masking_db.shape()[1], full_masking_db.shape()[2]);
-  CHECK_EQ(masked_amount_db.shape()[1], masked_amount_db.shape()[2]);
-
-  // Check same number of channels allocated in the last axes.
-  CHECK_EQ(full_masking_db.shape()[2], probe_energy_db.shape()[1]);
-  CHECK_EQ(full_masking_db.shape()[2], masked_amount_db.shape()[2]);
-  HWY_DYNAMIC_DISPATCH(HwyMaskedAmount)
-  (*this, full_masking_db, probe_energy_db, masked_amount_db);
-}
-
-void Masking::PartialLoudness(
+void Masking::CutFullyMasked(
     const hwy::AlignedNDArray<float, 2>& energy_channels_db, float cam_delta,
-    hwy::AlignedNDArray<float, 2>& partial_loudness_db) const {
-  CHECK_EQ(energy_channels_db.shape()[0], partial_loudness_db.shape()[0]);
-  CHECK_EQ(energy_channels_db.shape()[1], partial_loudness_db.shape()[1]);
+    hwy::AlignedNDArray<float, 2>& non_masked_db) const {
+  CHECK_EQ(energy_channels_db.shape()[0], non_masked_db.shape()[0]);
+  CHECK_EQ(energy_channels_db.shape()[1], non_masked_db.shape()[1]);
   CHECK_GT(cam_delta, 0.0f);
 
-  HWY_DYNAMIC_DISPATCH(HwyPartialLoudness)
-  (*this, energy_channels_db, cam_delta, partial_loudness_db);
+  HWY_DYNAMIC_DISPATCH(HwyCutFullyMasked)
+  (*this, energy_channels_db, cam_delta, non_masked_db);
 }
 
 }  // namespace zimtohrli

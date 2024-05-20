@@ -83,42 +83,23 @@ struct Masking {
                    float cam_delta,
                    hwy::AlignedNDArray<float, 3>& full_masking_db) const;
 
-  // Populates masked_amount_db with the amount of energy full_masking_db will
-  // mask in probe_energy_db.
-  //
-  // full_masking_db is a (num_samples, num_masked_channels,
-  // num_masker_channels)-shaped array of full masking levels expressed in dB.
-  // num_masker_channels is identical to num_masked_channels.
-  //
-  // probe_energy_db is a (num_samples, num_channels)-shaped array of energy
-  // expressed in dB. num_channels is identical to num_masker_channels and
-  // num_masked_channels.
-  //
-  // masked_amount_db is a (num_samples, num_masked_channels,
-  // num_masker_channels)-shaped array of energy expressed in dB.
-  void MaskedAmount(const hwy::AlignedNDArray<float, 3>& full_masking_db,
-                    const hwy::AlignedNDArray<float, 2>& probe_energy_db,
-                    hwy::AlignedNDArray<float, 3>& masked_amount_db) const;
-
-  // Populates partial_loudness with the remaining energy in energy_channels
-  // after masking.
+  // Populates non_masked_db with the energy after any fully masked channels are
+  // zeroed out.
   //
   // energy_channels_db is a (num_samples, num_channels)-shaped array of dB
   // energy values.
   //
   // cam_delta is the cam delta between each channel and the next.
   //
-  // partial_loudness_db is a (num_samples, num_channels)-shaped array of dB
-  // energy values.
-  //
-  // energy_channels_db and partial_loudness_db can NOT be the same array.
+  // non_masked_db is a (num_samples, num_channels)-shaped array of dB energy
+  // values.
   //
   // Assumes that any padding built into the energy_channels_db array (the
   // values between energy_channels_db.shape() and
   // energy_channels_db.memory_shape()) is populated with zeros.
-  void PartialLoudness(
-      const hwy::AlignedNDArray<float, 2>& energy_channels_db, float cam_delta,
-      hwy::AlignedNDArray<float, 2>& partial_loudness_db) const;
+  void CutFullyMasked(const hwy::AlignedNDArray<float, 2>& energy_channels_db,
+                      float cam_delta,
+                      hwy::AlignedNDArray<float, 2>& non_masked_db) const;
 
   // The negative distance in Cam at which a 20dB masker will no longer mask any
   // probe.
@@ -133,14 +114,7 @@ struct Masking {
   // any probe.
   float upper_zero_at_80 = 10;
 
-  // The dB a probe has to be raised above full masking to be masked no more
-  // than 'onset_peak'dB.
-  float onset_width = 10;
-  // The masking of a probe after it has been raised 'onset_width'dB above full
-  // masking.
-  float onset_peak = 6;
-  // The dB that a masker masks in the same band, and the dB above full masking
-  // where a probe will no longer be masked.
+  // The dB that a masker masks in the same band.
   float max_mask = 20;
 };
 

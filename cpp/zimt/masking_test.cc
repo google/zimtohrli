@@ -246,6 +246,18 @@ TEST(Masking, FullMasking) {
   EXPECT_NEAR((full_masking[{0, 1}][1]), 60, 1e-2) << "-20dB self masking";
 }
 
+TEST(Masking, CutFullyMasked) {
+  hwy::AlignedNDArray<float, 2> energy_channels({1, 2});
+  hwy::AlignedNDArray<float, 2> non_masked({1, 2});
+  Masking m;
+
+  energy_channels[{0}] = {90, 20};
+  m.CutFullyMasked(energy_channels, 1, non_masked);
+  EXPECT_NEAR((non_masked[{0}][0]), 90, 1e-2) << "No self masking";
+  EXPECT_NEAR((non_masked[{0}][1]), -43.82, 1e-2)
+      << "20dB fully masked by 90dB";
+}
+
 void BM_FullMasking(benchmark::State& state) {
   const size_t sample_rate = 100;
   const hwy::AlignedNDArray<float, 2> energy_channels_db(
@@ -260,200 +272,6 @@ void BM_FullMasking(benchmark::State& state) {
   state.SetItemsProcessed(energy_channels_db.size() * state.iterations());
 }
 BENCHMARK_RANGE(BM_FullMasking, 1, 64);
-
-TEST(Masking, MaskedAmount) {
-  hwy::AlignedNDArray<float, 2> probe({1, 2});
-  hwy::AlignedNDArray<float, 3> full_masking({1, 2, 2});
-  hwy::AlignedNDArray<float, 3> masked_amount({1, 2, 2});
-  Masking m;
-
-  probe[{0}] = {80, 60};
-  m.FullMasking(probe, 1, full_masking);
-  m.MaskedAmount(full_masking, probe, masked_amount);
-  EXPECT_NEAR((masked_amount[{0, 0}][0]), 0, 1e-2) << "No self masking";
-  EXPECT_NEAR((masked_amount[{0, 0}][1]), 0, 1e-2)
-      << "No masking from weaker masker";
-  EXPECT_NEAR((masked_amount[{0, 1}][0]), 8.4, 1e-2)
-      << "Some masking of 60dB from 80dB at -1 Cam";
-  EXPECT_NEAR((masked_amount[{0, 1}][1]), 0, 1e-2) << "No self masking";
-
-  probe[{0}] = {80, 70};
-  m.FullMasking(probe, 1, full_masking);
-  m.MaskedAmount(full_masking, probe, masked_amount);
-  EXPECT_NEAR((masked_amount[{0, 0}][0]), 0, 1e-2) << "No self masking";
-  EXPECT_NEAR((masked_amount[{0, 0}][1]), 0, 1e-2)
-      << "No masking from weaker masker";
-  EXPECT_NEAR((masked_amount[{0, 1}][0]), 2.4, 1e-2)
-      << "A bit less masking of 70dB from 80dB at -1 Cam";
-  EXPECT_NEAR((masked_amount[{0, 1}][1]), 0, 1e-2) << "No self masking";
-
-  probe[{0}] = {80, 55};
-  m.FullMasking(probe, 1, full_masking);
-  m.MaskedAmount(full_masking, probe, masked_amount);
-  EXPECT_NEAR((masked_amount[{0, 0}][0]), 0, 1e-2) << "No self masking";
-  EXPECT_NEAR((masked_amount[{0, 0}][1]), 0, 1e-2)
-      << "No masking from weaker masker";
-  EXPECT_NEAR((masked_amount[{0, 1}][0]), 11.4, 1e-2)
-      << "A bit more masking of 55dB from 80dB at -1 Cam";
-  EXPECT_NEAR((masked_amount[{0, 1}][1]), 0, 1e-2) << "No self masking";
-
-  probe[{0}] = {80, 60};
-  m.FullMasking(probe, 2, full_masking);
-  m.MaskedAmount(full_masking, probe, masked_amount);
-  EXPECT_NEAR((masked_amount[{0, 0}][0]), 0, 1e-2) << "No self masking";
-  EXPECT_NEAR((masked_amount[{0, 0}][1]), 0, 1e-2)
-      << "No masking from weaker masker";
-  EXPECT_NEAR((masked_amount[{0, 1}][0]), 4.8, 1e-2)
-      << "A bit less masking of 60dB from 80dB at -2 Cam";
-  EXPECT_NEAR((masked_amount[{0, 1}][1]), 0, 1e-2) << "No self masking";
-
-  probe[{0}] = {60, 80};
-  m.FullMasking(probe, 1, full_masking);
-  m.MaskedAmount(full_masking, probe, masked_amount);
-  EXPECT_NEAR((masked_amount[{0, 0}][0]), 0, 1e-2) << "No self masking";
-  EXPECT_NEAR((masked_amount[{0, 0}][1]), 6, 1e-2)
-      << "A bit less masking of 60dB from 80dB at 1 Cam";
-  EXPECT_NEAR((masked_amount[{0, 1}][0]), 0, 1e-2)
-      << "No masking from weaker masker";
-  EXPECT_NEAR((masked_amount[{0, 1}][1]), 0, 1e-2) << "No self masking";
-
-  probe[{0}] = {60, 80};
-  m.FullMasking(probe, 1.5, full_masking);
-  m.MaskedAmount(full_masking, probe, masked_amount);
-  EXPECT_NEAR((masked_amount[{0, 0}][0]), 0, 1e-2) << "No self masking";
-  EXPECT_NEAR((masked_amount[{0, 0}][1]), 3, 1e-2)
-      << "Even less masking of 60dB from 80dB at 1.5 Cam";
-  EXPECT_NEAR((masked_amount[{0, 1}][0]), 0, 1e-2)
-      << "No masking from weaker masker";
-  EXPECT_NEAR((masked_amount[{0, 1}][1]), 0, 1e-2) << "No self masking";
-
-  probe[{0}] = {60, 70};
-  m.FullMasking(probe, 1, full_masking);
-  m.MaskedAmount(full_masking, probe, masked_amount);
-  EXPECT_NEAR((masked_amount[{0, 0}][0]), 0, 1e-2) << "No self masking";
-  EXPECT_NEAR((masked_amount[{0, 0}][1]), 0.375, 1e-2)
-      << "Very little masking of 60dB from 70dB at 1 Cam";
-  EXPECT_NEAR((masked_amount[{0, 1}][0]), 0, 1e-2)
-      << "No masking from weaker masker";
-  EXPECT_NEAR((masked_amount[{0, 1}][1]), 0, 1e-2) << "No self masking";
-
-  probe[{0}] = {65, 80};
-  m.FullMasking(probe, 1, full_masking);
-  m.MaskedAmount(full_masking, probe, masked_amount);
-  EXPECT_NEAR((masked_amount[{0, 0}][0]), 0, 1e-2) << "No self masking";
-  EXPECT_NEAR((masked_amount[{0, 0}][1]), 3, 1e-2)
-      << "A bit less masking of 65dB from 80dB at 1 Cam";
-  EXPECT_NEAR((masked_amount[{0, 1}][0]), 0, 1e-2)
-      << "No masking from weaker masker";
-  EXPECT_NEAR((masked_amount[{0, 1}][1]), 0, 1e-2) << "No self masking";
-
-  probe[{0}] = {55, 80};
-  m.FullMasking(probe, 1, full_masking);
-  m.MaskedAmount(full_masking, probe, masked_amount);
-  EXPECT_NEAR((masked_amount[{0, 0}][0]), 0, 1e-2) << "No self masking";
-  EXPECT_NEAR((masked_amount[{0, 0}][1]), 9, 1e-2)
-      << "Some more masking of 55dB from 80dB at 1 Cam";
-  EXPECT_NEAR((masked_amount[{0, 1}][0]), 0, 1e-2)
-      << "No masking from weaker masker";
-  EXPECT_NEAR((masked_amount[{0, 1}][1]), 0, 1e-2) << "No self masking";
-}
-
-void BM_MaskedAmount(benchmark::State& state) {
-  const size_t sample_rate = 100;
-  hwy::AlignedNDArray<float, 2> probe({sample_rate * state.range(0), 1024});
-  hwy::AlignedNDArray<float, 3> full_masking(
-      {probe.shape()[0], probe.shape()[1], probe.shape()[1]});
-  hwy::AlignedNDArray<float, 3> masked_amount(full_masking.shape());
-  Masking m;
-  m.FullMasking(probe, 0.1, full_masking);
-
-  for (auto s : state) {
-    m.MaskedAmount(full_masking, probe, masked_amount);
-  }
-  state.SetItemsProcessed(probe.size() * state.iterations());
-}
-BENCHMARK_RANGE(BM_MaskedAmount, 1, 64);
-
-TEST(Masking, PartialLoudness) {
-  hwy::AlignedNDArray<float, 2> pre_masking({1, 2});
-  hwy::AlignedNDArray<float, 2> post_masking({1, 2});
-  Masking m;
-
-  pre_masking[{0}] = {80, 60};
-  m.PartialLoudness(pre_masking, 0.1, post_masking);
-  EXPECT_NEAR((post_masking[{0}][0]), 80, 1e-2) << "60dB not masking 80dB";
-  EXPECT_NEAR((post_masking[{0}][1]), 48.36, 1e-2)
-      << "80dB masking 60dB 0.1 Cam away";
-
-  pre_masking[{0}] = {80, 55};
-  m.PartialLoudness(pre_masking, 0.1, post_masking);
-  EXPECT_NEAR((post_masking[{0}][0]), 80, 1e-2) << "55dB not masking 80dB";
-  EXPECT_NEAR((post_masking[{0}][1]), 40.36, 1e-2)
-      << "80dB masking 55dB 0.1 Cam away more";
-
-  pre_masking[{0}] = {70, 60};
-  m.PartialLoudness(pre_masking, 0.1, post_masking);
-  EXPECT_NEAR((post_masking[{0}][0]), 70, 1e-2) << "60dB not masking 70dB";
-  EXPECT_NEAR((post_masking[{0}][1]), 54.346, 1e-2)
-      << "70dB masking 60dB 0.1 Cam away less";
-
-  pre_masking[{0}] = {80, 60};
-  m.PartialLoudness(pre_masking, 0.2, post_masking);
-  EXPECT_NEAR((post_masking[{0}][0]), 80, 1e-2) << "60dB not masking 80dB";
-  EXPECT_NEAR((post_masking[{0}][1]), 48.72, 1e-2)
-      << "80dB masking 60dB 0.2 Cam away less";
-
-  pre_masking[{0}] = {80, 60};
-  m.PartialLoudness(pre_masking, 3, post_masking);
-  EXPECT_NEAR((post_masking[{0}][0]), 80, 1e-2) << "60dB not masking 80dB";
-  EXPECT_NEAR((post_masking[{0}][1]), 58.8, 1e-2)
-      << "80dB masking 60dB 3 Cam away much less";
-
-  pre_masking[{0}] = {80, 60};
-  m.PartialLoudness(pre_masking, 4, post_masking);
-  EXPECT_NEAR((post_masking[{0}][0]), 80, 1e-2) << "60dB not masking 80dB";
-  EXPECT_NEAR((post_masking[{0}][1]), 60, 1e-2)
-      << "80dB not masking 60dB 4 Cam away at all";
-
-  pre_masking[{0}] = {80, 60};
-  m.PartialLoudness(pre_masking, 0.05, post_masking);
-  EXPECT_NEAR((post_masking[{0}][0]), 80, 1e-2) << "60dB not masking 80dB";
-  EXPECT_NEAR((post_masking[{0}][1]), 48.18, 1e-2)
-      << "80dB masking 60dB 0.05 Cam away more";
-
-  pre_masking[{0}] = {60, 80};
-  m.PartialLoudness(pre_masking, 0.1, post_masking);
-  EXPECT_NEAR((post_masking[{0}][0]), 48.6, 1e-2)
-      << "80dB masking 60dB -0.1 Cam away less";
-  EXPECT_NEAR((post_masking[{0}][1]), 80, 1e-2) << "60dB not masking 80dB";
-
-  pre_masking[{0}] = {60, 80};
-  m.PartialLoudness(pre_masking, 1, post_masking);
-  EXPECT_NEAR((post_masking[{0}][0]), 54, 1e-2)
-      << "80dB masking 60dB -1 Cam away even less";
-  EXPECT_NEAR((post_masking[{0}][1]), 80, 1e-2) << "60dB not masking 80dB";
-
-  pre_masking[{0}] = {60, 80};
-  m.PartialLoudness(pre_masking, 2, post_masking);
-  EXPECT_NEAR((post_masking[{0}][0]), 60, 1e-2)
-      << "80dB not masking 60dB -2 Cam at all";
-  EXPECT_NEAR((post_masking[{0}][1]), 80, 1e-2) << "60dB not masking 80dB";
-}
-
-void BM_PartialLoudness(benchmark::State& state) {
-  const size_t sample_rate = 100;
-  hwy::AlignedNDArray<float, 2> probe({sample_rate * state.range(0), 1024});
-  hwy::AlignedNDArray<float, 3> full_masking(
-      {probe.shape()[0], probe.shape()[1], probe.shape()[1]});
-  hwy::AlignedNDArray<float, 3> masked_amount(full_masking.shape());
-  Masking m;
-
-  for (auto s : state) {
-    m.PartialLoudness(probe, 0.1, probe);
-  }
-  state.SetItemsProcessed(probe.size() * state.iterations());
-}
-BENCHMARK_RANGE(BM_PartialLoudness, 1, 64);
 
 }  // namespace
 

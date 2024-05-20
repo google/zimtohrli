@@ -307,8 +307,8 @@ void Zimtohrli::Spectrogram(
   ComputeEnergy(channels, energy_channels_db);
   ToDb(energy_channels_db, full_scale_sine_db, epsilon, energy_channels_db);
   if (apply_masking) {
-    masking.PartialLoudness(energy_channels_db, cam_filterbank->cam_delta,
-                            partial_energy_channels_db);
+    masking.CutFullyMasked(energy_channels_db, cam_filterbank->cam_delta,
+                           partial_energy_channels_db);
   } else {
     hwy::CopyBytes(energy_channels_db.data(), partial_energy_channels_db.data(),
                    energy_channels_db.memory_size() * sizeof(float));

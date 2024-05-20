@@ -43,12 +43,12 @@ class PyohrliTest(unittest.TestCase):
         dict(
             a_hz=5000.0,
             b_hz=5010.0,
-            distance=7.927417755126953e-05,
+            distance=3.737211227416992e-05,
         ),
         dict(
             a_hz=5000.0,
             b_hz=10000.0,
-            distance=0.24643820524215698,
+            distance=0.31567609310150146,
         ),
     )
     def test_distance(self, a_hz: float, b_hz: float, distance: float):
@@ -59,6 +59,7 @@ class PyohrliTest(unittest.TestCase):
         signal_b = np.sin(np.linspace(0.0, np.pi * 2 * b_hz, int(sample_rate)))
         analysis_b = metric.analyze(signal_b)
         analysis_distance = metric.analysis_distance(analysis_a, analysis_b)
+        print(f"{analysis_distance=}")
         self.assertLess(abs(analysis_distance - distance), 1e-3)
         distance = metric.distance(signal_a, signal_b)
         self.assertLess(abs(distance - distance), 1e-3)

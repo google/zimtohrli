@@ -42,8 +42,6 @@ typedef struct ZimtohrliParameters {
   float MaskingLowerZeroAt80;
   float MaskingUpperZeroAt20;
   float MaskingUpperZeroAt80;
-  float MaskingOnsetWidth;
-  float MaskingOnsetPeak;
   float MaskingMaxMask;
 
 } ZimtohrliParameters;
