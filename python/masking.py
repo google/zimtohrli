@@ -135,7 +135,7 @@ class Masking:
     def non_masked_energy(
         self, energy_channels_db: audio_signal.Channels
     ) -> audio_signal.Channels:
-        """Returns energy_channels after full masking.
+        """Returns energy_channels after fully masked channels are decimated.
 
         Args:
           energy_channels_db: Channels containing the energy to be masked.

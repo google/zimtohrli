@@ -103,19 +103,19 @@ struct Masking {
 
   // The negative distance in Cam at which a 20dB masker will no longer mask any
   // probe.
-  float lower_zero_at_20 = -2;
+  float lower_zero_at_20 = -4.1;
   // The negative distance in Cam at which an 80dB masker will no longer mask
   // any probe.
   float lower_zero_at_80 = -6;
   // The positive distance in Cam at which a 20dB masker will no longer mask any
   // probe.
-  float upper_zero_at_20 = 2;
+  float upper_zero_at_20 = 3.1;
   // The positive distance in Cam at which an 80dB masker will no longer mask
   // any probe.
-  float upper_zero_at_80 = 10;
+  float upper_zero_at_80 = 9.6;
 
   // The dB that a masker masks in the same band.
-  float max_mask = 20;
+  float max_mask = 17.7;
 };
 
 }  // namespace zimtohrli

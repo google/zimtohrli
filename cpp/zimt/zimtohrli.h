@@ -300,7 +300,7 @@ struct Zimtohrli {
   float unwarp_window_seconds = 2;
 
   // The reference dB SPL of a sine signal of amplitude 1.
-  float full_scale_sine_db = 80;
+  float full_scale_sine_db = 78.3;
 
   // The epsilon added to linear energy before converting to dB to avoid
   // log-of-zero.
