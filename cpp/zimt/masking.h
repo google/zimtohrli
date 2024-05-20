@@ -84,7 +84,7 @@ struct Masking {
                    hwy::AlignedNDArray<float, 3>& full_masking_db) const;
 
   // Populates non_masked_db with the energy after any fully masked channels are
-  // zeroed out.
+  // decimated.
   //
   // energy_channels_db is a (num_samples, num_channels)-shaped array of dB
   // energy values.
