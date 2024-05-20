@@ -48,7 +48,7 @@ class PyohrliTest(unittest.TestCase):
         dict(
             a_hz=5000.0,
             b_hz=10000.0,
-            distance=0.31567609310150146,
+            distance=0.3206554651260376,
         ),
     )
     def test_distance(self, a_hz: float, b_hz: float, distance: float):

@@ -518,7 +518,6 @@ type OptimizationEvent struct {
 }
 
 func (r ReferenceBundles) Optimize(startStep, numSteps float64, logger func(OptimizationEvent)) error {
-	rng := rand.New(rand.NewSource(0))
 	z := goohrli.New(goohrli.DefaultParameters(sampleRate))
 	loss, err := r.CalculateZimtohrliMSE(z)
 	if err != nil {
@@ -527,6 +526,7 @@ func (r ReferenceBundles) Optimize(startStep, numSteps float64, logger func(Opti
 	logger(OptimizationEvent{Parameters: z.Parameters(), Step: 0, Loss: loss, Temp: 1})
 	log.Printf("Created initial solution %v with loss %.2f", z, loss)
 	for step := startStep; step < numSteps; step++ {
+		rng := rand.New(rand.NewSource(int64(step)))
 		temp := 1.0 - (step+1)/numSteps
 		newZ := mutate(z, rng, temp)
 		log.Printf("Created new solution %+v", newZ)

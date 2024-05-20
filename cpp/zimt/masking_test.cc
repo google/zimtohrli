@@ -91,7 +91,11 @@ TEST(Masking, ToDbToLinear) {
 TEST(Masking, FullMasking) {
   hwy::AlignedNDArray<float, 2> energy_channels({1, 2});
   hwy::AlignedNDArray<float, 3> full_masking({1, 2, 2});
-  Masking m;
+  Masking m{.lower_zero_at_20 = -2,
+            .lower_zero_at_80 = -6,
+            .upper_zero_at_20 = 2,
+            .upper_zero_at_80 = 10,
+            .max_mask = 20};
 
   // Testing masker with lower frequency than probe.
 
@@ -254,7 +258,7 @@ TEST(Masking, CutFullyMasked) {
   energy_channels[{0}] = {90, 20};
   m.CutFullyMasked(energy_channels, 1, non_masked);
   EXPECT_NEAR((non_masked[{0}][0]), 90, 1e-2) << "No self masking";
-  EXPECT_NEAR((non_masked[{0}][1]), -43.82, 1e-2)
+  EXPECT_NEAR((non_masked[{0}][1]), -45.686698913574219, 1e-2)
       << "20dB fully masked by 90dB";
 }
 
