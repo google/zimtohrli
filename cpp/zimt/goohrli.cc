@@ -110,8 +110,6 @@ ZimtohrliParameters GetZimtohrliParameters(Zimtohrli zimtohrli) {
   result.MaskingLowerZeroAt80 = m.lower_zero_at_80;
   result.MaskingUpperZeroAt20 = m.upper_zero_at_20;
   result.MaskingUpperZeroAt80 = m.upper_zero_at_80;
-  result.MaskingOnsetWidth = m.onset_width;
-  result.MaskingOnsetPeak = m.onset_peak;
   result.MaskingMaxMask = m.max_mask;
   return result;
 }
@@ -130,8 +128,6 @@ void SetZimtohrliParameters(Zimtohrli zimtohrli,
   z->masking.lower_zero_at_80 = parameters.MaskingLowerZeroAt80;
   z->masking.upper_zero_at_20 = parameters.MaskingUpperZeroAt20;
   z->masking.upper_zero_at_80 = parameters.MaskingUpperZeroAt80;
-  z->masking.onset_width = parameters.MaskingOnsetWidth;
-  z->masking.onset_peak = parameters.MaskingOnsetPeak;
   z->masking.max_mask = parameters.MaskingMaxMask;
 }
 
@@ -152,8 +148,6 @@ ZimtohrliParameters DefaultZimtohrliParameters() {
   result.MaskingLowerZeroAt80 = m.lower_zero_at_80;
   result.MaskingUpperZeroAt20 = m.upper_zero_at_20;
   result.MaskingUpperZeroAt80 = m.upper_zero_at_80;
-  result.MaskingOnsetWidth = m.onset_width;
-  result.MaskingOnsetPeak = m.onset_peak;
   result.MaskingMaxMask = m.max_mask;
   return result;
 }

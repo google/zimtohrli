@@ -13,60 +13,49 @@
 # limitations under the License.
 """Tests for google3.third_party.zimtohrli.python.masking."""
 
-import dataclasses
 import numpy as np
 import unittest
 import parameterized
-import cam
 import masking
 import audio_signal
+import jax.numpy as jnp
+import cam
 
 
 class MaskingTest(unittest.TestCase):
-
-    @dataclasses.dataclass(frozen=True)
-    class Params:
-        masker_db_and_hz: tuple[int, int]
-        probe_db_and_hz: tuple[int, int]
-        want_masked_amount_range: tuple[float, float]
 
     @parameterized.parameterize(
         dict(
             masker_db_and_hz=(80, 600),
             probe_db_and_hz=(70, 700),
-            want_masked_amount_range=(2, 3),
-        ),
-        dict(
-            masker_db_and_hz=(80, 700),
-            probe_db_and_hz=(70, 600),
-            want_masked_amount_range=(0, 1),
-        ),
-        dict(
-            masker_db_and_hz=(75, 600),
-            probe_db_and_hz=(80, 700),
-            want_masked_amount_range=(-100, 0),
+            want_masked=False,
         ),
         dict(
             masker_db_and_hz=(80, 600),
-            probe_db_and_hz=(60, 700),
-            want_masked_amount_range=(20, 25),
+            probe_db_and_hz=(30, 700),
+            want_masked=True,
         ),
         dict(
             masker_db_and_hz=(80, 600),
-            probe_db_and_hz=(72, 700),
-            want_masked_amount_range=(0.5, 1.5),
+            probe_db_and_hz=(30, 2500),
+            want_masked=False,
         ),
         dict(
-            masker_db_and_hz=(78, 600),
-            probe_db_and_hz=(70, 700),
-            want_masked_amount_range=(0.5, 1.5),
+            masker_db_and_hz=(80, 600),
+            probe_db_and_hz=(30, 580),
+            want_masked=True,
+        ),
+        dict(
+            masker_db_and_hz=(80, 600),
+            probe_db_and_hz=(30, 200),
+            want_masked=False,
         ),
     )
-    def test_partial_masking(
+    def test_non_masked_energy(
         self,
         masker_db_and_hz: tuple[float, float],
         probe_db_and_hz: tuple[float, float],
-        want_masked_amount_range: tuple[float, float],
+        want_masked: bool,
     ):
         m = masking.Masking()
         chans = audio_signal.Channels(
@@ -75,89 +64,12 @@ class MaskingTest(unittest.TestCase):
                 [
                     [masker_db_and_hz[1], masker_db_and_hz[1] + 1],
                     [probe_db_and_hz[1], probe_db_and_hz[1] + 1],
-                ]
+                ],
             ),
             samples=np.asarray([[masker_db_and_hz[0]], [probe_db_and_hz[0]]]),
         )
-        self.assertGreaterEqual(
-            chans.samples[1, -1] - m.partial_loudness(chans).samples[1, -1],
-            want_masked_amount_range[0],
-        )
-        self.assertLessEqual(
-            chans.samples[1, -1] - m.partial_loudness(chans).samples[1, -1],
-            want_masked_amount_range[1],
-        )
-
-    @parameterized.parameterize(
-        dict(
-            masker_db_and_hz=(85, 600),
-            probe_db_and_hz=(70, 700),
-            want_masked_amount_range=(4, 6),
-        ),
-        dict(
-            masker_db_and_hz=(80, 700),
-            probe_db_and_hz=(73, 600),
-            want_masked_amount_range=(0, 1),
-        ),
-        dict(
-            masker_db_and_hz=(75, 600),
-            probe_db_and_hz=(80, 700),
-            want_masked_amount_range=(-100, 0),
-        ),
-        dict(
-            masker_db_and_hz=(80, 600),
-            probe_db_and_hz=(60, 700),
-            want_masked_amount_range=(10, 15),
-        ),
-        dict(
-            masker_db_and_hz=(85, 600),
-            probe_db_and_hz=(72, 700),
-            want_masked_amount_range=(3, 4),
-        ),
-        dict(
-            masker_db_and_hz=(83, 600),
-            probe_db_and_hz=(70, 700),
-            want_masked_amount_range=(3, 4),
-        ),
-    )
-    def test_channel_filtered_partial_masking(
-        self,
-        masker_db_and_hz: tuple[float, float],
-        probe_db_and_hz: tuple[float, float],
-        want_masked_amount_range: tuple[float, float],
-    ):
-        fs = 48000
-        t = 1
-        full_scale_sine_db = 90
-        masker_samples = np.sin(
-            np.linspace(0, 2 * np.pi * masker_db_and_hz[1] * t, int(fs * t))
-        ) * 10 ** ((masker_db_and_hz[0] - full_scale_sine_db) / 20)
-        probe_samples = np.sin(
-            np.linspace(0, 2 * np.pi * probe_db_and_hz[1] * t, int(fs * t))
-        ) * 10 ** ((probe_db_and_hz[0] - full_scale_sine_db) / 20)
-        sig = audio_signal.Signal(
-            sample_rate=fs, samples=masker_samples + probe_samples
-        )
-        channels = cam.Cam().channel_filter(sig)
-        probe_channel_idx = -1
-        for idx in range(np.asarray(channels.freqs).shape[0]):
-            if (
-                probe_db_and_hz[1] >= channels.freqs[idx][0]
-                and probe_db_and_hz[1] < channels.freqs[idx][1]
-            ):
-                probe_channel_idx = idx
-        energy = channels.energy()
-        energy_db = energy.to_db()
-        m = masking.Masking()
-        unmasked_probe_energy_db = energy_db.samples[probe_channel_idx, -1]
-        partial_loudness_db = m.partial_loudness(energy_db)
-        masked_probe_energy_db = partial_loudness_db.samples[
-            probe_channel_idx,
-            -1,
-        ]
-        masked_db = unmasked_probe_energy_db - masked_probe_energy_db
-        self.assertGreaterEqual(masked_db, want_masked_amount_range[0])
-        self.assertLessEqual(masked_db, want_masked_amount_range[1])
+        non_masked = m.non_masked_energy(chans)
+        self.assertEqual(non_masked.samples[1, 0] < 0, want_masked)
 
 
 if __name__ == "__main__":

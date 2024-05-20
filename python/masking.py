@@ -35,10 +35,6 @@ class Masking:
         no longer mask any probe.
       upper_zero_at_80: The positive distance in Cam at which an 80dB masker will
         no longer mask any probe.
-      onset_width: The dB a probe has to be raised above full masking to be masked
-        only 'onset_peak'dB.
-      onset_peak: The masking of a probe after it has been raised 'onset_width'dB
-        above full masking.
       max_mask: The maximum dB above full masking a probe will ever be masked.
       cam_model: The Cam model to use when computing masking.
     """
@@ -48,8 +44,6 @@ class Masking:
     upper_zero_at_20: audio_signal.Numerical = 2
     upper_zero_at_80: audio_signal.Numerical = 10
 
-    onset_width: audio_signal.Numerical = 10
-    onset_peak: audio_signal.Numerical = 6
     max_mask: audio_signal.Numerical = 20
 
     cam_model: Optional[cam.Cam] = None
@@ -100,39 +94,6 @@ class Masking:
             ),
         )
 
-    def masked_amount(
-        self, full_mask_level: jnp.ndarray, probe_level: jnp.ndarray
-    ) -> jnp.ndarray:
-        """Returns masked amount of probe for given full_mask_level.
-
-        Args:
-          full_mask_level: The dB at which probe would be fully masked.
-          probe_level: Objective dB of probe.
-
-        Returns:
-          dB of probe that would be masked away.
-        """
-        onset_delta = jnp.minimum(1e-6, self.onset_peak - full_mask_level)
-        onset_slope = onset_delta / self.onset_width
-        onset_offset = full_mask_level - full_mask_level / onset_slope
-        onset_crossing = full_mask_level + self.onset_width
-        max_mask_slope = jnp.minimum(self.onset_peak, full_mask_level) / -(
-            full_mask_level + self.max_mask - onset_crossing
-        )
-        max_mask_offset = full_mask_level + self.max_mask
-        return jnp.clip(  # Never mask more than full_masking and never less than 0.
-            jnp.minimum(  # Always mask at least enough to reach 0 at full + 20.
-                jnp.maximum(  # If we are loud, reduce masking quickly at start
-                    (probe_level - onset_offset) * onset_slope,
-                    (probe_level - max_mask_offset) * max_mask_slope,
-                ),
-                (probe_level - full_mask_level - self.max_mask)
-                * (full_mask_level / -self.max_mask),
-            ),
-            0,
-            full_mask_level,
-        )
-
     def full_masking_of_channels(
         self, cam_delta: jnp.ndarray, masker_level: jnp.ndarray
     ) -> jnp.ndarray:
@@ -153,27 +114,6 @@ class Masking:
         del (cam_delta, masker_level)
         return jnp.ndarray([])
 
-    def masked_amount_of_channels(
-        self, full_mask_level: jnp.ndarray, probe_level: jnp.ndarray
-    ) -> jnp.ndarray:
-        """Returns masked amount of channels.
-
-        Implementation created using jax.vmap in self.__post__init__.
-
-        Args:
-          full_mask_level: A (num_masking_channels, num_steps, num_masked_channels)-
-            shaped array of full masking levels, in dB, between each channel and
-            each other channel.
-          probe_level: A (num_channels, num_steps)-shaped array of energies, in dB,
-            of the channels.
-
-        Returns:
-          A (num_masked_channels, num_steps, num_masking_channels)-shaped array of
-            the dB being masked in each channel by each other channel.
-        """
-        del (full_mask_level, probe_level)
-        return jnp.ndarray([])
-
     def __post_init__(self):
         if self.cam_model is None:
             self.cam_model = cam.Cam()
@@ -191,24 +131,11 @@ class Masking:
             jax.jit(jax.vmap(full_masking_multi_maskers_multi_probes, (None, 1), 1)),
         )
 
-        # [maskers], [] => [maskers]
-        masked_amount_multi_maskers = jax.vmap(self.masked_amount, (0, None), 0)
-        # [maskers, probes], [probes] => [probes, maskers]
-        masked_amount_multi_maskers_multi_probes = jax.vmap(
-            masked_amount_multi_maskers, (1, 0), 0
-        )
-        # [maskers, steps, probes], [probes, steps] => [probes, steps, maskers]
-        setattr(
-            self,
-            "masked_amount_of_channels",
-            jax.jit(jax.vmap(masked_amount_multi_maskers_multi_probes, (1, 1), 1)),
-        )
-
     @jax.jit
-    def partial_loudness(
+    def non_masked_energy(
         self, energy_channels_db: audio_signal.Channels
     ) -> audio_signal.Channels:
-        """Returns partial loudness of energy_channels after masking.
+        """Returns energy_channels after full masking.
 
         Args:
           energy_channels_db: Channels containing the energy to be masked.
@@ -218,20 +145,15 @@ class Masking:
         """
         cams = self.cam_model.cam_from_hz(energy_channels_db.freqs[:, 0])
         cam_delta = cams[jnp.newaxis, ...] - cams[..., jnp.newaxis]
-        full_masking_db = self.full_masking_of_channels(
-            cam_delta, energy_channels_db.samples
-        )
-        masked_amount_db = self.masked_amount_of_channels(
-            full_masking_db, energy_channels_db.samples
-        )
-        masked_amount = 10 ** (masked_amount_db / 10) - 1
-        masked_amount_sum = masked_amount.sum(axis=-1)
-        masked_amount_sum_db = 10 * jnp.log10(masked_amount_sum + 1)
-        partial_loudness_db = jnp.asarray(energy_channels_db.samples) - jnp.asarray(
-            masked_amount_sum_db
-        )
+        max_full_masking_db = jnp.max(
+            self.full_masking_of_channels(cam_delta, energy_channels_db.samples), axis=0
+        ).T
         return audio_signal.Channels(
-            samples=partial_loudness_db,
+            samples=jnp.where(
+                max_full_masking_db >= energy_channels_db.samples,
+                energy_channels_db.samples - max_full_masking_db,
+                energy_channels_db.samples,
+            ),
             freqs=energy_channels_db.freqs,
             sample_rate=energy_channels_db.sample_rate,
         )

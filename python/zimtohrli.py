@@ -64,7 +64,7 @@ class Zimtohrli:
         energy_db = cam_channels.energy().to_db(
             full_scale_sine_db=full_scale_sine_db, db_epsilon=db_epsilon
         )
-        partial_energy_db = self.m.partial_loudness(energy_db)
+        partial_energy_db = self.m.non_masked_energy(energy_db)
         return self.l.phons_from_spl_for_channels(partial_energy_db)
 
     def distance(

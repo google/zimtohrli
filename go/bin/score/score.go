@@ -66,6 +66,10 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err := zimtohrliParameters.Update([]byte(*zimtohrliParametersJSON)); err != nil {
+		log.Panic(err)
+	}
+
 	if *optimize != "" {
 		bundles, err := data.OpenBundles(*optimize)
 		if err != nil {
@@ -98,9 +102,6 @@ func main() {
 		for _, study := range studies {
 			measurements := map[data.ScoreType]data.Measurement{}
 			if *calculateZimtohrli {
-				if err := zimtohrliParameters.Update([]byte(*zimtohrliParametersJSON)); err != nil {
-					log.Panic(err)
-				}
 				if !reflect.DeepEqual(zimtohrliParameters, goohrli.DefaultParameters(zimtohrliParameters.SampleRate)) {
 					log.Printf("Using %+v", zimtohrliParameters)
 				}

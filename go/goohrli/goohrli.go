@@ -118,8 +118,6 @@ type Parameters struct {
 	MaskingLowerZeroAt80 float64
 	MaskingUpperZeroAt20 float64
 	MaskingUpperZeroAt80 float64
-	MaskingOnsetWidth    float64
-	MaskingOnsetPeak     float64
 	MaskingMaxMask       float64
 }
 
@@ -172,8 +170,6 @@ func goFromCParameters(cParams C.ZimtohrliParameters) Parameters {
 		MaskingLowerZeroAt80: float64(cParams.MaskingLowerZeroAt80),
 		MaskingUpperZeroAt20: float64(cParams.MaskingUpperZeroAt20),
 		MaskingUpperZeroAt80: float64(cParams.MaskingUpperZeroAt80),
-		MaskingOnsetWidth:    float64(cParams.MaskingOnsetWidth),
-		MaskingOnsetPeak:     float64(cParams.MaskingOnsetPeak),
 		MaskingMaxMask:       float64(cParams.MaskingMaxMask),
 	}
 }
@@ -214,8 +210,6 @@ func (g *Goohrli) Set(params Parameters) {
 	cParams.MaskingLowerZeroAt80 = C.float(params.MaskingLowerZeroAt80)
 	cParams.MaskingUpperZeroAt20 = C.float(params.MaskingUpperZeroAt20)
 	cParams.MaskingUpperZeroAt80 = C.float(params.MaskingUpperZeroAt80)
-	cParams.MaskingOnsetWidth = C.float(params.MaskingOnsetWidth)
-	cParams.MaskingOnsetPeak = C.float(params.MaskingOnsetPeak)
 	cParams.MaskingMaxMask = C.float(params.MaskingMaxMask)
 	C.SetZimtohrliParameters(g.zimtohrli, cParams)
 }
