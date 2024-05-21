@@ -288,7 +288,11 @@ void Zimtohrli::Spectrogram(
   std::vector<float> gains;
   for (size_t i = 0; i < cam_filterbank->filter.Size(); ++i) {
     freqs.push_back(cam_filterbank->thresholds_hz[{1}][i]);
+<<<<<<< HEAD
     gains.push_back(1.0);
+=======
+    gains.push_back(tabuli::GetRotatorGains(gains.size()));
+>>>>>>> 62123e9 (Hacked together a replacement of the ellitic filters with the tabuli)
   }
   tabuli::Rotators rots(1, freqs, gains, cam_filterbank->sample_rate, 1.0f);
   rots.Filter(signal, channels);
