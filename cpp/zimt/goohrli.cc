@@ -55,8 +55,12 @@ float MOSFromZimtohrli(float zimtohrli_distance) {
 }
 
 Zimtohrli CreateZimtohrli(ZimtohrliParameters params) {
-  zimtohrli::Cam cam{.minimum_bandwidth_hz = params.FrequencyResolution};
-  cam.high_threshold_hz = std::min(cam.high_threshold_hz, params.SampleRate);
+  zimtohrli::Cam cam{.minimum_bandwidth_hz = params.FrequencyResolution,
+                     .filter_order = params.FilterOrder,
+                     .filter_pass_band_ripple = params.FilterPassBandRipple,
+                     .filter_stop_band_ripple = params.FilterStopBandRipple};
+  cam.high_threshold_hz =
+      std::min(cam.high_threshold_hz, params.SampleRate * 0.5f);
   zimtohrli::Zimtohrli* result = new zimtohrli::Zimtohrli{
       .cam_filterbank = cam.CreateFilterbank(params.SampleRate)};
   SetZimtohrliParameters(result, params);
@@ -111,6 +115,9 @@ ZimtohrliParameters GetZimtohrliParameters(Zimtohrli zimtohrli) {
   result.MaskingUpperZeroAt20 = m.upper_zero_at_20;
   result.MaskingUpperZeroAt80 = m.upper_zero_at_80;
   result.MaskingMaxMask = m.max_mask;
+  result.FilterOrder = z->cam_filterbank->filter_order;
+  result.FilterPassBandRipple = z->cam_filterbank->filter_pass_band_ripple;
+  result.FilterStopBandRipple = z->cam_filterbank->filter_stop_band_ripple;
   return result;
 }
 
@@ -132,7 +139,7 @@ void SetZimtohrliParameters(Zimtohrli zimtohrli,
 }
 
 ZimtohrliParameters DefaultZimtohrliParameters() {
-  zimtohrli::Zimtohrli default_zimtohrli;
+  const zimtohrli::Zimtohrli default_zimtohrli;
   ZimtohrliParameters result;
   result.SampleRate = -1;
   result.FrequencyResolution = zimtohrli::Cam{}.minimum_bandwidth_hz;
@@ -143,12 +150,16 @@ ZimtohrliParameters DefaultZimtohrliParameters() {
   result.UnwarpWindowSeconds = default_zimtohrli.unwarp_window_seconds;
   result.NSIMStepWindow = default_zimtohrli.nsim_step_window;
   result.NSIMChannelWindow = default_zimtohrli.nsim_channel_window;
-  zimtohrli::Masking m;
+  const zimtohrli::Masking m;
   result.MaskingLowerZeroAt20 = m.lower_zero_at_20;
   result.MaskingLowerZeroAt80 = m.lower_zero_at_80;
   result.MaskingUpperZeroAt20 = m.upper_zero_at_20;
   result.MaskingUpperZeroAt80 = m.upper_zero_at_80;
   result.MaskingMaxMask = m.max_mask;
+  const zimtohrli::Cam c;
+  result.FilterOrder = c.filter_order;
+  result.FilterPassBandRipple = c.filter_pass_band_ripple;
+  result.FilterStopBandRipple = c.filter_stop_band_ripple;
   return result;
 }
 

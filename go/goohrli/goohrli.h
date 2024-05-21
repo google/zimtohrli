@@ -43,7 +43,9 @@ typedef struct ZimtohrliParameters {
   float MaskingUpperZeroAt20;
   float MaskingUpperZeroAt80;
   float MaskingMaxMask;
-
+  int FilterOrder;
+  float FilterStopBandRipple;
+  float FilterPassBandRipple;
 } ZimtohrliParameters;
 
 // Returns the default parameters.
@@ -97,8 +99,8 @@ float AnalysisDistance(Zimtohrli zimtohrli, Analysis a, Analysis b);
 
 // Sets the parameters.
 //
-// Sample rate and frequency resolution can only be set when an instance is
-// created and will be ignored in this function.
+// Sample rate, frequency resolution, and filter parameters can only be set when
+// an instance is created and will be ignored in this function.
 void SetZimtohrliParameters(Zimtohrli zimtohrli,
                             ZimtohrliParameters parameters);
 

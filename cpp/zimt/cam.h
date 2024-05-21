@@ -34,6 +34,11 @@ struct CamFilterbank {
 
   // The sample rate this filterbank was designed for.
   float sample_rate;
+
+  // The parameters used when creating this filterbank.
+  int filter_order;
+  float filter_pass_band_ripple;
+  float filter_stop_band_ripple;
 };
 
 // Converts between Hz and Cam (see

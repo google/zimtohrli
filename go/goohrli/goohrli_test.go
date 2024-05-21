@@ -15,9 +15,11 @@
 package goohrli
 
 import (
+	"log"
 	"math"
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestMeasureAndNormalize(t *testing.T) {
@@ -173,4 +175,82 @@ func TestViSQOL(t *testing.T) {
 			t.Errorf("got mos %v, wanted mos %v", mos, tc.wantMOS)
 		}
 	}
+}
+
+var goohrliDurationType = reflect.TypeOf(Duration{})
+
+func populate(s any) {
+	counter := 1
+	val := reflect.ValueOf(s).Elem()
+	typ := val.Type()
+	for _, field := range reflect.VisibleFields(typ) {
+		switch field.Type.Kind() {
+		case reflect.Float64:
+			val.FieldByIndex(field.Index).SetFloat(float64(counter))
+		case reflect.Int:
+			val.FieldByIndex(field.Index).SetInt(int64(counter & 0xffff))
+		case reflect.Bool:
+			val.FieldByIndex(field.Index).SetBool(true)
+		default:
+			if field.Type == goohrliDurationType {
+				val.FieldByIndex(field.Index).Set(reflect.ValueOf(Duration{Duration: time.Duration(counter) * time.Minute}))
+			} else {
+				log.Panicf("Unsupported field %v", field)
+			}
+		}
+		counter++
+	}
+}
+
+func rdiff(a, b float64) float64 {
+	return math.Abs(float64(a-b) / (0.5 * (a + b)))
+}
+
+func checkNear(a, b any, rtol float64, t *testing.T) {
+	t.Helper()
+	aVal := reflect.ValueOf(a)
+	bVal := reflect.ValueOf(b)
+	if aVal.Type() != bVal.Type() {
+		t.Fatalf("%v and %v not same type", a, b)
+	}
+	for _, field := range reflect.VisibleFields(aVal.Type()) {
+		switch field.Type.Kind() {
+		case reflect.Float64:
+			aFloat := aVal.FieldByIndex(field.Index).Float()
+			bFloat := bVal.FieldByIndex(field.Index).Float()
+			if d := rdiff(aFloat, bFloat); d > rtol {
+				t.Errorf("%v is more than %v off from %v", aFloat, rtol, bFloat)
+			}
+		case reflect.Int:
+			aInt := aVal.FieldByIndex(field.Index).Int()
+			bInt := bVal.FieldByIndex(field.Index).Int()
+			if aInt != bInt {
+				t.Errorf("%v: %v != %v", field.Name, aInt, bInt)
+			}
+		case reflect.Bool:
+			aBool := aVal.FieldByIndex(field.Index).Bool()
+			bBool := bVal.FieldByIndex(field.Index).Bool()
+			if aBool != bBool {
+				t.Errorf("%v: %v != %v", field.Name, aBool, bBool)
+			}
+		default:
+			if field.Type == goohrliDurationType {
+				aDur := aVal.FieldByIndex(field.Index).Interface().(Duration).Duration
+				bDur := bVal.FieldByIndex(field.Index).Interface().(Duration).Duration
+				if d := rdiff(float64(aDur), float64(bDur)); d > rtol {
+					t.Errorf("%v is more than %v off from %v", aDur, rtol, bDur)
+				}
+			} else {
+				log.Panicf("Unsupported field %v", field)
+			}
+		}
+	}
+}
+
+func TestParamConversion(t *testing.T) {
+	params := Parameters{}
+	populate(&params)
+	cParams := cFromGoParameters(params)
+	reconvertedParams := goFromCParameters(cParams)
+	checkNear(reconvertedParams, params, 1e-6, t)
 }
