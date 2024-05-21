@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <iostream>
 #include <limits>
 #include <optional>
 #include <utility>
@@ -27,6 +28,7 @@
 #include "hwy/aligned_allocator.h"
 #include "zimt/dtw.h"
 #include "zimt/filterbank.h"
+#include "zimt/fourier_bank.h"
 #include "zimt/masking.h"
 #include "zimt/nsim.h"
 
@@ -281,7 +283,17 @@ void Zimtohrli::Spectrogram(
            partial_energy_channels_db.shape()[1]);
   CHECK_EQ(partial_energy_channels_db.shape()[0], spectrogram.shape()[0]);
   CHECK_EQ(partial_energy_channels_db.shape()[1], spectrogram.shape()[1]);
-  cam_filterbank->filter.Filter(signal, state, channels);
+  //  cam_filterbank->filter.Filter(signal, state, channels);
+  // Using a tabuli::Rotators instead of the cam_filterbank filter.
+  std::vector<float> freqs;
+  std::vector<float> gains;
+  for (size_t i = 0; i < cam_filterbank->filter.Size(); ++i) {
+    freqs.push_back(cam_filterbank->thresholds_hz[{1}][i]);
+    gains.push_back(1.0);
+  }
+  tabuli::Rotators rots(1, freqs, gains, cam_filterbank->sample_rate, 1.0f);
+  rots.Filter(signal, channels);
+
   ComputeEnergy(channels, energy_channels_db);
   ToDb(energy_channels_db, full_scale_sine_db, epsilon, energy_channels_db);
   if (apply_masking) {
@@ -318,11 +330,11 @@ Analysis Zimtohrli::Analyze(hwy::Span<const float> signal,
       1.0f, std::ceil(static_cast<float>(signal.size()) *
                       perceptual_sample_rate / cam_filterbank->sample_rate)));
   hwy::AlignedNDArray<float, 2> energy_channels_db(
-      {num_downscaled_samples, cam_filterbank->filter.Size()});
+      {num_downscaled_samples, channels.shape()[1]});
   hwy::AlignedNDArray<float, 2> partial_energy_channels_db(
-      {num_downscaled_samples, cam_filterbank->filter.Size()});
+      {num_downscaled_samples, channels.shape()[1]});
   hwy::AlignedNDArray<float, 2> spectrogram(
-      {num_downscaled_samples, cam_filterbank->filter.Size()});
+      {num_downscaled_samples, channels.shape()[1]});
   Spectrogram(signal, state, channels, energy_channels_db,
               partial_energy_channels_db, spectrogram);
   return {.energy_channels_db = std::move(energy_channels_db),

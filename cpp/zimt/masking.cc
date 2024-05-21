@@ -64,7 +64,7 @@ void HwyComputeEnergy(const hwy::AlignedNDArray<float, 2>& sample_channels,
         samples =
             Load(d, sample_channels[{sample_index + downscale_index}].data() +
                         channel_index);
-        accumulator = MulAdd(samples, samples, accumulator);
+        accumulator = Add(samples, accumulator);
       }
       Store(Mul(downscaling_reciprocal_vec, accumulator), d,
             energy_channels[{energy_sample_index}].data() + channel_index);
