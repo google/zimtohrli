@@ -464,12 +464,9 @@ const sampleRate = 48000
 
 func mutate(z *goohrli.Goohrli, rng *rand.Rand, temp float64) *goohrli.Goohrli {
 	params := z.Parameters()
-	params.MaskingLowerZeroAt20 = mutateFloat(params.MaskingLowerZeroAt20, -6, -1, rng, temp)
-	params.MaskingLowerZeroAt80 = mutateFloat(params.MaskingLowerZeroAt80, -6, -1, rng, temp)
-	params.MaskingUpperZeroAt20 = mutateFloat(params.MaskingUpperZeroAt20, 1, 4, rng, temp)
-	params.MaskingUpperZeroAt80 = mutateFloat(params.MaskingUpperZeroAt80, 4, 12, rng, temp)
-	params.MaskingMaxMask = mutateFloat(params.MaskingMaxMask, 10, 30, rng, temp)
-	params.FullScaleSineDB = mutateFloat(params.FullScaleSineDB, 60, 90, rng, temp)
+	params.FilterOrder = mutateInt(params.FilterOrder, 2, 5, rng, temp)
+	params.FilterPassBandRipple = mutateFloat(params.FilterPassBandRipple, 1, 6, rng, temp)
+	params.FilterStopBandRipple = mutateFloat(params.FilterStopBandRipple, 12, 90, rng, temp)
 	result := goohrli.New(params)
 	return result
 }

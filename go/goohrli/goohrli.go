@@ -69,13 +69,10 @@ type Goohrli struct {
 
 // New returns a new Goohrli for the given parameters.
 func New(params Parameters) *Goohrli {
-	cParams := C.DefaultZimtohrliParameters()
-	cParams.SampleRate = C.float(params.SampleRate)
-	cParams.FrequencyResolution = C.float(params.FrequencyResolution)
+	cParams := cFromGoParameters(params)
 	result := &Goohrli{
 		zimtohrli: C.CreateZimtohrli(cParams),
 	}
-	result.Set(params)
 	runtime.SetFinalizer(result, func(g *Goohrli) {
 		C.FreeZimtohrli(g.zimtohrli)
 	})
@@ -119,6 +116,9 @@ type Parameters struct {
 	MaskingUpperZeroAt20 float64
 	MaskingUpperZeroAt80 float64
 	MaskingMaxMask       float64
+	FilterOrder          int
+	FilterPassBandRipple float64
+	FilterStopBandRipple float64
 }
 
 var durationType = reflect.TypeOf(time.Second)
@@ -155,6 +155,36 @@ func (p *Parameters) Update(b []byte) error {
 	return nil
 }
 
+func cFromGoParameters(params Parameters) C.ZimtohrliParameters {
+	var cParams C.ZimtohrliParameters
+	cParams.SampleRate = C.float(params.SampleRate)
+	cParams.FrequencyResolution = C.float(params.FrequencyResolution)
+	cParams.PerceptualSampleRate = C.float(params.PerceptualSampleRate)
+	if params.ApplyMasking {
+		cParams.ApplyMasking = 1
+	} else {
+		cParams.ApplyMasking = 0
+	}
+	cParams.FullScaleSineDB = C.float(params.FullScaleSineDB)
+	if params.ApplyLoudness {
+		cParams.ApplyLoudness = 1
+	} else {
+		cParams.ApplyLoudness = 0
+	}
+	cParams.UnwarpWindowSeconds = C.float(float64(params.UnwarpWindow.Duration) / float64(time.Second))
+	cParams.NSIMStepWindow = C.int(params.NSIMStepWindow)
+	cParams.NSIMChannelWindow = C.int(params.NSIMChannelWindow)
+	cParams.MaskingLowerZeroAt20 = C.float(params.MaskingLowerZeroAt20)
+	cParams.MaskingLowerZeroAt80 = C.float(params.MaskingLowerZeroAt80)
+	cParams.MaskingUpperZeroAt20 = C.float(params.MaskingUpperZeroAt20)
+	cParams.MaskingUpperZeroAt80 = C.float(params.MaskingUpperZeroAt80)
+	cParams.MaskingMaxMask = C.float(params.MaskingMaxMask)
+	cParams.FilterOrder = C.int(params.FilterOrder)
+	cParams.FilterPassBandRipple = C.float(params.FilterPassBandRipple)
+	cParams.FilterStopBandRipple = C.float(params.FilterStopBandRipple)
+	return cParams
+}
+
 func goFromCParameters(cParams C.ZimtohrliParameters) Parameters {
 	return Parameters{
 		SampleRate:           float64(cParams.SampleRate),
@@ -171,6 +201,9 @@ func goFromCParameters(cParams C.ZimtohrliParameters) Parameters {
 		MaskingUpperZeroAt20: float64(cParams.MaskingUpperZeroAt20),
 		MaskingUpperZeroAt80: float64(cParams.MaskingUpperZeroAt80),
 		MaskingMaxMask:       float64(cParams.MaskingMaxMask),
+		FilterOrder:          int(cParams.FilterOrder),
+		FilterPassBandRipple: float64(cParams.FilterPassBandRipple),
+		FilterStopBandRipple: float64(cParams.FilterStopBandRipple),
 	}
 }
 
@@ -188,7 +221,7 @@ func (g *Goohrli) Parameters() Parameters {
 
 // Set updates the parameters controlling the behavior of this instance.
 //
-// SampleRate and FrequencyResolution can't be updated and will be ignored in this method.
+// SampleRate, FrequencyResolution, and Filter*-parameters can't be updated and will be ignored in this method.
 func (g *Goohrli) Set(params Parameters) {
 	var cParams C.ZimtohrliParameters
 	cParams.PerceptualSampleRate = C.float(params.PerceptualSampleRate)
@@ -211,6 +244,9 @@ func (g *Goohrli) Set(params Parameters) {
 	cParams.MaskingUpperZeroAt20 = C.float(params.MaskingUpperZeroAt20)
 	cParams.MaskingUpperZeroAt80 = C.float(params.MaskingUpperZeroAt80)
 	cParams.MaskingMaxMask = C.float(params.MaskingMaxMask)
+	cParams.FilterOrder = C.int(params.FilterOrder)
+	cParams.FilterPassBandRipple = C.float(params.FilterPassBandRipple)
+	cParams.FilterStopBandRipple = C.float(params.FilterStopBandRipple)
 	C.SetZimtohrliParameters(g.zimtohrli, cParams)
 }
 

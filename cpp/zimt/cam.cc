@@ -16,6 +16,7 @@
 
 #include <cmath>
 #include <cstddef>
+#include <iostream>
 #include <utility>
 #include <vector>
 
@@ -73,7 +74,10 @@ CamFilterbank Cam::CreateFilterbank(float sample_rate) const {
   return {.filter = Filterbank(coeffs),
           .thresholds_hz = std::move(thresholds),
           .cam_delta = cam_delta,
-          .sample_rate = sample_rate};
+          .sample_rate = sample_rate,
+          .filter_order = filter_order,
+          .filter_pass_band_ripple = filter_pass_band_ripple,
+          .filter_stop_band_ripple = filter_stop_band_ripple};
 }
 
 }  // namespace zimtohrli
