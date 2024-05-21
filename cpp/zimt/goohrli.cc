@@ -23,6 +23,7 @@
 #include "hwy/aligned_allocator.h"
 #include "hwy/base.h"
 #include "zimt/cam.h"
+#include "zimt/fourier_bank.h"
 #include "zimt/masking.h"
 #include "zimt/mos.h"
 #include "zimt/visqol.h"
@@ -55,10 +56,20 @@ float MOSFromZimtohrli(float zimtohrli_distance) {
 }
 
 Zimtohrli CreateZimtohrli(ZimtohrliParameters params) {
-  zimtohrli::Cam cam{.minimum_bandwidth_hz = params.FrequencyResolution,
+  // Overriding lots of settings to ensure we have exactly tabuli::kNumRotators
+  // channels.
+  const zimtohrli::Cam def_cam;
+  const float min_cam = def_cam.CamFromHz(def_cam.low_threshold_hz);
+  const float max_cam = def_cam.CamFromHz(def_cam.high_threshold_hz);
+  const float cam_step = (max_cam - min_cam) / tabuli::kNumRotators;
+  const float hz_resolution =
+      def_cam.HzFromCam(min_cam + cam_step) - def_cam.low_threshold_hz;
+  zimtohrli::Cam cam{.minimum_bandwidth_hz = hz_resolution,
                      .filter_order = params.FilterOrder,
                      .filter_pass_band_ripple = params.FilterPassBandRipple,
                      .filter_stop_band_ripple = params.FilterStopBandRipple};
+  CHECK_EQ(cam.CreateFilterbank(params.SampleRate).filter.Size(),
+           tabuli::kNumRotators);
   cam.high_threshold_hz =
       std::min(cam.high_threshold_hz, params.SampleRate * 0.5f);
   zimtohrli::Zimtohrli* result = new zimtohrli::Zimtohrli{
@@ -76,7 +87,7 @@ Analysis Analyze(Zimtohrli zimtohrli, float* data, int size) {
   hwy::AlignedNDArray<float, 1> signal({static_cast<size_t>(size)});
   hwy::CopyBytes(data, signal.data(), size * sizeof(float));
   hwy::AlignedNDArray<float, 2> channels(
-      {signal.shape()[0], z->cam_filterbank->filter.Size()});
+      {signal.shape()[0], tabuli::kNumRotators});
   zimtohrli::Analysis analysis = z->Analyze(signal[{}], channels);
   return new zimtohrli::Analysis{
       .energy_channels_db = std::move(analysis.energy_channels_db),
