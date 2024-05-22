@@ -21,7 +21,7 @@ namespace zimtohrli {
 
 namespace {
 
-const std::array<float, 3> params = {1.000e+00, 7.451e-09, 2.943e+00};
+const std::array<float, 3> params = {1.000e+00, -7.449e-09, 3.344e+00};
 
 float sigmoid(float x) {
   return params[0] / (params[1] + std::exp(params[2] * x));
