@@ -651,11 +651,17 @@ func (b ReferenceBundles) Leaderboard() (MSEScores, error) {
 	representedScoreTypes := map[ScoreType]int{}
 	for index, bundle := range b {
 		if index == 0 {
-			representedScoreTypes = bundle.ScoreTypes
+			for scoreType, count := range bundle.ScoreTypes {
+				if scoreType != MOS && scoreType != JND {
+					representedScoreTypes[scoreType] = count
+				}
+			}
 		} else {
 			for previouslyFoundScoreType := range representedScoreTypes {
-				if _, found := bundle.ScoreTypes[previouslyFoundScoreType]; !found {
+				if count, found := bundle.ScoreTypes[previouslyFoundScoreType]; !found {
 					delete(representedScoreTypes, previouslyFoundScoreType)
+				} else if previouslyFoundScoreType != MOS && previouslyFoundScoreType != JND {
+					representedScoreTypes[previouslyFoundScoreType] += count
 				}
 			}
 		}
