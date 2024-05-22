@@ -345,6 +345,88 @@ EOF
         cat "${INSTALL_LOG}"
         exit 3
     fi
+
+    local WRAPPER="${DST}/serve_f2"
+    echo "Dropping f2 wrapper ${WRAPPER}..."
+    cat > "${WRAPPER}.go" <<EOF
+package main
+
+import (
+    "bufio"
+    "fmt"
+    "io"
+    "log"
+    "math"
+    "os"
+    "os/exec"
+    "strconv"
+    "strings"
+)
+
+func extract(line string, label string) (float64, bool, error) {
+    if match, found := strings.CutPrefix(line, fmt.Sprintf("%s: ", label)); found {
+        f, err := strconv.ParseFloat(match, 64)
+        if err != nil {
+            return 0, false, err
+        }
+        return f, true, nil
+    }
+    return 0, false, nil
+}
+
+func main() {
+    reader := bufio.NewReader(os.Stdin)
+    fmt.Println("READY:f2")
+    for {
+        fmt.Println("REF")
+        ref, err := reader.ReadString('\n')
+        if err == io.EOF {
+            break
+        } else if err != nil {
+            log.Fatal(err)
+        }
+        fmt.Println("DIST")
+        dist, err := reader.ReadString('\n')
+        if err == io.EOF {
+            break
+        } else if err != nil {
+            log.Fatal(err)
+        }
+        command := exec.Command("${PEAQ_BIN}", "-r", strings.TrimSpace(ref), "-t", strings.TrimSpace(dist))
+        output, err := command.CombinedOutput()
+        if err != nil {
+            log.Fatal(fmt.Errorf("when calling %v: %v\n%s", command, err, output))
+        }
+        adbSum := 0.0
+        avgModDiff1Sum := 0.0
+        count := 0
+        for _, line := range strings.Split(string(output), "\n") {
+            if f, found, err := extract(line, "ADBb"); err != nil {
+                log.Fatal(err)
+            } else if found {
+                count++
+                adbSum += f
+            }
+            if f, found, err := extract(line, "AvgModDiff1b"); err != nil {
+                log.Fatal(err)
+            } else if found {
+                avgModDiff1Sum += f
+            }
+        }
+        meanADB := adbSum / float64(count)
+        meanAvgModDiff1 := avgModDiff1Sum / float64(count)
+        fmt.Printf("SCORE=%f\n", 49.73 /
+                                 (1 + math.Pow(-0.0315 * meanAvgModDiff1 - 0.73,
+                                               2)) -46.95 * meanADB + 147.12)
+    }
+}
+EOF
+
+    ( cd "${DST}" && go build "${WRAPPER}.go" ) > "${INSTALL_LOG}" 2>&1
+    if test "${?}" != "0"; then
+        cat "${INSTALL_LOG}"
+        exit 3
+    fi
 }
 
 install_peaq
