@@ -41,6 +41,7 @@ func main() {
 	calculate := flag.String("calculate", "", "Glob to directories with databases to calculate metrics for.")
 	force := flag.Bool("force", false, "Whether to recalculate scores that already exist.")
 	calculateZimtohrli := flag.Bool("calculate_zimtohrli", false, "Whether to calculate Zimtohrli scores.")
+	zimtohrliScoreType := flag.String("zimtohrli_score_type", string(data.Zimtohrli), "Score type name to use when storing Zimtohrli scores in a dataset.")
 	calculateViSQOL := flag.Bool("calculate_visqol", false, "Whether to calculate ViSQOL scores.")
 	calculatePipeMetric := flag.String("calculate_pipe", "", "Path to a binary that serves metrics via stdin/stdout pipe. Install some of the via 'install_python_metrics.py'.")
 	zimtohrliParameters := goohrli.DefaultParameters(-1)
@@ -107,7 +108,7 @@ func main() {
 				}
 				zimtohrliParameters.SampleRate = sampleRate
 				z := goohrli.New(zimtohrliParameters)
-				measurements[data.Zimtohrli] = z.NormalizedAudioDistance
+				measurements[data.ScoreType(*zimtohrliScoreType)] = z.NormalizedAudioDistance
 			}
 			if *calculateViSQOL {
 				v := goohrli.NewViSQOL()
