@@ -73,10 +73,10 @@ class PyohrliTest(unittest.TestCase):
 
     @parameterize(
         dict(zimtohrli_distance=0.0, mos=5.0),
-        dict(zimtohrli_distance=0.1, mos=3.9802114963531494),
-        dict(zimtohrli_distance=0.5, mos=1.9183233976364136),
-        dict(zimtohrli_distance=0.7, mos=1.5097649097442627),
-        dict(zimtohrli_distance=1.0, mos=1.210829496383667),
+        dict(zimtohrli_distance=0.1, mos=3.8630697727203369),
+        dict(zimtohrli_distance=0.5, mos=1.751483678817749),
+        dict(zimtohrli_distance=0.7, mos=1.3850023746490479),
+        dict(zimtohrli_distance=1.0, mos=1.1411819458007812),
     )
     def test_mos_from_zimtohrli(self, zimtohrli_distance: float, mos: float):
         self.assertAlmostEqual(
