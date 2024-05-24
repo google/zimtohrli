@@ -24,6 +24,7 @@ import "C"
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"math"
 	"reflect"
 	"runtime"
@@ -69,9 +70,8 @@ type Goohrli struct {
 
 // New returns a new Goohrli for the given parameters.
 func New(params Parameters) *Goohrli {
-	cParams := cFromGoParameters(params)
 	result := &Goohrli{
-		zimtohrli: C.CreateZimtohrli(cParams),
+		zimtohrli: C.CreateZimtohrli(cFromGoParameters(params)),
 	}
 	runtime.SetFinalizer(result, func(g *Goohrli) {
 		C.FreeZimtohrli(g.zimtohrli)
@@ -100,6 +100,12 @@ func (d *Duration) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+const (
+	numLoudnessAFParams = 10
+	numLoudnessLUParams = 16
+	numLoudnessTFParams = 13
+)
+
 // Parameters contains the parameters used by a Goohrli instance.
 type Parameters struct {
 	SampleRate           float64
@@ -119,6 +125,9 @@ type Parameters struct {
 	FilterOrder          int
 	FilterPassBandRipple float64
 	FilterStopBandRipple float64
+	LoudnessAFParams     [numLoudnessAFParams]float64
+	LoudnessLUParams     [numLoudnessLUParams]float64
+	LoudnessTFParams     [numLoudnessTFParams]float64
 }
 
 var durationType = reflect.TypeOf(time.Second)
@@ -142,6 +151,16 @@ func (p *Parameters) Update(b []byte) error {
 			fieldVal.SetBool(v.(bool))
 		case reflect.Int:
 			fieldVal.SetInt(int64(v.(float64)))
+		case reflect.Array:
+			b, err := json.Marshal(v)
+			if err != nil {
+				return err
+			}
+			aryPtr := reflect.New(reflect.ArrayOf(fieldVal.Type().Len(), fieldVal.Type().Elem()))
+			if err := json.Unmarshal(b, aryPtr.Interface()); err != nil {
+				return err
+			}
+			fieldVal.Set(aryPtr.Elem())
 		default:
 			if fieldVal.Type() == durationType {
 				d, err := time.ParseDuration(v.(string))
@@ -182,11 +201,29 @@ func cFromGoParameters(params Parameters) C.ZimtohrliParameters {
 	cParams.FilterOrder = C.int(params.FilterOrder)
 	cParams.FilterPassBandRipple = C.float(params.FilterPassBandRipple)
 	cParams.FilterStopBandRipple = C.float(params.FilterStopBandRipple)
+	if int(C.NumLoudnessAFParams()) != len(params.LoudnessAFParams) {
+		log.Panicf("C++ API uses %v AF parameters for loudness, but Go API uses %v", C.NumLoudnessAFParams(), len(params.LoudnessAFParams))
+	}
+	for i, f := range params.LoudnessAFParams {
+		cParams.LoudnessAFParams[i] = C.float(f)
+	}
+	if int(C.NumLoudnessLUParams()) != len(params.LoudnessLUParams) {
+		log.Panicf("C++ API uses %v LU parameters for loudness, but Go API uses %v", C.NumLoudnessLUParams(), len(params.LoudnessLUParams))
+	}
+	for i, f := range params.LoudnessLUParams {
+		cParams.LoudnessLUParams[i] = C.float(f)
+	}
+	if int(C.NumLoudnessTFParams()) != len(params.LoudnessTFParams) {
+		log.Panicf("C++ API uses %v TF parameters for loudness, but Go API uses %v", C.NumLoudnessTFParams(), len(params.LoudnessTFParams))
+	}
+	for i, f := range params.LoudnessTFParams {
+		cParams.LoudnessTFParams[i] = C.float(f)
+	}
 	return cParams
 }
 
 func goFromCParameters(cParams C.ZimtohrliParameters) Parameters {
-	return Parameters{
+	result := Parameters{
 		SampleRate:           float64(cParams.SampleRate),
 		FrequencyResolution:  float64(cParams.FrequencyResolution),
 		PerceptualSampleRate: float64(cParams.PerceptualSampleRate),
@@ -205,13 +242,30 @@ func goFromCParameters(cParams C.ZimtohrliParameters) Parameters {
 		FilterPassBandRipple: float64(cParams.FilterPassBandRipple),
 		FilterStopBandRipple: float64(cParams.FilterStopBandRipple),
 	}
+	if int(C.NumLoudnessAFParams()) != len(result.LoudnessAFParams) {
+		log.Panicf("C++ API uses %v AF parameters for loudness, but Go API uses %v", C.NumLoudnessAFParams(), len(result.LoudnessAFParams))
+	}
+	for i, cFloat := range cParams.LoudnessAFParams {
+		result.LoudnessAFParams[i] = float64(cFloat)
+	}
+	if int(C.NumLoudnessLUParams()) != len(result.LoudnessLUParams) {
+		log.Panicf("C++ API uses %v LU parameters for loudness, but Go API uses %v", C.NumLoudnessLUParams(), len(result.LoudnessLUParams))
+	}
+	for i, cFloat := range cParams.LoudnessLUParams {
+		result.LoudnessLUParams[i] = float64(cFloat)
+	}
+	if int(C.NumLoudnessTFParams()) != len(result.LoudnessTFParams) {
+		log.Panicf("C++ API uses %v TF parameters for loudness, but Go API uses %v", C.NumLoudnessTFParams(), len(result.LoudnessTFParams))
+	}
+	for i, cFloat := range cParams.LoudnessTFParams {
+		result.LoudnessTFParams[i] = float64(cFloat)
+	}
+	return result
 }
 
 // DefaultParameters returns the default Zimtohrli parameters.
 func DefaultParameters(sampleRate float64) Parameters {
-	cParams := C.DefaultZimtohrliParameters()
-	cParams.SampleRate = C.float(sampleRate)
-	return goFromCParameters(cParams)
+	return goFromCParameters(C.DefaultZimtohrliParameters(C.float(sampleRate)))
 }
 
 // Parameters returns the parameters controlling the behavior of this instance.
@@ -223,31 +277,7 @@ func (g *Goohrli) Parameters() Parameters {
 //
 // SampleRate, FrequencyResolution, and Filter*-parameters can't be updated and will be ignored in this method.
 func (g *Goohrli) Set(params Parameters) {
-	var cParams C.ZimtohrliParameters
-	cParams.PerceptualSampleRate = C.float(params.PerceptualSampleRate)
-	if params.ApplyMasking {
-		cParams.ApplyMasking = 1
-	} else {
-		cParams.ApplyMasking = 0
-	}
-	cParams.FullScaleSineDB = C.float(params.FullScaleSineDB)
-	if params.ApplyLoudness {
-		cParams.ApplyLoudness = 1
-	} else {
-		cParams.ApplyLoudness = 0
-	}
-	cParams.UnwarpWindowSeconds = C.float(float64(params.UnwarpWindow.Duration) / float64(time.Second))
-	cParams.NSIMStepWindow = C.int(params.NSIMStepWindow)
-	cParams.NSIMChannelWindow = C.int(params.NSIMChannelWindow)
-	cParams.MaskingLowerZeroAt20 = C.float(params.MaskingLowerZeroAt20)
-	cParams.MaskingLowerZeroAt80 = C.float(params.MaskingLowerZeroAt80)
-	cParams.MaskingUpperZeroAt20 = C.float(params.MaskingUpperZeroAt20)
-	cParams.MaskingUpperZeroAt80 = C.float(params.MaskingUpperZeroAt80)
-	cParams.MaskingMaxMask = C.float(params.MaskingMaxMask)
-	cParams.FilterOrder = C.int(params.FilterOrder)
-	cParams.FilterPassBandRipple = C.float(params.FilterPassBandRipple)
-	cParams.FilterStopBandRipple = C.float(params.FilterStopBandRipple)
-	C.SetZimtohrliParameters(g.zimtohrli, cParams)
+	C.SetZimtohrliParameters(g.zimtohrli, cFromGoParameters(params))
 }
 
 func (g *Goohrli) String() string {

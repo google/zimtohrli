@@ -35,8 +35,7 @@ func main() {
 	pipeMetric := flag.String("pipe_metric", "", "Path to a binary that serves metrics via stdin/stdout pipe. Install some of the via 'install_python_metrics.py'.")
 	zimtohrli := flag.Bool("zimtohrli", true, "Whether to measure using Zimtohrli.")
 	outputZimtohrliDistance := flag.Bool("output_zimtohrli_distance", false, "Whether to output the raw Zimtohrli distance instead of a mapped mean opinion score.")
-	zimtohrliParameters := goohrli.DefaultParameters(-1)
-	zimtohrliParameters.SampleRate = 48000
+	zimtohrliParameters := goohrli.DefaultParameters(48000)
 	b, err := json.Marshal(zimtohrliParameters)
 	if err != nil {
 		log.Panic(err)
