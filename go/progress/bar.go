@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"os"
 	"sync"
 	"syscall"
 	"time"
@@ -85,7 +86,7 @@ func (b *Bar) Finish() {
 	}
 	suffix := fmt.Sprintf(" %.2f/s ATC: %s", speed*float64(time.Second), atc.Round(round))
 
-	fmt.Printf("\r%s%s%s\n", prefix, b.filler(prefix, suffix), suffix)
+	fmt.Fprintf(os.Stderr, "\r%s%s%s\n", prefix, b.filler(prefix, suffix), suffix)
 }
 
 func (b *Bar) filler(prefix, suffix string) string {
@@ -146,5 +147,5 @@ func (b *Bar) Update(total, completed, errors int) {
 	b.total = total
 	b.lastRender = now
 
-	fmt.Printf("\r%s%s%s", prefix, b.filler(prefix, suffix), suffix)
+	fmt.Fprintf(os.Stderr, "\r%s%s%s", prefix, b.filler(prefix, suffix), suffix)
 }

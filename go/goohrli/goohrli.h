@@ -27,6 +27,19 @@
 extern "C" {
 #endif
 
+#define NUM_LOUDNESS_A_F_PARAMS 10
+#define NUM_LOUDNESS_L_U_PARAMS 16
+#define NUM_LOUDNESS_T_F_PARAMS 13
+
+// Returns the number of LoudnessAFParams in ZimtohrliParameters.
+int NumLoudnessAFParams();
+
+// Returns the number of LoudnessLUParams in ZimtohrliParameters.
+int NumLoudnessLUParams();
+
+// Returns the number of LoudnessTFParams in ZimtohrliParameters.
+int NumLoudnessTFParams();
+
 // Contains the parameters controlling Zimtohrli behavior.
 typedef struct ZimtohrliParameters {
   float SampleRate;
@@ -46,10 +59,13 @@ typedef struct ZimtohrliParameters {
   int FilterOrder;
   float FilterStopBandRipple;
   float FilterPassBandRipple;
+  float LoudnessAFParams[NUM_LOUDNESS_A_F_PARAMS];
+  float LoudnessLUParams[NUM_LOUDNESS_L_U_PARAMS];
+  float LoudnessTFParams[NUM_LOUDNESS_T_F_PARAMS];
 } ZimtohrliParameters;
 
 // Returns the default parameters.
-ZimtohrliParameters DefaultZimtohrliParameters();
+ZimtohrliParameters DefaultZimtohrliParameters(float sample_rate);
 
 // void* representation of zimtohrli::Zimtohrli.
 typedef void* Zimtohrli;
