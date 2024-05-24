@@ -15,6 +15,7 @@
 package goohrli
 
 import (
+	"encoding/json"
 	"log"
 	"math"
 	"reflect"
@@ -108,7 +109,7 @@ func TestGoohrli(t *testing.T) {
 		{
 			freqA:    5000,
 			freqB:    5010,
-			distance: 0.0001035928726196289,
+			distance: 5.1915645599365234e-05,
 		},
 		{
 			freqA:    5000,
@@ -130,11 +131,11 @@ func TestGoohrli(t *testing.T) {
 		}
 		analysisB := g.Analyze(soundB)
 		analysisDistance := float64(g.AnalysisDistance(analysisA, analysisB))
-		if math.Abs(analysisDistance-tc.distance) > 1e-3 {
+		if d := rdiff(analysisDistance, tc.distance); d > 0.01 {
 			t.Errorf("Distance = %v, want %v", analysisDistance, tc.distance)
 		}
 		distance := float64(g.Distance(soundA, soundB))
-		if math.Abs(distance-tc.distance) > 1e-3 {
+		if d := rdiff(distance, tc.distance); d > 0.01 {
 			t.Errorf("Distance = %v, want %v", distance, tc.distance)
 		}
 	}
@@ -191,6 +192,15 @@ func populate(s any) {
 			val.FieldByIndex(field.Index).SetInt(int64(counter & 0xffff))
 		case reflect.Bool:
 			val.FieldByIndex(field.Index).SetBool(true)
+		case reflect.Array:
+			if field.Type.Elem().Kind() == reflect.Float64 {
+				for i := 0; i < field.Type.Len(); i++ {
+					val.FieldByIndex(field.Index).Index(i).SetFloat(float64(counter))
+					counter++
+				}
+			} else {
+				log.Panicf("Unsupported array type %v", field.Type.Elem().Kind())
+			}
 		default:
 			if field.Type == goohrliDurationType {
 				val.FieldByIndex(field.Index).Set(reflect.ValueOf(Duration{Duration: time.Duration(counter) * time.Minute}))
@@ -219,26 +229,38 @@ func checkNear(a, b any, rtol float64, t *testing.T) {
 			aFloat := aVal.FieldByIndex(field.Index).Float()
 			bFloat := bVal.FieldByIndex(field.Index).Float()
 			if d := rdiff(aFloat, bFloat); d > rtol {
-				t.Errorf("%v is more than %v off from %v", aFloat, rtol, bFloat)
+				t.Errorf("%v: %v is more than %v off from %v", field, aFloat, rtol, bFloat)
 			}
 		case reflect.Int:
 			aInt := aVal.FieldByIndex(field.Index).Int()
 			bInt := bVal.FieldByIndex(field.Index).Int()
 			if aInt != bInt {
-				t.Errorf("%v: %v != %v", field.Name, aInt, bInt)
+				t.Errorf("%v: %v != %v", field, aInt, bInt)
 			}
 		case reflect.Bool:
 			aBool := aVal.FieldByIndex(field.Index).Bool()
 			bBool := bVal.FieldByIndex(field.Index).Bool()
 			if aBool != bBool {
-				t.Errorf("%v: %v != %v", field.Name, aBool, bBool)
+				t.Errorf("%v: %v != %v", field, aBool, bBool)
+			}
+		case reflect.Array:
+			if field.Type.Elem().Kind() == reflect.Float64 {
+				for i := 0; i < aVal.FieldByIndex(field.Index).Len(); i++ {
+					aFloat := aVal.FieldByIndex(field.Index).Index(i).Float()
+					bFloat := bVal.FieldByIndex(field.Index).Index(i).Float()
+					if d := rdiff(aFloat, bFloat); d > rtol {
+						t.Errorf("%v[%v]: %v is more than %v off from %v", field, i, aFloat, rtol, bFloat)
+					}
+				}
+			} else {
+				log.Panicf("Unsupported array type %v", field.Type.Elem())
 			}
 		default:
 			if field.Type == goohrliDurationType {
 				aDur := aVal.FieldByIndex(field.Index).Interface().(Duration).Duration
 				bDur := bVal.FieldByIndex(field.Index).Interface().(Duration).Duration
 				if d := rdiff(float64(aDur), float64(bDur)); d > rtol {
-					t.Errorf("%v is more than %v off from %v", aDur, rtol, bDur)
+					t.Errorf("%v: %v is more than %v off from %v", field, aDur, rtol, bDur)
 				}
 			} else {
 				log.Panicf("Unsupported field %v", field)
@@ -253,4 +275,25 @@ func TestParamConversion(t *testing.T) {
 	cParams := cFromGoParameters(params)
 	reconvertedParams := goFromCParameters(cParams)
 	checkNear(reconvertedParams, params, 1e-6, t)
+}
+
+func TestParamUpdate(t *testing.T) {
+	params := DefaultParameters(48000)
+	js, err := json.Marshal(params)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := map[string]any{}
+	if err := json.Unmarshal(js, &m); err != nil {
+		t.Fatal(err)
+	}
+	for k, v := range m {
+		js, err = json.Marshal(map[string]any{k: v})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := params.Update(js); err != nil {
+			t.Error(err)
+		}
+	}
 }

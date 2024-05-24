@@ -18,6 +18,7 @@
 #include <cstddef>
 #include <utility>
 
+#include "absl/log/check.h"
 #include "absl/status/statusor.h"
 #include "absl/types/span.h"
 #include "hwy/aligned_allocator.h"
@@ -27,6 +28,21 @@
 #include "zimt/mos.h"
 #include "zimt/visqol.h"
 #include "zimt/zimtohrli.h"
+
+int NumLoudnessAFParams() {
+  CHECK_EQ(NUM_LOUDNESS_A_F_PARAMS, zimtohrli::Loudness{}.a_f_params.size());
+  return NUM_LOUDNESS_A_F_PARAMS;
+}
+
+int NumLoudnessLUParams() {
+  CHECK_EQ(NUM_LOUDNESS_L_U_PARAMS, zimtohrli::Loudness{}.l_u_params.size());
+  return NUM_LOUDNESS_L_U_PARAMS;
+}
+
+int NumLoudnessTFParams() {
+  CHECK_EQ(NUM_LOUDNESS_T_F_PARAMS, zimtohrli::Loudness{}.t_f_params.size());
+  return NUM_LOUDNESS_T_F_PARAMS;
+}
 
 EnergyAndMaxAbsAmplitude Measure(const float* signal, int size) {
   hwy::AlignedNDArray<float, 1> signal_array({static_cast<size_t>(size)});
@@ -95,7 +111,7 @@ float AnalysisDistance(Zimtohrli zimtohrli, Analysis a, Analysis b) {
       .value;
 }
 
-ZimtohrliParameters GetZimtohrliParameters(Zimtohrli zimtohrli) {
+ZimtohrliParameters GetZimtohrliParameters(const Zimtohrli zimtohrli) {
   zimtohrli::Zimtohrli* z = static_cast<zimtohrli::Zimtohrli*>(zimtohrli);
   ZimtohrliParameters result;
   result.SampleRate = z->cam_filterbank->sample_rate;
@@ -118,11 +134,17 @@ ZimtohrliParameters GetZimtohrliParameters(Zimtohrli zimtohrli) {
   result.FilterOrder = z->cam_filterbank->filter_order;
   result.FilterPassBandRipple = z->cam_filterbank->filter_pass_band_ripple;
   result.FilterStopBandRipple = z->cam_filterbank->filter_stop_band_ripple;
+  memcpy(result.LoudnessAFParams, z->loudness.a_f_params.data(),
+         sizeof(result.LoudnessAFParams));
+  memcpy(result.LoudnessLUParams, z->loudness.l_u_params.data(),
+         sizeof(result.LoudnessLUParams));
+  memcpy(result.LoudnessTFParams, z->loudness.t_f_params.data(),
+         sizeof(result.LoudnessTFParams));
   return result;
 }
 
 void SetZimtohrliParameters(Zimtohrli zimtohrli,
-                            ZimtohrliParameters parameters) {
+                            const ZimtohrliParameters parameters) {
   zimtohrli::Zimtohrli* z = static_cast<zimtohrli::Zimtohrli*>(zimtohrli);
   z->perceptual_sample_rate = parameters.PerceptualSampleRate;
   z->apply_masking = parameters.ApplyMasking != 0;
@@ -136,31 +158,18 @@ void SetZimtohrliParameters(Zimtohrli zimtohrli,
   z->masking.upper_zero_at_20 = parameters.MaskingUpperZeroAt20;
   z->masking.upper_zero_at_80 = parameters.MaskingUpperZeroAt80;
   z->masking.max_mask = parameters.MaskingMaxMask;
+  memcpy(z->loudness.a_f_params.data(), parameters.LoudnessAFParams,
+         sizeof(parameters.LoudnessAFParams));
+  memcpy(z->loudness.l_u_params.data(), parameters.LoudnessLUParams,
+         sizeof(parameters.LoudnessLUParams));
+  memcpy(z->loudness.t_f_params.data(), parameters.LoudnessTFParams,
+         sizeof(parameters.LoudnessTFParams));
 }
 
-ZimtohrliParameters DefaultZimtohrliParameters() {
-  const zimtohrli::Zimtohrli default_zimtohrli;
-  ZimtohrliParameters result;
-  result.SampleRate = -1;
-  result.FrequencyResolution = zimtohrli::Cam{}.minimum_bandwidth_hz;
-  result.PerceptualSampleRate = default_zimtohrli.perceptual_sample_rate;
-  result.ApplyMasking = default_zimtohrli.apply_masking;
-  result.FullScaleSineDB = default_zimtohrli.full_scale_sine_db;
-  result.ApplyLoudness = default_zimtohrli.apply_loudness;
-  result.UnwarpWindowSeconds = default_zimtohrli.unwarp_window_seconds;
-  result.NSIMStepWindow = default_zimtohrli.nsim_step_window;
-  result.NSIMChannelWindow = default_zimtohrli.nsim_channel_window;
-  const zimtohrli::Masking m;
-  result.MaskingLowerZeroAt20 = m.lower_zero_at_20;
-  result.MaskingLowerZeroAt80 = m.lower_zero_at_80;
-  result.MaskingUpperZeroAt20 = m.upper_zero_at_20;
-  result.MaskingUpperZeroAt80 = m.upper_zero_at_80;
-  result.MaskingMaxMask = m.max_mask;
-  const zimtohrli::Cam c;
-  result.FilterOrder = c.filter_order;
-  result.FilterPassBandRipple = c.filter_pass_band_ripple;
-  result.FilterStopBandRipple = c.filter_stop_band_ripple;
-  return result;
+ZimtohrliParameters DefaultZimtohrliParameters(float sample_rate) {
+  zimtohrli::Zimtohrli default_zimtohrli{
+      .cam_filterbank = zimtohrli::Cam{}.CreateFilterbank(sample_rate)};
+  return GetZimtohrliParameters(&default_zimtohrli);
 }
 
 ViSQOL CreateViSQOL() { return new zimtohrli::ViSQOL(); }
