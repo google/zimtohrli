@@ -109,7 +109,11 @@ func TestGoohrli(t *testing.T) {
 		{
 			freqA:    5000,
 			freqB:    5010,
+<<<<<<< HEAD
 			distance: 5.2988529205322266e-05,
+=======
+			distance: 5.1915645599365234e-05,
+>>>>>>> 440a975 (Made it possible to define the loudness coeffs in the Go Zimtohrli wrapper.)
 		},
 		{
 			freqA:    5000,
@@ -131,11 +135,19 @@ func TestGoohrli(t *testing.T) {
 		}
 		analysisB := g.Analyze(soundB)
 		analysisDistance := float64(g.AnalysisDistance(analysisA, analysisB))
+<<<<<<< HEAD
 		if d := rdiff(analysisDistance, tc.distance); d > 0.1 {
 			t.Errorf("Distance = %v, want %v", analysisDistance, tc.distance)
 		}
 		distance := float64(g.Distance(soundA, soundB))
 		if d := rdiff(distance, tc.distance); d > 0.1 {
+=======
+		if d := rdiff(analysisDistance, tc.distance); d > 0.01 {
+			t.Errorf("Distance = %v, want %v", analysisDistance, tc.distance)
+		}
+		distance := float64(g.Distance(soundA, soundB))
+		if d := rdiff(distance, tc.distance); d > 0.01 {
+>>>>>>> 440a975 (Made it possible to define the loudness coeffs in the Go Zimtohrli wrapper.)
 			t.Errorf("Distance = %v, want %v", distance, tc.distance)
 		}
 	}

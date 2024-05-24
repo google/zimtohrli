@@ -147,6 +147,9 @@ func (b *Bar) Update(total, completed, errors int) {
 	b.total = total
 	b.lastRender = now
 
+<<<<<<< HEAD
 	os.Stderr.SetWriteDeadline(time.Now().Add(100 * time.Millisecond))
+=======
+>>>>>>> 440a975 (Made it possible to define the loudness coeffs in the Go Zimtohrli wrapper.)
 	fmt.Fprintf(os.Stderr, "\r%s%s%s", prefix, b.filler(prefix, suffix), suffix)
 }

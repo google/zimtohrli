@@ -146,12 +146,21 @@ ZimtohrliParameters GetZimtohrliParameters(const Zimtohrli zimtohrli) {
   result.FilterOrder = z->cam_filterbank->filter_order;
   result.FilterPassBandRipple = z->cam_filterbank->filter_pass_band_ripple;
   result.FilterStopBandRipple = z->cam_filterbank->filter_stop_band_ripple;
+<<<<<<< HEAD
   std::memcpy(result.LoudnessAFParams, z->loudness.a_f_params.data(),
               sizeof(result.LoudnessAFParams));
   std::memcpy(result.LoudnessLUParams, z->loudness.l_u_params.data(),
               sizeof(result.LoudnessLUParams));
   std::memcpy(result.LoudnessTFParams, z->loudness.t_f_params.data(),
               sizeof(result.LoudnessTFParams));
+=======
+  memcpy(result.LoudnessAFParams, z->loudness.a_f_params.data(),
+         sizeof(result.LoudnessAFParams));
+  memcpy(result.LoudnessLUParams, z->loudness.l_u_params.data(),
+         sizeof(result.LoudnessLUParams));
+  memcpy(result.LoudnessTFParams, z->loudness.t_f_params.data(),
+         sizeof(result.LoudnessTFParams));
+>>>>>>> 440a975 (Made it possible to define the loudness coeffs in the Go Zimtohrli wrapper.)
   return result;
 }
 
@@ -170,12 +179,21 @@ void SetZimtohrliParameters(Zimtohrli zimtohrli,
   z->masking.upper_zero_at_20 = parameters.MaskingUpperZeroAt20;
   z->masking.upper_zero_at_80 = parameters.MaskingUpperZeroAt80;
   z->masking.max_mask = parameters.MaskingMaxMask;
+<<<<<<< HEAD
   std::memcpy(z->loudness.a_f_params.data(), parameters.LoudnessAFParams,
               sizeof(parameters.LoudnessAFParams));
   std::memcpy(z->loudness.l_u_params.data(), parameters.LoudnessLUParams,
               sizeof(parameters.LoudnessLUParams));
   std::memcpy(z->loudness.t_f_params.data(), parameters.LoudnessTFParams,
               sizeof(parameters.LoudnessTFParams));
+=======
+  memcpy(z->loudness.a_f_params.data(), parameters.LoudnessAFParams,
+         sizeof(parameters.LoudnessAFParams));
+  memcpy(z->loudness.l_u_params.data(), parameters.LoudnessLUParams,
+         sizeof(parameters.LoudnessLUParams));
+  memcpy(z->loudness.t_f_params.data(), parameters.LoudnessTFParams,
+         sizeof(parameters.LoudnessTFParams));
+>>>>>>> 440a975 (Made it possible to define the loudness coeffs in the Go Zimtohrli wrapper.)
 }
 
 ZimtohrliParameters DefaultZimtohrliParameters(float sample_rate) {
