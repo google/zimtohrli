@@ -253,13 +253,16 @@ TEST(Masking, FullMasking) {
 TEST(Masking, CutFullyMasked) {
   hwy::AlignedNDArray<float, 2> energy_channels({1, 2});
   hwy::AlignedNDArray<float, 2> non_masked({1, 2});
-  Masking m;
+  Masking m{.lower_zero_at_20 = -2,
+            .lower_zero_at_80 = -6,
+            .upper_zero_at_20 = 2,
+            .upper_zero_at_80 = 10,
+            .max_mask = 20};
 
-  energy_channels[{0}] = {90, 20};
-  m.CutFullyMasked(energy_channels, 1, non_masked);
-  EXPECT_NEAR((non_masked[{0}][0]), 90, 1e-2) << "No self masking";
-  EXPECT_NEAR((non_masked[{0}][1]), -45.686698913574219, 1e-2)
-      << "20dB fully masked by 90dB";
+  energy_channels[{0}] = {80, 20};
+  m.CutFullyMasked(energy_channels, 2, non_masked);
+  EXPECT_NEAR((non_masked[{0}][0]), 80, 1e-2) << "No self masking";
+  EXPECT_NEAR((non_masked[{0}][1]), -28, 1) << "20dB fully masked by 80dB";
 }
 
 void BM_FullMasking(benchmark::State& state) {

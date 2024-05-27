@@ -207,35 +207,26 @@ void HwyCutFullyMasked(const Masking& m,
   FullMaskingCalculator full_masking_calculator(m, cam_delta);
   const size_t num_samples = energy_channels_db.shape()[0];
   const size_t num_channels = energy_channels_db.shape()[1];
-  hwy::AlignedNDArray<float, 2> max_masked(energy_channels_db.shape());
-  for (size_t sample_index = 0; sample_index < num_samples; ++sample_index) {
-    for (size_t probe_channel_index = 0; probe_channel_index < num_channels;
-         ++probe_channel_index) {
-      for (size_t masker_channel_index = 0; masker_channel_index < num_channels;
-           masker_channel_index += Lanes(d)) {
-        const Vec masker_level_db =
-            Load(d, energy_channels_db[{sample_index}].data() +
-                        masker_channel_index);
-        const Vec full_masking_db = full_masking_calculator.Calculate(
-            masker_level_db, static_cast<float>(probe_channel_index) -
-                                 static_cast<float>(masker_channel_index));
-        max_masked[{sample_index}][probe_channel_index] =
-            std::max(max_masked[{sample_index}][probe_channel_index],
-                     ReduceMax(d, full_masking_db));
-      }
-    }
-  }
   for (size_t sample_index = 0; sample_index < num_samples; ++sample_index) {
     const float* energy_channels_db_data =
         energy_channels_db[{sample_index}].data();
-    const float* max_masked_data = max_masked[{sample_index}].data();
-    float* non_masked_db_data = non_masked_db[{sample_index}].data();
-    for (size_t channel_index = 0; channel_index < num_channels;
-         channel_index += Lanes(d)) {
-      const Vec max_masking = Load(d, max_masked_data + channel_index);
-      const Vec probe = Load(d, energy_channels_db_data + channel_index);
-      Store(IfThenElse(Ge(max_masking, probe), Sub(probe, max_masking), probe),
-            d, non_masked_db_data + channel_index);
+    for (size_t probe_channel_index = 0; probe_channel_index < num_channels;
+         ++probe_channel_index) {
+      float max_masked = std::numeric_limits<float>::min();
+      for (size_t masker_channel_index = 0; masker_channel_index < num_channels;
+           masker_channel_index += Lanes(d)) {
+        const Vec masker_level_db =
+            Load(d, energy_channels_db_data + masker_channel_index);
+        const Vec full_masking_db = full_masking_calculator.Calculate(
+            masker_level_db, static_cast<float>(probe_channel_index) -
+                                 static_cast<float>(masker_channel_index));
+        max_masked = std::max(max_masked, ReduceMax(d, full_masking_db));
+      }
+      const float probe_energy_db =
+          energy_channels_db_data[probe_channel_index];
+      non_masked_db[{sample_index}][probe_channel_index] =
+          max_masked > probe_energy_db ? probe_energy_db - max_masked
+                                       : probe_energy_db;
     }
   }
 }
