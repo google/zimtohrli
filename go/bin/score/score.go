@@ -44,7 +44,7 @@ func main() {
 	zimtohrliScoreType := flag.String("zimtohrli_score_type", string(data.Zimtohrli), "Score type name to use when storing Zimtohrli scores in a dataset.")
 	calculateViSQOL := flag.Bool("calculate_visqol", false, "Whether to calculate ViSQOL scores.")
 	calculatePipeMetric := flag.String("calculate_pipe", "", "Path to a binary that serves metrics via stdin/stdout pipe. Install some of the via 'install_python_metrics.py'.")
-	zimtohrliParameters := goohrli.DefaultParameters(-1)
+	zimtohrliParameters := goohrli.DefaultParameters(48000)
 	b, err := json.Marshal(zimtohrliParameters)
 	if err != nil {
 		log.Panic(err)
@@ -179,7 +179,7 @@ func main() {
 		}
 		for _, bundle := range bundles {
 			if bundle.IsJND() {
-				accuracy, err := bundle.Accuracy()
+				accuracy, err := bundle.JNDAccuracy()
 				if err != nil {
 					log.Fatal(err)
 				}
