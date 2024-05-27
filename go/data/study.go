@@ -210,7 +210,7 @@ func (c CorrelationTable) String() string {
 			sort.Sort(scores)
 			for _, score := range scores {
 				if score.ScoreTypeB != MOS {
-					listResult = append(listResult, Row{string(score.ScoreTypeB), fmt.Sprintf("%.2f", score.Score)})
+					listResult = append(listResult, Row{string(score.ScoreTypeB), fmt.Sprintf("%.15f", score.Score)})
 				}
 			}
 		}

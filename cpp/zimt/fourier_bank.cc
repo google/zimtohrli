@@ -61,7 +61,7 @@ void Rotators::Filter(hwy::Span<const float> signal,
   OccasionallyRenormalize();
   for (int64_t i = 0; i < signal.size(); ++i) {
     for (int k = 0; k < kNumRotators; ++k) {
-      int64_t delayed_ix = i - advance[k];
+      int64_t delayed_ix = i - 7;  // advance[k] * 0.2;
       float sample = 0;
       if (delayed_ix > 0) {
         sample = signal[delayed_ix];
@@ -72,12 +72,21 @@ void Rotators::Filter(hwy::Span<const float> signal,
     if (i >= max_delay_) {
       for (int k = 0; k < kNumRotators; ++k) {
         float amplitude =
-            std::sqrt(rot[2][k] * rot[2][k] + rot[3][k] * rot[3][k]);
-        channels[{out_ix}][k] = HardClip(amplitude);
+            std::sqrt(channel[0].accu[4][k] * channel[0].accu[4][k] +
+                      channel[0].accu[5][k] * channel[0].accu[5][k]);
+        const float windowM1 = 1 - window[k];
+        amplitude *= std::sqrt(windowM1) * windowM1;
+        channels[{out_ix}][k] = 2.2 * amplitude;
       }
       ++out_ix;
     }
   }
+}
+
+double CalculateBandwidth(double low, double mid, double high) {
+  const double geo_mean_low = std::sqrt(low * mid);
+  const double geo_mean_high = std::sqrt(mid * high);
+  return std::abs(geo_mean_high - mid) + std::abs(mid - geo_mean_low);
 }
 
 Rotators::Rotators(int num_channels, std::vector<float> frequency,
@@ -89,7 +98,10 @@ Rotators::Rotators(int num_channels, std::vector<float> frequency,
     // of triple leaking integrator.
     float kWindow = 0.9996;
     float w40Hz = std::pow(kWindow, 128.0 / kNumRotators);  // at 40 Hz.
-    window[i] = pow(w40Hz, std::max(1.0, frequency[i] / 40.0));
+    float bw = CalculateBandwidth(
+        i == 0 ? frequency[1] : frequency[i - 1], frequency[i],
+        i + 1 == kNumRotators ? frequency[i - 1] : frequency[i + 1]);
+    window[i] = std::pow(kWindow, bw * 0.5 * 1.4);
     delay[i] = FindMedian3xLeaker(window[i]);
     float windowM1 = 1.0f - window[i];
     max_delay_ = std::max(max_delay_, delay[i]);

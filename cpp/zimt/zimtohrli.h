@@ -283,7 +283,7 @@ struct Zimtohrli {
 
   // Sample rate corresponding to the human hearing sensitivity to timing
   // differences.
-  float perceptual_sample_rate = 100.0;
+  float perceptual_sample_rate = 85.0;
 
   // The filterbank used to separate the signal in frequency channels.
   std::optional<CamFilterbank> cam_filterbank;
