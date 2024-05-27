@@ -311,9 +311,12 @@ func ternarySearch(f func(int) float64, left, right int) int {
 	return (left + right) / 2
 }
 
+<<<<<<< HEAD
 // JNDAccuracyAndThreshold returns the treshold for the score type that provides the highest accuracy at
 // predicting the JND score (whether a human observer was able to detect the distortion), and the
 // accuracy it provided.
+=======
+>>>>>>> 1bd81e3 (Refactored CutFullyMasked to avoid an extra loop.)
 func (r *ReferenceBundle) JNDAccuracyAndThreshold(scoreType ScoreType) (float64, float64, error) {
 	if !r.IsJND() {
 		return 0, 0, fmt.Errorf("cannot compute JND accuracy on non-JND references")
