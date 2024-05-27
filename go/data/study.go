@@ -259,17 +259,17 @@ func (r *ReferenceBundle) Correlate() (CorrelationTable, error) {
 	return result, nil
 }
 
-// AccuracyScore contains the accuracy for a metric when used to predict audible differences, and the threshold when that accuracy was achieved.
-type AccuracyScore struct {
+// JNDAccuracyScore contains the accuracy for a metric when used to predict audible differences, and the threshold when that accuracy was achieved.
+type JNDAccuracyScore struct {
 	ScoreType ScoreType
 	Threshold float64
 	Accuracy  float64
 }
 
-// AccuracyScores contains the accuracy scores for multiple score types.
-type AccuracyScores []AccuracyScore
+// JNDAccuracyScores contains the accuracy scores for multiple score types.
+type JNDAccuracyScores []JNDAccuracyScore
 
-func (a AccuracyScores) String() string {
+func (a JNDAccuracyScores) String() string {
 	table := Table{Row{"Score type", "Accuracy", "Threshold"}}
 	table = append(table, nil)
 	for _, score := range a {
@@ -278,15 +278,15 @@ func (a AccuracyScores) String() string {
 	return fmt.Sprintf("### Maximal audibility classification accuracy and threshold per score type\n\n%s", table.String())
 }
 
-func (a AccuracyScores) Len() int {
+func (a JNDAccuracyScores) Len() int {
 	return len(a)
 }
 
-func (a AccuracyScores) Less(i, j int) bool {
+func (a JNDAccuracyScores) Less(i, j int) bool {
 	return a[i].Accuracy > a[j].Accuracy
 }
 
-func (a AccuracyScores) Swap(i, j int) {
+func (a JNDAccuracyScores) Swap(i, j int) {
 	a[i], a[j] = a[j], a[i]
 }
 
@@ -311,9 +311,9 @@ func ternarySearch(f func(int) float64, left, right int) int {
 	return (left + right) / 2
 }
 
-func (r *ReferenceBundle) AccuracyAndThreshold(scoreType ScoreType) (float64, float64, error) {
+func (r *ReferenceBundle) JNDAccuracyAndThreshold(scoreType ScoreType) (float64, float64, error) {
 	if !r.IsJND() {
-		return 0, 0, fmt.Errorf("cannot compute accuracy on non-JND references")
+		return 0, 0, fmt.Errorf("cannot compute JND accuracy on non-JND references")
 	}
 	audible := sort.Float64Slice{}
 	inaudible := sort.Float64Slice{}
@@ -361,16 +361,16 @@ func (r *ReferenceBundle) AccuracyAndThreshold(scoreType ScoreType) (float64, fl
 	return accuracy(bestAccuracyThresholdIndex), all[bestAccuracyThresholdIndex], nil
 }
 
-// Accuracy returns the accuracy of each score type when used to predict audible differences.
-func (r *ReferenceBundle) Accuracy() (AccuracyScores, error) {
-	result := AccuracyScores{}
+// JNDAccuracy returns the accuracy of each score type when used to predict audible differences.
+func (r *ReferenceBundle) JNDAccuracy() (JNDAccuracyScores, error) {
+	result := JNDAccuracyScores{}
 	for scoreType := range r.ScoreTypes {
 		if scoreType != JND {
-			accuracy, threshold, err := r.AccuracyAndThreshold(scoreType)
+			accuracy, threshold, err := r.JNDAccuracyAndThreshold(scoreType)
 			if err != nil {
 				return nil, err
 			}
-			result = append(result, AccuracyScore{
+			result = append(result, JNDAccuracyScore{
 				ScoreType: scoreType,
 				Threshold: threshold,
 				Accuracy:  accuracy,
@@ -408,7 +408,7 @@ func (r ReferenceBundles) CalculateZimtohrliMSE(z *goohrli.Goohrli) (float64, er
 			return 0, err
 		}
 		if bundle.IsJND() {
-			accuracy, _, err := bundle.AccuracyAndThreshold(Zimtohrli)
+			accuracy, _, err := bundle.JNDAccuracyAndThreshold(Zimtohrli)
 			if err != nil {
 				return 0, err
 			}
@@ -464,9 +464,10 @@ const sampleRate = 48000
 
 func mutate(z *goohrli.Goohrli, rng *rand.Rand, temp float64) *goohrli.Goohrli {
 	params := z.Parameters()
-	params.FilterOrder = mutateInt(params.FilterOrder, 2, 5, rng, temp)
-	params.FilterPassBandRipple = mutateFloat(params.FilterPassBandRipple, 1, 6, rng, temp)
-	params.FilterStopBandRipple = mutateFloat(params.FilterStopBandRipple, 12, 90, rng, temp)
+	params.PerceptualSampleRate = mutateFloat(params.PerceptualSampleRate, 50, 150, rng, temp)
+	params.FrequencyResolution = mutateFloat(params.FrequencyResolution, 1, 15, rng, temp)
+	params.NSIMChannelWindow = mutateInt(params.NSIMChannelWindow, 3, 64, rng, temp)
+	params.NSIMStepWindow = mutateInt(params.NSIMStepWindow, 3, 64, rng, temp)
 	result := goohrli.New(params)
 	return result
 }
@@ -590,7 +591,7 @@ Created at %s
 	for _, bundle := range b {
 		fmt.Fprintf(res, "## %s\n\n", filepath.Base(bundle.Dir))
 		if bundle.IsJND() {
-			accuracy, err := bundle.Accuracy()
+			accuracy, err := bundle.JNDAccuracy()
 			if err != nil {
 				return "", err
 			}
@@ -685,7 +686,7 @@ func (b ReferenceBundles) Leaderboard() (MSEScores, error) {
 	}
 	for _, bundle := range b {
 		if bundle.IsJND() {
-			accuracies, err := bundle.Accuracy()
+			accuracies, err := bundle.JNDAccuracy()
 			if err != nil {
 				return nil, err
 			}
