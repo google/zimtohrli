@@ -27,6 +27,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"sort"
 	"strings"
@@ -460,14 +461,23 @@ func mutateInt(i, min, max int, rng *rand.Rand, temp float64) int {
 	return int(mutateFloat(float64(i), float64(min), float64(max), rng, temp))
 }
 
+func mutateFloatsWithin(v any, ref any, limit float64, rng *rand.Rand, temp float64) {
+	vVal := reflect.ValueOf(v).Elem()
+	refVal := reflect.ValueOf(ref)
+	for i := 0; i < vVal.Len(); i++ {
+		refI := refVal.Index(i).Float()
+		vVal.Index(i).SetFloat(mutateFloat(vVal.Index(i).Float(), refI/limit, refI*limit, rng, temp))
+	}
+}
+
 const sampleRate = 48000
 
 func mutate(z *goohrli.Goohrli, rng *rand.Rand, temp float64) *goohrli.Goohrli {
 	params := z.Parameters()
-	params.PerceptualSampleRate = mutateFloat(params.PerceptualSampleRate, 50, 150, rng, temp)
-	params.FrequencyResolution = mutateFloat(params.FrequencyResolution, 1, 15, rng, temp)
-	params.NSIMChannelWindow = mutateInt(params.NSIMChannelWindow, 3, 64, rng, temp)
-	params.NSIMStepWindow = mutateInt(params.NSIMStepWindow, 3, 64, rng, temp)
+	defaultParams := goohrli.DefaultParameters(params.SampleRate)
+	mutateFloatsWithin(&params.LoudnessAFParams, defaultParams.LoudnessAFParams, 1.5, rng, temp)
+	mutateFloatsWithin(&params.LoudnessLUParams, defaultParams.LoudnessLUParams, 1.5, rng, temp)
+	mutateFloatsWithin(&params.LoudnessTFParams, defaultParams.LoudnessTFParams, 1.5, rng, temp)
 	result := goohrli.New(params)
 	return result
 }

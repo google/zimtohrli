@@ -36,6 +36,11 @@ const (
 	sampleRate = 48000
 )
 
+type logEvent struct {
+	data.OptimizationEvent
+	Error string `json:",omitempty"`
+}
+
 func main() {
 	details := flag.String("details", "", "Glob to directories with databases to show the details of.")
 	calculate := flag.String("calculate", "", "Glob to directories with databases to calculate metrics for.")
@@ -83,8 +88,16 @@ func main() {
 				log.Fatal(err)
 			}
 			optimizeLog = func(ev data.OptimizationEvent) {
-				b, _ := json.Marshal(ev)
-				f.WriteString(string(b) + "\n")
+				b, err := json.Marshal(logEvent{OptimizationEvent: ev})
+				if err == nil {
+					f.WriteString(string(b) + "\n")
+				} else {
+					b, err := json.Marshal(logEvent{Error: err.Error()})
+					if err != nil {
+						log.Panic(err)
+					}
+					f.WriteString(string(b) + "\n")
+				}
 				f.Sync()
 			}
 		}
