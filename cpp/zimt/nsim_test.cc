@@ -14,7 +14,10 @@
 
 #include "zimt/nsim.h"
 
-#include "absl/log/check.h"
+#include <cstddef>
+#include <utility>
+#include <vector>
+
 #include "benchmark/benchmark.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
