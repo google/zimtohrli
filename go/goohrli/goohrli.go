@@ -79,14 +79,17 @@ func New(params Parameters) *Goohrli {
 	return result
 }
 
+// Duration wraps a time.Duration to provide specialized JSON marshal/unmarshal methods.
 type Duration struct {
 	time.Duration
 }
 
+// MarshalJSON implements json.Marshaler.
 func (d Duration) MarshalJSON() ([]byte, error) {
 	return json.Marshal(d.Duration.String())
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
 func (d *Duration) UnmarshalJSON(b []byte) error {
 	timeString := ""
 	if err := json.Unmarshal(b, &timeString); err != nil {
