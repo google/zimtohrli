@@ -3,6 +3,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 Created at 2024-05-22
 	
 Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtohrli.git
@@ -21,6 +22,8 @@ Created at 2024-06-12
 Revision v0.1.10-42-g214796d, branch work, origin git@github.com:google/zimtohrli.git
 >>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 =======
+=======
+>>>>>>> a8eaa92 (Added the AQUA metric.)
 Created at 2024-06-12
 	
 Revision v0.1.10-42-g214796d, branch work, origin git@github.com:google/zimtohrli.git
@@ -29,12 +32,26 @@ Created at 2024-05-22
 	
 Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtohrli.git
 >>>>>>> 0735430 (Hacked together a replacement of the ellitic filters with the tabuli)
+<<<<<<< HEAD
 >>>>>>> 62123e9 (Hacked together a replacement of the ellitic filters with the tabuli)
+=======
+=======
+Created at 2024-05-22
+	
+Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtohrli.git
+=======
+Created at 2024-05-31
+	
+Revision v0.1.10-31-gec087ee, branch main, origin git@github.com:google/zimtohrli.git
+>>>>>>> b70f33d (Added the AQUA metric.)
+>>>>>>> a751c4d (Added the AQUA metric.)
+>>>>>>> a8eaa92 (Added the AQUA metric.)
 
 ## PEASS_DB
 
 ### Spearman correlation table for all score types
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -69,6 +86,8 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 =======
 =======
 >>>>>>> 62123e9 (Hacked together a replacement of the ellitic filters with the tabuli)
+=======
+>>>>>>> a8eaa92 (Added the AQUA metric.)
 |          |2f   |AQUA |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |
 |----------|-----|-----|------|-----|-------|-----|-------|------|-----|-------|-------|----------|
 <<<<<<< HEAD
@@ -102,6 +121,8 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 >>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 =======
 =======
+=======
+>>>>>>> a751c4d (Added the AQUA metric.)
 |          |2f   |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |
 |----------|-----|------|-----|-------|-----|-------|------|-----|-------|-------|----------|
 |2f        |1.00 |0.55  |0.29 |0.29   |0.55 |0.43   |0.43  |0.56 |0.75   |0.30   |+Inf      |
@@ -115,8 +136,29 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 |ViSQOL    |0.75 |0.56  |0.36 |0.24   |0.52 |0.49   |0.40  |0.43 |1.00   |0.35   |+Inf      |
 |WARP-Q    |0.30 |0.65  |0.34 |0.15   |0.25 |0.78   |0.71  |0.59 |0.35   |1.00   |+Inf      |
 |Zimtohrli |+Inf |+Inf  |+Inf |+Inf   |+Inf |+Inf   |+Inf  |+Inf |+Inf   |+Inf   |+Inf      |
+<<<<<<< HEAD
 >>>>>>> 0735430 (Hacked together a replacement of the ellitic filters with the tabuli)
+<<<<<<< HEAD
 >>>>>>> 62123e9 (Hacked together a replacement of the ellitic filters with the tabuli)
+=======
+=======
+=======
+|          |AQUA |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |
+|----------|-----|------|-----|-------|-----|-------|------|-----|-------|-------|----------|
+|AQUA      |1.00 |0.79  |0.52 |0.16   |0.33 |0.85   |0.81  |0.63 |0.56   |0.75   |0.67      |
+|CDPAM     |0.79 |1.00  |0.47 |0.11   |0.47 |0.85   |0.78  |0.65 |0.56   |0.65   |0.74      |
+|DPAM      |0.52 |0.47  |1.00 |0.09   |0.40 |0.57   |0.50  |0.33 |0.36   |0.34   |0.51      |
+|GVPMOS    |0.16 |0.11  |0.09 |1.00   |0.09 |0.08   |0.01  |0.28 |0.24   |0.15   |0.26      |
+|MOS       |0.33 |0.47  |0.40 |0.09   |1.00 |0.45   |0.36  |0.34 |0.52   |0.25   |0.56      |
+|PARLAQ    |0.85 |0.85  |0.57 |0.08   |0.45 |1.00   |0.83  |0.68 |0.49   |0.78   |0.72      |
+|PEAQB     |0.81 |0.78  |0.50 |0.01   |0.36 |0.83   |1.00  |0.70 |0.40   |0.71   |0.65      |
+|PESQ      |0.63 |0.65  |0.33 |0.28   |0.34 |0.68   |0.70  |1.00 |0.43   |0.59   |0.57      |
+|ViSQOL    |0.56 |0.56  |0.36 |0.24   |0.52 |0.49   |0.40  |0.43 |1.00   |0.35   |0.70      |
+|WARP-Q    |0.75 |0.65  |0.34 |0.15   |0.25 |0.78   |0.71  |0.59 |0.35   |1.00   |0.49      |
+|Zimtohrli |0.67 |0.74  |0.51 |0.26   |0.56 |0.72   |0.65  |0.57 |0.70   |0.49   |1.00      |
+>>>>>>> b70f33d (Added the AQUA metric.)
+>>>>>>> a751c4d (Added the AQUA metric.)
+>>>>>>> a8eaa92 (Added the AQUA metric.)
 
 ### Score type MOS Spearman correlation in order
 
@@ -159,6 +201,7 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 |          |2f   |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |
 |----------|-----|------|-----|-------|-----|-------|------|-----|-------|-------|----------|
 |2f        |1.00 |0.71  |0.58 |0.36   |0.77 |0.84   |0.71  |0.89 |0.80   |0.73   |+Inf      |
@@ -190,6 +233,8 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 =======
 =======
 >>>>>>> 62123e9 (Hacked together a replacement of the ellitic filters with the tabuli)
+=======
+>>>>>>> a8eaa92 (Added the AQUA metric.)
 |          |2f   |AQUA |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |
 |----------|-----|-----|------|-----|-------|-----|-------|------|-----|-------|-------|----------|
 <<<<<<< HEAD
@@ -223,6 +268,8 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 >>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 =======
 =======
+=======
+>>>>>>> a751c4d (Added the AQUA metric.)
 |          |2f   |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |
 |----------|-----|------|-----|-------|-----|-------|------|-----|-------|-------|----------|
 |2f        |1.00 |0.71  |0.58 |0.36   |0.77 |0.84   |0.71  |0.89 |0.80   |0.73   |+Inf      |
@@ -236,8 +283,29 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 |ViSQOL    |0.80 |0.73  |0.47 |0.17   |0.74 |0.85   |0.71  |0.80 |1.00   |0.70   |+Inf      |
 |WARP-Q    |0.73 |0.71  |0.66 |0.36   |0.62 |0.75   |0.70  |0.65 |0.70   |1.00   |+Inf      |
 |Zimtohrli |+Inf |+Inf  |+Inf |+Inf   |+Inf |+Inf   |+Inf  |+Inf |+Inf   |+Inf   |+Inf      |
+<<<<<<< HEAD
 >>>>>>> 0735430 (Hacked together a replacement of the ellitic filters with the tabuli)
+<<<<<<< HEAD
 >>>>>>> 62123e9 (Hacked together a replacement of the ellitic filters with the tabuli)
+=======
+=======
+=======
+|          |AQUA |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |
+|----------|-----|------|-----|-------|-----|-------|------|-----|-------|-------|----------|
+|AQUA      |1.00 |0.74  |0.54 |0.28   |0.69 |0.87   |0.72  |0.67 |0.79   |0.77   |0.84      |
+|CDPAM     |0.74 |1.00  |0.62 |0.38   |0.61 |0.87   |0.62  |0.61 |0.73   |0.71   |0.77      |
+|DPAM      |0.54 |0.62  |1.00 |0.51   |0.50 |0.55   |0.55  |0.48 |0.47   |0.66   |0.60      |
+|GVPMOS    |0.28 |0.38  |0.51 |1.00   |0.27 |0.34   |0.17  |0.27 |0.17   |0.36   |0.33      |
+|MOS       |0.69 |0.61  |0.50 |0.27   |1.00 |0.73   |0.59  |0.76 |0.74   |0.62   |0.72      |
+|PARLAQ    |0.87 |0.87  |0.55 |0.34   |0.73 |1.00   |0.67  |0.76 |0.85   |0.75   |0.88      |
+|PEAQB     |0.72 |0.62  |0.55 |0.17   |0.59 |0.67   |1.00  |0.60 |0.71   |0.70   |0.75      |
+|PESQ      |0.67 |0.61  |0.48 |0.27   |0.76 |0.76   |0.60  |1.00 |0.80   |0.65   |0.81      |
+|ViSQOL    |0.79 |0.73  |0.47 |0.17   |0.74 |0.85   |0.71  |0.80 |1.00   |0.70   |0.81      |
+|WARP-Q    |0.77 |0.71  |0.66 |0.36   |0.62 |0.75   |0.70  |0.65 |0.70   |1.00   |0.74      |
+|Zimtohrli |0.84 |0.77  |0.60 |0.33   |0.72 |0.88   |0.75  |0.81 |0.81   |0.74   |1.00      |
+>>>>>>> b70f33d (Added the AQUA metric.)
+>>>>>>> a751c4d (Added the AQUA metric.)
+>>>>>>> a8eaa92 (Added the AQUA metric.)
 
 ### Score type MOS Spearman correlation in order
 
@@ -271,8 +339,19 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 |PESQ       |0.76                 |
 |ViSQOL     |0.74                 |
 |PARLAQ     |0.73                 |
+<<<<<<< HEAD
 >>>>>>> 0735430 (Hacked together a replacement of the ellitic filters with the tabuli)
+<<<<<<< HEAD
 >>>>>>> 62123e9 (Hacked together a replacement of the ellitic filters with the tabuli)
+=======
+=======
+<<<<<<< HEAD
+=======
+|Zimtohrli  |0.72                 |
+|AQUA       |0.69                 |
+>>>>>>> b70f33d (Added the AQUA metric.)
+>>>>>>> a751c4d (Added the AQUA metric.)
+>>>>>>> a8eaa92 (Added the AQUA metric.)
 |WARP-Q     |0.62                 |
 |CDPAM      |0.61                 |
 |PEAQB      |0.59                 |
@@ -283,6 +362,7 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 
 ### Spearman correlation table for all score types
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -335,6 +415,8 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 =======
 =======
 >>>>>>> 62123e9 (Hacked together a replacement of the ellitic filters with the tabuli)
+=======
+>>>>>>> a8eaa92 (Added the AQUA metric.)
 |          |2f   |AQUA |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |
 |----------|-----|-----|------|-----|-------|-----|-------|------|-----|-------|-------|----------|
 <<<<<<< HEAD
@@ -389,6 +471,8 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 >>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 =======
 =======
+=======
+>>>>>>> a751c4d (Added the AQUA metric.)
 |            |2f   |ADB  |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |avgModDiff1 |
 |------------|-----|-----|------|-----|-------|-----|-------|------|-----|-------|-------|----------|------------|
 |2f          |1.00 |0.92 |0.82  |0.60 |0.44   |0.80 |0.87   |0.86  |0.88 |0.85   |0.75   |+Inf      |0.99        |
@@ -421,13 +505,50 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 |WARP-Q      |0.65                 |
 |DPAM        |0.50                 |
 |GVPMOS      |0.38                 |
+<<<<<<< HEAD
 >>>>>>> 0735430 (Hacked together a replacement of the ellitic filters with the tabuli)
+<<<<<<< HEAD
 >>>>>>> 62123e9 (Hacked together a replacement of the ellitic filters with the tabuli)
+=======
+=======
+=======
+|          |AQUA |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |
+|----------|-----|------|-----|-------|-----|-------|------|-----|-------|-------|----------|
+|AQUA      |1.00 |0.76  |0.53 |0.30   |0.68 |0.82   |0.79  |0.72 |0.84   |0.76   |0.80      |
+|CDPAM     |0.76 |1.00  |0.56 |0.41   |0.67 |0.88   |0.79  |0.73 |0.82   |0.74   |0.79      |
+|DPAM      |0.53 |0.56  |1.00 |0.47   |0.50 |0.52   |0.56  |0.46 |0.56   |0.66   |0.64      |
+|GVPMOS    |0.30 |0.41  |0.47 |1.00   |0.38 |0.38   |0.31  |0.30 |0.29   |0.41   |0.40      |
+|MOS       |0.68 |0.67  |0.50 |0.38   |1.00 |0.74   |0.68  |0.76 |0.73   |0.65   |0.68      |
+|PARLAQ    |0.82 |0.88  |0.52 |0.38   |0.74 |1.00   |0.75  |0.82 |0.88   |0.73   |0.83      |
+|PEAQB     |0.79 |0.79  |0.56 |0.31   |0.68 |0.75   |1.00  |0.78 |0.81   |0.72   |0.75      |
+|PESQ      |0.72 |0.73  |0.46 |0.30   |0.76 |0.82   |0.78  |1.00 |0.83   |0.67   |0.77      |
+|ViSQOL    |0.84 |0.82  |0.56 |0.29   |0.73 |0.88   |0.81  |0.83 |1.00   |0.76   |0.82      |
+|WARP-Q    |0.76 |0.74  |0.66 |0.41   |0.65 |0.73   |0.72  |0.67 |0.76   |1.00   |0.74      |
+|Zimtohrli |0.80 |0.79  |0.64 |0.40   |0.68 |0.83   |0.75  |0.77 |0.82   |0.74   |1.00      |
+
+### Score type MOS Spearman correlation in order
+
+|Score type |Spearman correlation |
+|-----------|---------------------|
+|PESQ       |0.76                 |
+|PARLAQ     |0.74                 |
+|ViSQOL     |0.73                 |
+|AQUA       |0.68                 |
+|PEAQB      |0.68                 |
+|Zimtohrli  |0.68                 |
+|CDPAM      |0.67                 |
+|WARP-Q     |0.65                 |
+|DPAM       |0.50                 |
+|GVPMOS     |0.38                 |
+>>>>>>> b70f33d (Added the AQUA metric.)
+>>>>>>> a751c4d (Added the AQUA metric.)
+>>>>>>> a8eaa92 (Added the AQUA metric.)
 
 ## SiSEC08
 
 ### Spearman correlation table for all score types
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -462,6 +583,8 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 =======
 =======
 >>>>>>> 62123e9 (Hacked together a replacement of the ellitic filters with the tabuli)
+=======
+>>>>>>> a8eaa92 (Added the AQUA metric.)
 |          |2f   |AQUA |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |
 |----------|-----|-----|------|-----|-------|-----|-------|------|-----|-------|-------|----------|
 <<<<<<< HEAD
@@ -495,6 +618,8 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 >>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 =======
 =======
+=======
+>>>>>>> a751c4d (Added the AQUA metric.)
 |          |2f   |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |
 |----------|-----|------|-----|-------|-----|-------|------|-----|-------|-------|----------|
 |2f        |1.00 |0.82  |0.60 |0.34   |0.77 |0.90   |0.81  |0.89 |0.87   |0.89   |NaN       |
@@ -508,8 +633,29 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 |ViSQOL    |0.87 |0.79  |0.49 |0.15   |0.78 |0.86   |0.78  |0.86 |1.00   |0.81   |NaN       |
 |WARP-Q    |0.89 |0.75  |0.66 |0.41   |0.75 |0.82   |0.79  |0.79 |0.81   |1.00   |NaN       |
 |Zimtohrli |NaN  |NaN   |NaN  |NaN    |NaN  |NaN    |NaN   |NaN  |NaN    |NaN    |NaN       |
+<<<<<<< HEAD
 >>>>>>> 0735430 (Hacked together a replacement of the ellitic filters with the tabuli)
+<<<<<<< HEAD
 >>>>>>> 62123e9 (Hacked together a replacement of the ellitic filters with the tabuli)
+=======
+=======
+=======
+|          |AQUA |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |
+|----------|-----|------|-----|-------|-----|-------|------|-----|-------|-------|----------|
+|AQUA      |1.00 |0.70  |0.55 |0.24   |0.74 |0.87   |0.85  |0.71 |0.80   |0.82   |0.87      |
+|CDPAM     |0.70 |1.00  |0.53 |0.33   |0.70 |0.86   |0.72  |0.80 |0.79   |0.75   |0.83      |
+|DPAM      |0.55 |0.53  |1.00 |0.51   |0.54 |0.53   |0.56  |0.46 |0.49   |0.66   |0.58      |
+|GVPMOS    |0.24 |0.33  |0.51 |1.00   |0.29 |0.31   |0.18  |0.18 |0.15   |0.41   |0.32      |
+|MOS       |0.74 |0.70  |0.54 |0.29   |1.00 |0.78   |0.66  |0.73 |0.78   |0.75   |0.76      |
+|PARLAQ    |0.87 |0.86  |0.53 |0.31   |0.78 |1.00   |0.72  |0.84 |0.86   |0.82   |0.93      |
+|PEAQB     |0.85 |0.72  |0.56 |0.18   |0.66 |0.72   |1.00  |0.70 |0.78   |0.79   |0.79      |
+|PESQ      |0.71 |0.80  |0.46 |0.18   |0.73 |0.84   |0.70  |1.00 |0.86   |0.79   |0.85      |
+|ViSQOL    |0.80 |0.79  |0.49 |0.15   |0.78 |0.86   |0.78  |0.86 |1.00   |0.81   |0.83      |
+|WARP-Q    |0.82 |0.75  |0.66 |0.41   |0.75 |0.82   |0.79  |0.79 |0.81   |1.00   |0.84      |
+|Zimtohrli |0.87 |0.83  |0.58 |0.32   |0.76 |0.93   |0.79  |0.85 |0.83   |0.84   |1.00      |
+>>>>>>> b70f33d (Added the AQUA metric.)
+>>>>>>> a751c4d (Added the AQUA metric.)
+>>>>>>> a8eaa92 (Added the AQUA metric.)
 
 ### Score type MOS Spearman correlation in order
 
@@ -558,6 +704,7 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 |          |2f   |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |
 |----------|-----|------|-----|-------|-----|-------|------|-----|-------|-------|----------|
 |2f        |1.00 |0.70  |0.27 |0.14   |0.80 |0.65   |0.91  |0.69 |0.79   |0.22   |0.48      |
@@ -589,6 +736,8 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 =======
 =======
 >>>>>>> 62123e9 (Hacked together a replacement of the ellitic filters with the tabuli)
+=======
+>>>>>>> a8eaa92 (Added the AQUA metric.)
 |          |2f   |AQUA |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |
 |----------|-----|-----|------|-----|-------|-----|-------|------|-----|-------|-------|----------|
 <<<<<<< HEAD
@@ -622,6 +771,8 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 >>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 =======
 =======
+=======
+>>>>>>> a751c4d (Added the AQUA metric.)
 |          |2f   |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |
 |----------|-----|------|-----|-------|-----|-------|------|-----|-------|-------|----------|
 |2f        |1.00 |0.70  |0.27 |0.14   |0.80 |0.65   |0.91  |0.69 |0.79   |0.22   |0.48      |
@@ -635,8 +786,29 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 |ViSQOL    |0.79 |0.54  |0.17 |0.10   |0.80 |0.51   |0.86  |0.51 |1.00   |0.04   |0.58      |
 |WARP-Q    |0.22 |0.19  |0.23 |0.33   |0.10 |0.29   |0.14  |0.06 |0.04   |1.00   |0.07      |
 |Zimtohrli |0.48 |0.25  |0.15 |0.10   |0.43 |0.37   |0.53  |0.40 |0.58   |0.07   |1.00      |
+<<<<<<< HEAD
 >>>>>>> 0735430 (Hacked together a replacement of the ellitic filters with the tabuli)
+<<<<<<< HEAD
 >>>>>>> 62123e9 (Hacked together a replacement of the ellitic filters with the tabuli)
+=======
+=======
+=======
+|          |AQUA |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |
+|----------|-----|------|-----|-------|-----|-------|------|-----|-------|-------|----------|
+|AQUA      |1.00 |0.62  |0.60 |0.18   |0.40 |0.68   |0.33  |0.69 |0.29   |0.14   |0.58      |
+|CDPAM     |0.62 |1.00  |0.49 |0.12   |0.59 |0.68   |0.60  |0.67 |0.54   |0.19   |0.67      |
+|DPAM      |0.60 |0.49  |1.00 |0.19   |0.21 |0.58   |0.13  |0.38 |0.17   |0.23   |0.40      |
+|GVPMOS    |0.18 |0.12  |0.19 |1.00   |0.01 |0.31   |0.01  |0.08 |0.10   |0.33   |0.00      |
+|MOS       |0.40 |0.59  |0.21 |0.01   |1.00 |0.54   |0.85  |0.57 |0.80   |0.10   |0.71      |
+|PARLAQ    |0.68 |0.68  |0.58 |0.31   |0.54 |1.00   |0.55  |0.67 |0.51   |0.29   |0.73      |
+|PEAQB     |0.33 |0.60  |0.13 |0.01   |0.85 |0.55   |1.00  |0.63 |0.86   |0.14   |0.77      |
+|PESQ      |0.69 |0.67  |0.38 |0.08   |0.57 |0.67   |0.63  |1.00 |0.51   |0.06   |0.70      |
+|ViSQOL    |0.29 |0.54  |0.17 |0.10   |0.80 |0.51   |0.86  |0.51 |1.00   |0.04   |0.72      |
+|WARP-Q    |0.14 |0.19  |0.23 |0.33   |0.10 |0.29   |0.14  |0.06 |0.04   |1.00   |0.18      |
+|Zimtohrli |0.58 |0.67  |0.40 |0.00   |0.71 |0.73   |0.77  |0.70 |0.72   |0.18   |1.00      |
+>>>>>>> b70f33d (Added the AQUA metric.)
+>>>>>>> a751c4d (Added the AQUA metric.)
+>>>>>>> a8eaa92 (Added the AQUA metric.)
 
 ### Score type MOS Spearman correlation in order
 
@@ -671,9 +843,19 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 |CDPAM      |0.59                 |
 |PESQ       |0.57                 |
 |PARLAQ     |0.54                 |
+<<<<<<< HEAD
 |Zimtohrli  |0.43                 |
+<<<<<<< HEAD
 >>>>>>> 0735430 (Hacked together a replacement of the ellitic filters with the tabuli)
+<<<<<<< HEAD
 >>>>>>> 62123e9 (Hacked together a replacement of the ellitic filters with the tabuli)
+=======
+=======
+=======
+|AQUA       |0.40                 |
+>>>>>>> b70f33d (Added the AQUA metric.)
+>>>>>>> a751c4d (Added the AQUA metric.)
+>>>>>>> a8eaa92 (Added the AQUA metric.)
 |DPAM       |0.21                 |
 |GVPMOS     |0.17                 |
 |WARP-Q     |0.10                 |
@@ -682,6 +864,7 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 
 ### Spearman correlation table for all score types
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -716,6 +899,8 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 =======
 =======
 >>>>>>> 62123e9 (Hacked together a replacement of the ellitic filters with the tabuli)
+=======
+>>>>>>> a8eaa92 (Added the AQUA metric.)
 |          |2f   |AQUA |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |
 |----------|-----|-----|------|-----|-------|-----|-------|------|-----|-------|-------|----------|
 <<<<<<< HEAD
@@ -749,6 +934,8 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 >>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 =======
 =======
+=======
+>>>>>>> a751c4d (Added the AQUA metric.)
 |          |2f   |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |
 |----------|-----|------|-----|-------|-----|-------|------|-----|-------|-------|----------|
 |2f        |1.00 |0.65  |0.68 |0.54   |0.52 |0.90   |0.73  |0.70 |0.53   |0.62   |NaN       |
@@ -762,8 +949,29 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 |ViSQOL    |0.53 |0.62  |0.66 |0.47   |0.52 |0.56   |0.58  |0.64 |1.00   |0.73   |NaN       |
 |WARP-Q    |0.62 |0.77  |0.57 |0.64   |0.58 |0.65   |0.65  |0.75 |0.73   |1.00   |NaN       |
 |Zimtohrli |NaN  |NaN   |NaN  |NaN    |NaN  |NaN    |NaN   |NaN  |NaN    |NaN    |NaN       |
+<<<<<<< HEAD
 >>>>>>> 0735430 (Hacked together a replacement of the ellitic filters with the tabuli)
+<<<<<<< HEAD
 >>>>>>> 62123e9 (Hacked together a replacement of the ellitic filters with the tabuli)
+=======
+=======
+=======
+|          |AQUA |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |
+|----------|-----|------|-----|-------|-----|-------|------|-----|-------|-------|----------|
+|AQUA      |1.00 |0.73  |0.72 |0.76   |0.64 |0.91   |0.76  |0.81 |0.55   |0.68   |0.81      |
+|CDPAM     |0.73 |1.00  |0.61 |0.77   |0.66 |0.67   |0.63  |0.85 |0.62   |0.77   |0.87      |
+|DPAM      |0.72 |0.61  |1.00 |0.55   |0.54 |0.71   |0.61  |0.67 |0.66   |0.57   |0.64      |
+|GVPMOS    |0.76 |0.77  |0.55 |1.00   |0.69 |0.63   |0.56  |0.89 |0.47   |0.64   |0.91      |
+|MOS       |0.64 |0.66  |0.54 |0.69   |1.00 |0.56   |0.54  |0.74 |0.52   |0.58   |0.73      |
+|PARLAQ    |0.91 |0.67  |0.71 |0.63   |0.56 |1.00   |0.79  |0.71 |0.56   |0.65   |0.67      |
+|PEAQB     |0.76 |0.63  |0.61 |0.56   |0.54 |0.79   |1.00  |0.67 |0.58   |0.65   |0.65      |
+|PESQ      |0.81 |0.85  |0.67 |0.89   |0.74 |0.71   |0.67  |1.00 |0.64   |0.75   |0.95      |
+|ViSQOL    |0.55 |0.62  |0.66 |0.47   |0.52 |0.56   |0.58  |0.64 |1.00   |0.73   |0.59      |
+|WARP-Q    |0.68 |0.77  |0.57 |0.64   |0.58 |0.65   |0.65  |0.75 |0.73   |1.00   |0.72      |
+|Zimtohrli |0.81 |0.87  |0.64 |0.91   |0.73 |0.67   |0.65  |0.95 |0.59   |0.72   |1.00      |
+>>>>>>> b70f33d (Added the AQUA metric.)
+>>>>>>> a751c4d (Added the AQUA metric.)
+>>>>>>> a8eaa92 (Added the AQUA metric.)
 
 ### Score type MOS Spearman correlation in order
 
@@ -786,7 +994,10 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 >>>>>>> 62123e9 (Hacked together a replacement of the ellitic filters with the tabuli)
 |CDPAM      |0.66                 |
 |AQUA       |0.64                 |
+<<<<<<< HEAD
 |2f         |0.60                 |
+=======
+>>>>>>> a751c4d (Added the AQUA metric.)
 |WARP-Q     |0.58                 |
 |PARLAQ     |0.56                 |
 |PEAQB      |0.54                 |
@@ -799,6 +1010,7 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 
 ### Spearman correlation table for all score types
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -833,6 +1045,8 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 =======
 =======
 >>>>>>> 62123e9 (Hacked together a replacement of the ellitic filters with the tabuli)
+=======
+>>>>>>> a8eaa92 (Added the AQUA metric.)
 |          |2f   |AQUA |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |
 |----------|-----|-----|------|-----|-------|-----|-------|------|-----|-------|-------|----------|
 <<<<<<< HEAD
@@ -866,6 +1080,8 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 >>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 =======
 =======
+=======
+>>>>>>> a751c4d (Added the AQUA metric.)
 |          |2f   |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |
 |----------|-----|------|-----|-------|-----|-------|------|-----|-------|-------|----------|
 |2f        |1.00 |0.39  |0.28 |0.55   |0.56 |0.66   |0.61  |0.67 |0.72   |0.12   |0.20      |
@@ -879,8 +1095,29 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 |ViSQOL    |0.72 |0.41  |0.28 |0.54   |0.61 |0.49   |0.28  |0.57 |1.00   |0.02   |0.11      |
 |WARP-Q    |0.12 |0.08  |0.02 |0.00   |0.07 |0.26   |0.22  |0.22 |0.02   |1.00   |0.00      |
 |Zimtohrli |0.20 |0.00  |0.10 |0.06   |0.03 |0.00   |0.23  |0.05 |0.11   |0.00   |1.00      |
+<<<<<<< HEAD
 >>>>>>> 0735430 (Hacked together a replacement of the ellitic filters with the tabuli)
+<<<<<<< HEAD
 >>>>>>> 62123e9 (Hacked together a replacement of the ellitic filters with the tabuli)
+=======
+=======
+=======
+|          |AQUA |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |
+|----------|-----|------|-----|-------|-----|-------|------|-----|-------|-------|----------|
+|AQUA      |1.00 |0.30  |0.25 |0.36   |0.46 |0.77   |0.55  |0.73 |0.56   |0.18   |0.69      |
+|CDPAM     |0.30 |1.00  |0.19 |0.42   |0.44 |0.20   |0.21  |0.35 |0.41   |0.08   |0.38      |
+|DPAM      |0.25 |0.19  |1.00 |0.11   |0.19 |0.28   |0.18  |0.27 |0.28   |0.02   |0.20      |
+|GVPMOS    |0.36 |0.42  |0.11 |1.00   |0.78 |0.30   |0.22  |0.44 |0.54   |0.00   |0.53      |
+|MOS       |0.46 |0.44  |0.19 |0.78   |1.00 |0.47   |0.28  |0.60 |0.61   |0.07   |0.64      |
+|PARLAQ    |0.77 |0.20  |0.28 |0.30   |0.47 |1.00   |0.55  |0.81 |0.49   |0.26   |0.63      |
+|PEAQB     |0.55 |0.21  |0.18 |0.22   |0.28 |0.55   |1.00  |0.66 |0.28   |0.22   |0.46      |
+|PESQ      |0.73 |0.35  |0.27 |0.44   |0.60 |0.81   |0.66  |1.00 |0.57   |0.22   |0.74      |
+|ViSQOL    |0.56 |0.41  |0.28 |0.54   |0.61 |0.49   |0.28  |0.57 |1.00   |0.02   |0.73      |
+|WARP-Q    |0.18 |0.08  |0.02 |0.00   |0.07 |0.26   |0.22  |0.22 |0.02   |1.00   |0.14      |
+|Zimtohrli |0.69 |0.38  |0.20 |0.53   |0.64 |0.63   |0.46  |0.74 |0.73   |0.14   |1.00      |
+>>>>>>> b70f33d (Added the AQUA metric.)
+>>>>>>> a751c4d (Added the AQUA metric.)
+>>>>>>> a8eaa92 (Added the AQUA metric.)
 
 ### Score type MOS Spearman correlation in order
 
@@ -957,15 +1194,26 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 |WARP-Q     |0.49     |1.3       |
 |PEAQB      |0.49     |-3.9      |
 |PARLAQ     |0.48     |30        |
+<<<<<<< HEAD
 |2f         |0.48     |-0.48     |
+<<<<<<< HEAD
 >>>>>>> 0735430 (Hacked together a replacement of the ellitic filters with the tabuli)
+<<<<<<< HEAD
 >>>>>>> 62123e9 (Hacked together a replacement of the ellitic filters with the tabuli)
+=======
+=======
+=======
+|AQUA       |0.48     |0.018     |
+>>>>>>> b70f33d (Added the AQUA metric.)
+>>>>>>> a751c4d (Added the AQUA metric.)
+>>>>>>> a8eaa92 (Added the AQUA metric.)
 |PESQ       |0.48     |1         |
 
 ## tcd-voip
 
 ### Spearman correlation table for all score types
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -1000,6 +1248,8 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 =======
 =======
 >>>>>>> 62123e9 (Hacked together a replacement of the ellitic filters with the tabuli)
+=======
+>>>>>>> a8eaa92 (Added the AQUA metric.)
 |          |2f   |AQUA |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |
 |----------|-----|-----|------|-----|-------|-----|-------|------|-----|-------|-------|----------|
 <<<<<<< HEAD
@@ -1033,6 +1283,8 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 >>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 =======
 =======
+=======
+>>>>>>> a751c4d (Added the AQUA metric.)
 |          |2f   |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |
 |----------|-----|------|-----|-------|-----|-------|------|-----|-------|-------|----------|
 |2f        |1.00 |0.62  |0.81 |0.55   |0.70 |0.71   |0.84  |0.76 |0.72   |0.61   |0.10      |
@@ -1046,8 +1298,29 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 |ViSQOL    |0.72 |0.76  |0.71 |0.57   |0.65 |0.36   |0.45  |0.46 |1.00   |0.57   |0.38      |
 |WARP-Q    |0.61 |0.79  |0.48 |0.67   |0.78 |0.56   |0.58  |0.77 |0.57   |1.00   |0.10      |
 |Zimtohrli |0.10 |0.20  |0.22 |0.10   |0.23 |0.18   |0.19  |0.04 |0.38   |0.10   |1.00      |
+<<<<<<< HEAD
 >>>>>>> 0735430 (Hacked together a replacement of the ellitic filters with the tabuli)
+<<<<<<< HEAD
 >>>>>>> 62123e9 (Hacked together a replacement of the ellitic filters with the tabuli)
+=======
+=======
+=======
+|          |AQUA |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |
+|----------|-----|------|-----|-------|-----|-------|------|-----|-------|-------|----------|
+|AQUA      |1.00 |0.63  |0.48 |0.39   |0.50 |0.90   |0.75  |0.59 |0.49   |0.57   |0.57      |
+|CDPAM     |0.63 |1.00  |0.51 |0.68   |0.73 |0.54   |0.55  |0.64 |0.76   |0.79   |0.86      |
+|DPAM      |0.48 |0.51  |1.00 |0.44   |0.57 |0.44   |0.59  |0.57 |0.71   |0.48   |0.47      |
+|GVPMOS    |0.39 |0.68  |0.44 |1.00   |0.70 |0.43   |0.45  |0.63 |0.57   |0.67   |0.70      |
+|MOS       |0.50 |0.73  |0.57 |0.70   |1.00 |0.52   |0.54  |0.84 |0.65   |0.78   |0.65      |
+|PARLAQ    |0.90 |0.54  |0.44 |0.43   |0.52 |1.00   |0.81  |0.70 |0.36   |0.56   |0.59      |
+|PEAQB     |0.75 |0.55  |0.59 |0.45   |0.54 |0.81   |1.00  |0.74 |0.45   |0.58   |0.68      |
+|PESQ      |0.59 |0.64  |0.57 |0.63   |0.84 |0.70   |0.74  |1.00 |0.46   |0.77   |0.68      |
+|ViSQOL    |0.49 |0.76  |0.71 |0.57   |0.65 |0.36   |0.45  |0.46 |1.00   |0.57   |0.64      |
+|WARP-Q    |0.57 |0.79  |0.48 |0.67   |0.78 |0.56   |0.58  |0.77 |0.57   |1.00   |0.80      |
+|Zimtohrli |0.57 |0.86  |0.47 |0.70   |0.65 |0.59   |0.68  |0.68 |0.64   |0.80   |1.00      |
+>>>>>>> b70f33d (Added the AQUA metric.)
+>>>>>>> a751c4d (Added the AQUA metric.)
+>>>>>>> a8eaa92 (Added the AQUA metric.)
 
 ### Score type MOS Spearman correlation in order
 
@@ -1080,9 +1353,19 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 |DPAM       |0.57                 |
 |PEAQB      |0.54                 |
 |PARLAQ     |0.52                 |
+<<<<<<< HEAD
 |Zimtohrli  |0.23                 |
+<<<<<<< HEAD
 >>>>>>> 0735430 (Hacked together a replacement of the ellitic filters with the tabuli)
+<<<<<<< HEAD
 >>>>>>> 62123e9 (Hacked together a replacement of the ellitic filters with the tabuli)
+=======
+=======
+=======
+|AQUA       |0.50                 |
+>>>>>>> b70f33d (Added the AQUA metric.)
+>>>>>>> a751c4d (Added the AQUA metric.)
+>>>>>>> a8eaa92 (Added the AQUA metric.)
 
 ## Global leaderboard across all studies
 
@@ -1090,6 +1373,7 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 
 |Score type |MSE  |Min score |Max score |Mean score |
 |-----------|-----|----------|----------|-----------|
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 |ViSQOL     |0.12 |0.52      |0.80      |0.68       |
@@ -1105,6 +1389,8 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 =======
 =======
 >>>>>>> 62123e9 (Hacked together a replacement of the ellitic filters with the tabuli)
+=======
+>>>>>>> a8eaa92 (Added the AQUA metric.)
 |Zimtohrli  |0.10 |0.56      |0.76      |0.69       |
 |ViSQOL     |0.12 |0.52      |0.80      |0.68       |
 |2f         |0.13 |0.48      |0.79      |0.67       |
@@ -1124,6 +1410,8 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 >>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 =======
 =======
+=======
+>>>>>>> a751c4d (Added the AQUA metric.)
 |ViSQOL     |0.12 |0.52      |0.80      |0.68       |
 |2f         |0.13 |0.48      |0.80      |0.66       |
 |PEAQB      |0.23 |0.28      |0.85      |0.55       |
@@ -1134,6 +1422,24 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 |CDPAM      |0.15 |0.44      |0.73      |0.62       |
 |PARLAQ     |0.19 |0.45      |0.78      |0.59       |
 |DPAM       |0.32 |0.19      |0.69      |0.46       |
+<<<<<<< HEAD
 >>>>>>> 0735430 (Hacked together a replacement of the ellitic filters with the tabuli)
+<<<<<<< HEAD
 >>>>>>> 62123e9 (Hacked together a replacement of the ellitic filters with the tabuli)
+=======
+=======
+=======
+|Zimtohrli  |0.10 |0.56      |0.76      |0.69       |
+|ViSQOL     |0.12 |0.52      |0.80      |0.68       |
+|PESQ       |0.15 |0.34      |0.84      |0.65       |
+|CDPAM      |0.15 |0.44      |0.73      |0.62       |
+|PARLAQ     |0.19 |0.45      |0.78      |0.59       |
+|AQUA       |0.22 |0.33      |0.74      |0.55       |
+|PEAQB      |0.23 |0.28      |0.85      |0.55       |
+|DPAM       |0.32 |0.19      |0.69      |0.46       |
+|WARP-Q     |0.34 |0.07      |0.78      |0.48       |
+|GVPMOS     |0.41 |0.01      |0.78      |0.41       |
+>>>>>>> b70f33d (Added the AQUA metric.)
+>>>>>>> a751c4d (Added the AQUA metric.)
+>>>>>>> a8eaa92 (Added the AQUA metric.)
 
