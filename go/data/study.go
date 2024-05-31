@@ -112,7 +112,7 @@ func (r *ReferenceBundle) IsJND() bool {
 // SortedTypes returns the score types of a bundle, alphabetically ordered.
 func (r *ReferenceBundle) SortedTypes() ScoreTypes {
 	sorted := ScoreTypes{}
-	for scoreType, _ := range r.ScoreTypes {
+	for scoreType := range r.ScoreTypes {
 		sorted = append(sorted, scoreType)
 	}
 	sort.Sort(sorted)
@@ -123,7 +123,7 @@ func (r *ReferenceBundle) SortedTypes() ScoreTypes {
 func (r *ReferenceBundle) Add(ref *Reference) {
 	for _, dist := range ref.Distortions {
 		for scoreType := range dist.Scores {
-			r.ScoreTypes[scoreType] += 1
+			r.ScoreTypes[scoreType]++
 		}
 	}
 	r.References = append(r.References, ref)
@@ -478,6 +478,7 @@ func mutate(z *goohrli.Goohrli, rng *rand.Rand, temp float64) *goohrli.Goohrli {
 	return result
 }
 
+// References returns the sum of the number of references in all the bundles.
 func (r ReferenceBundles) References() int {
 	res := 0
 	for _, bundle := range r {
@@ -584,7 +585,7 @@ func gitIdentity() (*string, error) {
 }
 
 // Report returns a Markdown report based on the bundles.
-func (b ReferenceBundles) Report() (string, error) {
+func (r ReferenceBundles) Report() (string, error) {
 	res := &bytes.Buffer{}
 	fmt.Fprintf(res, `# Zimtohrli correlation report
 
@@ -598,7 +599,7 @@ Created at %s
 	if id != nil {
 		fmt.Fprintf(res, "%s\n\n", *id)
 	}
-	for _, bundle := range b {
+	for _, bundle := range r {
 		fmt.Fprintf(res, "## %s\n\n", filepath.Base(bundle.Dir))
 		if bundle.IsJND() {
 			accuracy, err := bundle.JNDAccuracy()
@@ -617,7 +618,7 @@ Created at %s
 
 	fmt.Fprintf(res, "## Global leaderboard across all studies\n\n")
 
-	board, err := b.Leaderboard()
+	board, err := r.Leaderboard()
 	if err != nil {
 		return "", err
 	}
@@ -658,9 +659,9 @@ func (m MSEScores) Swap(i, j int) {
 }
 
 // Leaderboard returns the sorted mean squared errors for each score type that is represented in all bundles.
-func (b ReferenceBundles) Leaderboard() (MSEScores, error) {
+func (r ReferenceBundles) Leaderboard() (MSEScores, error) {
 	representedScoreTypes := map[ScoreType]int{}
-	for index, bundle := range b {
+	for index, bundle := range r {
 		if index == 0 {
 			for scoreType, count := range bundle.ScoreTypes {
 				if scoreType != MOS && scoreType != JND {
@@ -694,7 +695,7 @@ func (b ReferenceBundles) Leaderboard() (MSEScores, error) {
 		loss := 1.0 - score
 		sumOfSquares[scoreType] += loss * loss
 	}
-	for _, bundle := range b {
+	for _, bundle := range r {
 		if bundle.IsJND() {
 			accuracies, err := bundle.JNDAccuracy()
 			if err != nil {
@@ -722,7 +723,7 @@ func (b ReferenceBundles) Leaderboard() (MSEScores, error) {
 		}
 	}
 	result := MSEScores{}
-	numStudiesRecpripcal := 1.0 / float64(len(b))
+	numStudiesRecpripcal := 1.0 / float64(len(r))
 	for scoreType, squareSum := range sumOfSquares {
 		result = append(result, MSEScore{
 			ScoreType: scoreType,
