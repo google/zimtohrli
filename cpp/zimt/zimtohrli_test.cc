@@ -451,8 +451,6 @@ TEST(Zimtohrli, SpectrogramTest) {
                           loudness);
   EXPECT_NEAR(loudness[{last_energy_sample}][high_channel],
               spectrogram[{last_energy_sample}][high_channel], 1);
-  const float energy_in_high_channel_solo =
-      spectrogram[{last_energy_sample}][high_channel];
 
   z.Spectrogram(CreateSignal(sample_rate, seconds_of_audio,
                              {{low_channel_hz, low_channel_amplitude},
