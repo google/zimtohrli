@@ -816,8 +816,8 @@ func (s *Study) Close() error {
 type Measurement func(reference, distortion *audio.Audio) (float64, error)
 
 // Calculate computes measurements and populates the scores of the distortions.
-func (b *ReferenceBundle) Calculate(measurements map[ScoreType]Measurement, pool *worker.Pool[any], force bool) error {
-	for _, loopRef := range b.References {
+func (r *ReferenceBundle) Calculate(measurements map[ScoreType]Measurement, pool *worker.Pool[any], force bool) error {
+	for _, loopRef := range r.References {
 		refNeededMeasurements := map[ScoreType]Measurement{}
 		for _, dist := range loopRef.Distortions {
 			for scoreType, measurement := range measurements {
@@ -831,7 +831,7 @@ func (b *ReferenceBundle) Calculate(measurements map[ScoreType]Measurement, pool
 		}
 		ref := loopRef
 		pool.Submit(func(func(any)) error {
-			refAudio, err := ref.Load(b.Dir)
+			refAudio, err := ref.Load(r.Dir)
 			if err != nil {
 				return err
 			}
@@ -847,7 +847,7 @@ func (b *ReferenceBundle) Calculate(measurements map[ScoreType]Measurement, pool
 				}
 				dist := loopDist
 				pool.Submit(func(func(any)) error {
-					distAudio, err := dist.Load(b.Dir)
+					distAudio, err := dist.Load(r.Dir)
 					if err != nil {
 						return err
 					}
