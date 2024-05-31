@@ -311,6 +311,9 @@ func ternarySearch(f func(int) float64, left, right int) int {
 	return (left + right) / 2
 }
 
+// JNDAccuracyAndThreshold returns the treshold for the score type that provides the highest accuracy at
+// predicting the JND score (whether a human observer was able to detect the distortion), and the
+// accuracy it provided.
 func (r *ReferenceBundle) JNDAccuracyAndThreshold(scoreType ScoreType) (float64, float64, error) {
 	if !r.IsJND() {
 		return 0, 0, fmt.Errorf("cannot compute JND accuracy on non-JND references")
@@ -396,6 +399,9 @@ func (s Studies) ToBundles() (ReferenceBundles, error) {
 	return result, nil
 }
 
+// CalculateZimtohrliMSE returns the mean-squared-error for the Zimtohrli score
+// in the bundles. For JDN bundles this means 1 - accuracy, for the MOS bundles it means
+// 1 - Spearman correlation.
 func (r ReferenceBundles) CalculateZimtohrliMSE(z *goohrli.Goohrli) (float64, error) {
 	sumOfSquares := 0.0
 	for _, bundle := range r {
@@ -480,6 +486,7 @@ func (r ReferenceBundles) References() int {
 	return res
 }
 
+// Split will split the bundle randomly in two parts, at the split provided.
 func (r ReferenceBundles) Split(rng *rand.Rand, split float64) (ReferenceBundles, ReferenceBundles) {
 	left := ReferenceBundles{}
 	right := ReferenceBundles{}
@@ -508,6 +515,7 @@ func (r ReferenceBundles) Split(rng *rand.Rand, split float64) (ReferenceBundles
 	return left, right
 }
 
+// OptimizationEvent is a step in the optimization process.
 type OptimizationEvent struct {
 	Parameters goohrli.Parameters
 	Step       int
@@ -515,6 +523,8 @@ type OptimizationEvent struct {
 	Temp       float64
 }
 
+// Optimize will use simulated annealing to optimize a Zimtohrli metric for predicting
+// these bundles.
 func (r ReferenceBundles) Optimize(startStep, numSteps float64, logger func(OptimizationEvent)) error {
 	z := goohrli.New(goohrli.DefaultParameters(sampleRate))
 	loss, err := r.CalculateZimtohrliMSE(z)
