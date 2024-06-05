@@ -346,8 +346,8 @@ EOF
         exit 3
     fi
 
-    local WRAPPER="${DST}/serve_f2"
-    echo "Dropping f2 wrapper ${WRAPPER}..."
+    local WRAPPER="${DST}/serve_2f"
+    echo "Dropping 2f wrapper ${WRAPPER}..."
     cat > "${WRAPPER}.go" <<EOF
 package main
 
@@ -376,7 +376,7 @@ func extract(line string, label string) (float64, bool, error) {
 
 func main() {
     reader := bufio.NewReader(os.Stdin)
-    fmt.Println("READY:f2")
+    fmt.Println("READY:2f")
     for {
         fmt.Println("REF")
         ref, err := reader.ReadString('\n')
