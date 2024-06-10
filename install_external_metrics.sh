@@ -415,9 +415,9 @@ func main() {
         }
         meanADB := adbSum / float64(count)
         meanAvgModDiff1 := avgModDiff1Sum / float64(count)
-        fmt.Printf("SCORE=%f\n", 49.73 /
-                                 (1 + math.Pow(-0.0315 * meanAvgModDiff1 - 0.73,
-                                               2)) -46.95 * meanADB + 147.12)
+        fmt.Printf("SCORE=%f\n", 56.1345 /
+                                 (1 + math.Pow(-0.0282 * meanAvgModDiff1 - 0.8628,
+                                               2)) -27.1451 * meanADB + 86.3515)
     }
 }
 EOF
