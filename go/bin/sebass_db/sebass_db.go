@@ -17,7 +17,7 @@
 // It currently supports SASSEC, SiSEC08, SAOC, and PEASS-DB. SiSEC18 at
 // that web site doesn't contain all audio, and is not currently supported.
 //
-// Download and unpac one of the supported ZIP files, and use the directory
+// Download and unpack one of the supported ZIP files, and use the directory
 // it unpacked as -source when running this binary.
 package main
 
