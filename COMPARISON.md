@@ -4,6 +4,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 Created at 2024-05-22
 	
 Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtohrli.git
@@ -24,6 +25,8 @@ Revision v0.1.10-42-g214796d, branch work, origin git@github.com:google/zimtohrl
 =======
 =======
 >>>>>>> a8eaa92 (Added the AQUA metric.)
+=======
+>>>>>>> 307f062 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 Created at 2024-06-12
 	
 Revision v0.1.10-42-g214796d, branch work, origin git@github.com:google/zimtohrli.git
@@ -36,6 +39,8 @@ Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtoh
 >>>>>>> 62123e9 (Hacked together a replacement of the ellitic filters with the tabuli)
 =======
 =======
+=======
+>>>>>>> 58b6cb9 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 Created at 2024-05-22
 	
 Revision v0.1.10-26-gd782335, branch tabuli, origin git@github.com:google/zimtohrli.git
@@ -54,8 +59,19 @@ Revision v0.1.10-31-gec087ee, branch main, origin git@github.com:google/zimtohrl
 =======
 Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrli.git
 >>>>>>> 3999a81 (Added the 2f metric.)
+<<<<<<< HEAD
 >>>>>>> 0b6a150 (Added the 2f metric.)
+<<<<<<< HEAD
 >>>>>>> d259e8f (Added the 2f metric.)
+=======
+=======
+=======
+Created at 2024-06-12
+	
+Revision v0.1.10-42-g214796d, branch work, origin git@github.com:google/zimtohrli.git
+>>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
+>>>>>>> 58b6cb9 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
+>>>>>>> 307f062 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 
 ## PEASS_DB
 
@@ -181,6 +197,7 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 =======
 |          |2f   |AQUA |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |
 |----------|-----|-----|------|-----|-------|-----|-------|------|-----|-------|-------|----------|
+<<<<<<< HEAD
 |2f        |1.00 |0.53 |0.55  |0.29 |0.29   |0.55 |0.43   |0.43  |0.56 |0.75   |0.30   |0.72      |
 |AQUA      |0.53 |1.00 |0.79  |0.52 |0.16   |0.33 |0.85   |0.81  |0.63 |0.56   |0.75   |0.67      |
 |CDPAM     |0.55 |0.79 |1.00  |0.47 |0.11   |0.47 |0.85   |0.78  |0.65 |0.56   |0.65   |0.74      |
@@ -194,8 +211,28 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 |WARP-Q    |0.30 |0.75 |0.65  |0.34 |0.15   |0.25 |0.78   |0.71  |0.59 |0.35   |1.00   |0.49      |
 |Zimtohrli |0.72 |0.67 |0.74  |0.51 |0.26   |0.56 |0.72   |0.65  |0.57 |0.70   |0.49   |1.00      |
 >>>>>>> 3999a81 (Added the 2f metric.)
+<<<<<<< HEAD
 >>>>>>> 0b6a150 (Added the 2f metric.)
+<<<<<<< HEAD
 >>>>>>> d259e8f (Added the 2f metric.)
+=======
+=======
+=======
+|2f        |1.00 |0.73 |0.74  |0.37 |0.27   |0.53 |0.65   |0.65  |0.64 |0.78   |0.49   |0.82      |
+|AQUA      |0.73 |1.00 |0.79  |0.52 |0.20   |0.33 |0.85   |0.81  |0.63 |0.56   |0.75   |0.67      |
+|CDPAM     |0.74 |0.79 |1.00  |0.47 |0.19   |0.47 |0.85   |0.78  |0.65 |0.56   |0.65   |0.74      |
+|DPAM      |0.37 |0.52 |0.47  |1.00 |0.12   |0.40 |0.57   |0.50  |0.33 |0.36   |0.34   |0.51      |
+|GVPMOS    |0.27 |0.20 |0.19  |0.12 |1.00   |0.17 |0.18   |0.09  |0.27 |0.19   |0.32   |0.33      |
+|MOS       |0.53 |0.33 |0.47  |0.40 |0.17   |1.00 |0.45   |0.36  |0.34 |0.52   |0.25   |0.56      |
+|PARLAQ    |0.65 |0.85 |0.85  |0.57 |0.18   |0.45 |1.00   |0.83  |0.68 |0.49   |0.78   |0.72      |
+|PEAQB     |0.65 |0.81 |0.78  |0.50 |0.09   |0.36 |0.83   |1.00  |0.70 |0.40   |0.71   |0.65      |
+|PESQ      |0.64 |0.63 |0.65  |0.33 |0.27   |0.34 |0.68   |0.70  |1.00 |0.43   |0.59   |0.57      |
+|ViSQOL    |0.78 |0.56 |0.56  |0.36 |0.19   |0.52 |0.49   |0.40  |0.43 |1.00   |0.35   |0.70      |
+|WARP-Q    |0.49 |0.75 |0.65  |0.34 |0.32   |0.25 |0.78   |0.71  |0.59 |0.35   |1.00   |0.49      |
+|Zimtohrli |0.82 |0.67 |0.74  |0.51 |0.33   |0.56 |0.72   |0.65  |0.57 |0.70   |0.49   |1.00      |
+>>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
+>>>>>>> 58b6cb9 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
+>>>>>>> 307f062 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 
 ### Score type MOS Spearman correlation in order
 
@@ -225,10 +262,20 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 |Zimtohrli  |+Inf                 |
 =======
 |Zimtohrli  |0.56                 |
+<<<<<<< HEAD
 >>>>>>> 3999a81 (Added the 2f metric.)
 |2f         |0.55                 |
+<<<<<<< HEAD
 >>>>>>> 0735430 (Hacked together a replacement of the ellitic filters with the tabuli)
+<<<<<<< HEAD
 >>>>>>> 62123e9 (Hacked together a replacement of the ellitic filters with the tabuli)
+=======
+=======
+=======
+|2f         |0.53                 |
+>>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
+>>>>>>> 58b6cb9 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
+>>>>>>> 307f062 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 |ViSQOL     |0.52                 |
 |CDPAM      |0.47                 |
 |PARLAQ     |0.45                 |
@@ -363,6 +410,7 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 =======
 |          |2f   |AQUA |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |
 |----------|-----|-----|------|-----|-------|-----|-------|------|-----|-------|-------|----------|
+<<<<<<< HEAD
 |2f        |1.00 |0.77 |0.71  |0.58 |0.36   |0.77 |0.84   |0.71  |0.89 |0.80   |0.73   |0.88      |
 |AQUA      |0.77 |1.00 |0.74  |0.54 |0.28   |0.69 |0.87   |0.72  |0.67 |0.79   |0.77   |0.84      |
 |CDPAM     |0.71 |0.74 |1.00  |0.62 |0.38   |0.61 |0.87   |0.62  |0.61 |0.73   |0.71   |0.77      |
@@ -376,13 +424,34 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 |WARP-Q    |0.73 |0.77 |0.71  |0.66 |0.36   |0.62 |0.75   |0.70  |0.65 |0.70   |1.00   |0.74      |
 |Zimtohrli |0.88 |0.84 |0.77  |0.60 |0.33   |0.72 |0.88   |0.75  |0.81 |0.81   |0.74   |1.00      |
 >>>>>>> 3999a81 (Added the 2f metric.)
+<<<<<<< HEAD
 >>>>>>> 0b6a150 (Added the 2f metric.)
+<<<<<<< HEAD
 >>>>>>> d259e8f (Added the 2f metric.)
+=======
+=======
+=======
+|2f        |1.00 |0.82 |0.76  |0.62 |0.24   |0.78 |0.88   |0.74  |0.85 |0.84   |0.76   |0.90      |
+|AQUA      |0.82 |1.00 |0.74  |0.54 |0.13   |0.69 |0.87   |0.72  |0.67 |0.79   |0.77   |0.84      |
+|CDPAM     |0.76 |0.74 |1.00  |0.62 |0.30   |0.61 |0.87   |0.62  |0.61 |0.73   |0.71   |0.77      |
+|DPAM      |0.62 |0.54 |0.62  |1.00 |0.53   |0.50 |0.55   |0.55  |0.48 |0.47   |0.66   |0.60      |
+|GVPMOS    |0.24 |0.13 |0.30  |0.53 |1.00   |0.18 |0.23   |0.01  |0.19 |0.05   |0.31   |0.21      |
+|MOS       |0.78 |0.69 |0.61  |0.50 |0.18   |1.00 |0.73   |0.59  |0.76 |0.74   |0.62   |0.72      |
+|PARLAQ    |0.88 |0.87 |0.87  |0.55 |0.23   |0.73 |1.00   |0.67  |0.76 |0.85   |0.75   |0.88      |
+|PEAQB     |0.74 |0.72 |0.62  |0.55 |0.01   |0.59 |0.67   |1.00  |0.60 |0.71   |0.70   |0.75      |
+|PESQ      |0.85 |0.67 |0.61  |0.48 |0.19   |0.76 |0.76   |0.60  |1.00 |0.80   |0.65   |0.81      |
+|ViSQOL    |0.84 |0.79 |0.73  |0.47 |0.05   |0.74 |0.85   |0.71  |0.80 |1.00   |0.70   |0.81      |
+|WARP-Q    |0.76 |0.77 |0.71  |0.66 |0.31   |0.62 |0.75   |0.70  |0.65 |0.70   |1.00   |0.74      |
+|Zimtohrli |0.90 |0.84 |0.77  |0.60 |0.21   |0.72 |0.88   |0.75  |0.81 |0.81   |0.74   |1.00      |
+>>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
+>>>>>>> 58b6cb9 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
+>>>>>>> 307f062 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 
 ### Score type MOS Spearman correlation in order
 
 |Score type |Spearman correlation |
 |-----------|---------------------|
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -396,6 +465,8 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 >>>>>>> 62123e9 (Hacked together a replacement of the ellitic filters with the tabuli)
 =======
 >>>>>>> d259e8f (Added the 2f metric.)
+=======
+>>>>>>> 307f062 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 |2f         |0.78                 |
 >>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 |PESQ       |0.76                 |
@@ -411,10 +482,15 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 =======
 =======
 >>>>>>> 0b6a150 (Added the 2f metric.)
+=======
+>>>>>>> 58b6cb9 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 |Zimtohrli  |+Inf                 |
 =======
 >>>>>>> 3999a81 (Added the 2f metric.)
 |2f         |0.77                 |
+=======
+|2f         |0.78                 |
+>>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 |PESQ       |0.76                 |
 |ViSQOL     |0.74                 |
 |PARLAQ     |0.73                 |
@@ -612,6 +688,7 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 =======
 |          |2f   |AQUA |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |
 |----------|-----|-----|------|-----|-------|-----|-------|------|-----|-------|-------|----------|
+<<<<<<< HEAD
 |2f        |1.00 |0.80 |0.82  |0.60 |0.44   |0.80 |0.87   |0.86  |0.88 |0.85   |0.75   |0.86      |
 |AQUA      |0.80 |1.00 |0.76  |0.53 |0.30   |0.68 |0.82   |0.79  |0.72 |0.84   |0.76   |0.80      |
 |CDPAM     |0.82 |0.76 |1.00  |0.56 |0.41   |0.67 |0.88   |0.79  |0.73 |0.82   |0.74   |0.79      |
@@ -625,12 +702,26 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 |WARP-Q    |0.75 |0.76 |0.74  |0.66 |0.41   |0.65 |0.73   |0.72  |0.67 |0.76   |1.00   |0.74      |
 |Zimtohrli |0.86 |0.80 |0.79  |0.64 |0.40   |0.68 |0.83   |0.75  |0.77 |0.82   |0.74   |1.00      |
 >>>>>>> 3999a81 (Added the 2f metric.)
+=======
+|2f        |1.00 |0.84 |0.84  |0.61 |0.22   |0.79 |0.88   |0.87  |0.85 |0.88   |0.74   |0.86      |
+|AQUA      |0.84 |1.00 |0.76  |0.53 |0.09   |0.68 |0.82   |0.79  |0.72 |0.84   |0.76   |0.80      |
+|CDPAM     |0.84 |0.76 |1.00  |0.56 |0.21   |0.67 |0.88   |0.79  |0.73 |0.82   |0.74   |0.79      |
+|DPAM      |0.61 |0.53 |0.56  |1.00 |0.51   |0.50 |0.52   |0.56  |0.46 |0.56   |0.66   |0.64      |
+|GVPMOS    |0.22 |0.09 |0.21  |0.51 |1.00   |0.24 |0.22   |0.09  |0.15 |0.15   |0.35   |0.26      |
+|MOS       |0.79 |0.68 |0.67  |0.50 |0.24   |1.00 |0.74   |0.68  |0.76 |0.73   |0.65   |0.68      |
+|PARLAQ    |0.88 |0.82 |0.88  |0.52 |0.22   |0.74 |1.00   |0.75  |0.82 |0.88   |0.73   |0.83      |
+|PEAQB     |0.87 |0.79 |0.79  |0.56 |0.09   |0.68 |0.75   |1.00  |0.78 |0.81   |0.72   |0.75      |
+|PESQ      |0.85 |0.72 |0.73  |0.46 |0.15   |0.76 |0.82   |0.78  |1.00 |0.83   |0.67   |0.77      |
+|ViSQOL    |0.88 |0.84 |0.82  |0.56 |0.15   |0.73 |0.88   |0.81  |0.83 |1.00   |0.76   |0.82      |
+|WARP-Q    |0.74 |0.76 |0.74  |0.66 |0.35   |0.65 |0.73   |0.72  |0.67 |0.76   |1.00   |0.74      |
+|Zimtohrli |0.86 |0.80 |0.79  |0.64 |0.26   |0.68 |0.83   |0.75  |0.77 |0.82   |0.74   |1.00      |
+>>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 
 ### Score type MOS Spearman correlation in order
 
 |Score type |Spearman correlation |
 |-----------|---------------------|
-|2f         |0.80                 |
+|2f         |0.79                 |
 |PESQ       |0.76                 |
 |PARLAQ     |0.74                 |
 |ViSQOL     |0.73                 |
@@ -640,10 +731,20 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 |CDPAM      |0.67                 |
 |WARP-Q     |0.65                 |
 |DPAM       |0.50                 |
+<<<<<<< HEAD
 |GVPMOS     |0.38                 |
 >>>>>>> b70f33d (Added the AQUA metric.)
+<<<<<<< HEAD
 >>>>>>> a751c4d (Added the AQUA metric.)
+<<<<<<< HEAD
 >>>>>>> a8eaa92 (Added the AQUA metric.)
+=======
+=======
+=======
+|GVPMOS     |0.24                 |
+>>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
+>>>>>>> 58b6cb9 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
+>>>>>>> 307f062 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 
 ## SiSEC08
 
@@ -769,6 +870,7 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 =======
 |          |2f   |AQUA |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |
 |----------|-----|-----|------|-----|-------|-----|-------|------|-----|-------|-------|----------|
+<<<<<<< HEAD
 |2f        |1.00 |0.83 |0.82  |0.60 |0.34   |0.77 |0.90   |0.81  |0.89 |0.87   |0.89   |0.95      |
 |AQUA      |0.83 |1.00 |0.70  |0.55 |0.24   |0.74 |0.87   |0.85  |0.71 |0.80   |0.82   |0.87      |
 |CDPAM     |0.82 |0.70 |1.00  |0.53 |0.33   |0.70 |0.86   |0.72  |0.80 |0.79   |0.75   |0.83      |
@@ -782,8 +884,28 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 |WARP-Q    |0.89 |0.82 |0.75  |0.66 |0.41   |0.75 |0.82   |0.79  |0.79 |0.81   |1.00   |0.84      |
 |Zimtohrli |0.95 |0.87 |0.83  |0.58 |0.32   |0.76 |0.93   |0.79  |0.85 |0.83   |0.84   |1.00      |
 >>>>>>> 3999a81 (Added the 2f metric.)
+<<<<<<< HEAD
 >>>>>>> 0b6a150 (Added the 2f metric.)
+<<<<<<< HEAD
 >>>>>>> d259e8f (Added the 2f metric.)
+=======
+=======
+=======
+|2f        |1.00 |0.86 |0.85  |0.62 |0.15   |0.79 |0.92   |0.83  |0.87 |0.89   |0.89   |0.96      |
+|AQUA      |0.86 |1.00 |0.70  |0.55 |0.05   |0.74 |0.87   |0.85  |0.71 |0.80   |0.82   |0.87      |
+|CDPAM     |0.85 |0.70 |1.00  |0.53 |0.16   |0.70 |0.86   |0.72  |0.80 |0.79   |0.75   |0.83      |
+|DPAM      |0.62 |0.55 |0.53  |1.00 |0.47   |0.54 |0.53   |0.56  |0.46 |0.49   |0.66   |0.58      |
+|GVPMOS    |0.15 |0.05 |0.16  |0.47 |1.00   |0.13 |0.13   |0.04  |0.06 |0.01   |0.28   |0.12      |
+|MOS       |0.79 |0.74 |0.70  |0.54 |0.13   |1.00 |0.78   |0.66  |0.73 |0.78   |0.75   |0.76      |
+|PARLAQ    |0.92 |0.87 |0.86  |0.53 |0.13   |0.78 |1.00   |0.72  |0.84 |0.86   |0.82   |0.93      |
+|PEAQB     |0.83 |0.85 |0.72  |0.56 |0.04   |0.66 |0.72   |1.00  |0.70 |0.78   |0.79   |0.79      |
+|PESQ      |0.87 |0.71 |0.80  |0.46 |0.06   |0.73 |0.84   |0.70  |1.00 |0.86   |0.79   |0.85      |
+|ViSQOL    |0.89 |0.80 |0.79  |0.49 |0.01   |0.78 |0.86   |0.78  |0.86 |1.00   |0.81   |0.83      |
+|WARP-Q    |0.89 |0.82 |0.75  |0.66 |0.28   |0.75 |0.82   |0.79  |0.79 |0.81   |1.00   |0.84      |
+|Zimtohrli |0.96 |0.87 |0.83  |0.58 |0.12   |0.76 |0.93   |0.79  |0.85 |0.83   |0.84   |1.00      |
+>>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
+>>>>>>> 58b6cb9 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
+>>>>>>> 307f062 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 
 ### Score type MOS Spearman correlation in order
 
@@ -794,10 +916,16 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 |ViSQOL     |0.78                 |
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 |2f         |0.77                 |
 <<<<<<< HEAD
 =======
 <<<<<<< HEAD
+=======
+|2f         |0.77                 |
+<<<<<<< HEAD
+=======
+>>>>>>> 307f062 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 =======
 >>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 |Zimtohrli  |0.76                 |
@@ -817,18 +945,31 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 |DPAM       |0.54                 |
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 |GVPMOS     |0.29                 |
 |Zimtohrli  |NaN                  |
 =======
 |GVPMOS     |0.13                 |
 >>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 =======
+=======
+>>>>>>> 307f062 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 |GVPMOS     |0.13                 |
 =======
 |GVPMOS     |0.29                 |
 |Zimtohrli  |NaN                  |
 >>>>>>> 0735430 (Hacked together a replacement of the ellitic filters with the tabuli)
+<<<<<<< HEAD
 >>>>>>> 62123e9 (Hacked together a replacement of the ellitic filters with the tabuli)
+=======
+=======
+|GVPMOS     |0.29                 |
+|Zimtohrli  |NaN                  |
+=======
+|GVPMOS     |0.13                 |
+>>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
+>>>>>>> 58b6cb9 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
+>>>>>>> 307f062 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 
 ## coresvnet
 
@@ -954,6 +1095,7 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 =======
 |          |2f   |AQUA |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |
 |----------|-----|-----|------|-----|-------|-----|-------|------|-----|-------|-------|----------|
+<<<<<<< HEAD
 |2f        |1.00 |0.48 |0.70  |0.27 |0.14   |0.80 |0.65   |0.91  |0.69 |0.79   |0.22   |0.79      |
 |AQUA      |0.48 |1.00 |0.62  |0.60 |0.18   |0.40 |0.68   |0.33  |0.69 |0.29   |0.14   |0.58      |
 |CDPAM     |0.70 |0.62 |1.00  |0.49 |0.12   |0.59 |0.68   |0.60  |0.67 |0.54   |0.19   |0.67      |
@@ -967,8 +1109,28 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 |WARP-Q    |0.22 |0.14 |0.19  |0.23 |0.33   |0.10 |0.29   |0.14  |0.06 |0.04   |1.00   |0.18      |
 |Zimtohrli |0.79 |0.58 |0.67  |0.40 |0.00   |0.71 |0.73   |0.77  |0.70 |0.72   |0.18   |1.00      |
 >>>>>>> 3999a81 (Added the 2f metric.)
+<<<<<<< HEAD
 >>>>>>> 0b6a150 (Added the 2f metric.)
+<<<<<<< HEAD
 >>>>>>> d259e8f (Added the 2f metric.)
+=======
+=======
+=======
+|2f        |1.00 |0.53 |0.73  |0.31 |0.26   |0.77 |0.65   |0.87  |0.71 |0.77   |0.14   |0.74      |
+|AQUA      |0.53 |1.00 |0.62  |0.60 |0.20   |0.40 |0.68   |0.33  |0.69 |0.29   |0.14   |0.58      |
+|CDPAM     |0.73 |0.62 |1.00  |0.49 |0.17   |0.59 |0.68   |0.60  |0.67 |0.54   |0.19   |0.67      |
+|DPAM      |0.31 |0.60 |0.49  |1.00 |0.21   |0.21 |0.58   |0.13  |0.38 |0.17   |0.23   |0.40      |
+|GVPMOS    |0.26 |0.20 |0.17  |0.21 |1.00   |0.17 |0.37   |0.24  |0.13 |0.13   |0.32   |0.29      |
+|MOS       |0.77 |0.40 |0.59  |0.21 |0.17   |1.00 |0.54   |0.85  |0.57 |0.80   |0.10   |0.71      |
+|PARLAQ    |0.65 |0.68 |0.68  |0.58 |0.37   |0.54 |1.00   |0.55  |0.67 |0.51   |0.29   |0.73      |
+|PEAQB     |0.87 |0.33 |0.60  |0.13 |0.24   |0.85 |0.55   |1.00  |0.63 |0.86   |0.14   |0.77      |
+|PESQ      |0.71 |0.69 |0.67  |0.38 |0.13   |0.57 |0.67   |0.63  |1.00 |0.51   |0.06   |0.70      |
+|ViSQOL    |0.77 |0.29 |0.54  |0.17 |0.13   |0.80 |0.51   |0.86  |0.51 |1.00   |0.04   |0.72      |
+|WARP-Q    |0.14 |0.14 |0.19  |0.23 |0.32   |0.10 |0.29   |0.14  |0.06 |0.04   |1.00   |0.18      |
+|Zimtohrli |0.74 |0.58 |0.67  |0.40 |0.29   |0.71 |0.73   |0.77  |0.70 |0.72   |0.18   |1.00      |
+>>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
+>>>>>>> 58b6cb9 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
+>>>>>>> 307f062 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 
 ### Score type MOS Spearman correlation in order
 
@@ -978,12 +1140,15 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 |ViSQOL     |0.80                 |
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 |2f         |0.80                 |
 <<<<<<< HEAD
 =======
 =======
 =======
 >>>>>>> 62123e9 (Hacked together a replacement of the ellitic filters with the tabuli)
+=======
+>>>>>>> 307f062 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 |2f         |0.77                 |
 >>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 |Zimtohrli  |0.71                 |
@@ -999,9 +1164,14 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 >>>>>>> b70f33d (Added the AQUA metric.)
 =======
 =======
+=======
+>>>>>>> 58b6cb9 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 |2f         |0.80                 |
 <<<<<<< HEAD
 =======
+=======
+|2f         |0.77                 |
+>>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 |Zimtohrli  |0.71                 |
 >>>>>>> 3999a81 (Added the 2f metric.)
 |CDPAM      |0.59                 |
@@ -1148,6 +1318,7 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 =======
 |          |2f   |AQUA |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |
 |----------|-----|-----|------|-----|-------|-----|-------|------|-----|-------|-------|----------|
+<<<<<<< HEAD
 |2f        |1.00 |0.82 |0.65  |0.68 |0.54   |0.52 |0.90   |0.73  |0.70 |0.53   |0.62   |0.63      |
 |AQUA      |0.82 |1.00 |0.73  |0.72 |0.76   |0.64 |0.91   |0.76  |0.81 |0.55   |0.68   |0.81      |
 |CDPAM     |0.65 |0.73 |1.00  |0.61 |0.77   |0.66 |0.67   |0.63  |0.85 |0.62   |0.77   |0.87      |
@@ -1161,8 +1332,28 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 |WARP-Q    |0.62 |0.68 |0.77  |0.57 |0.64   |0.58 |0.65   |0.65  |0.75 |0.73   |1.00   |0.72      |
 |Zimtohrli |0.63 |0.81 |0.87  |0.64 |0.91   |0.73 |0.67   |0.65  |0.95 |0.59   |0.72   |1.00      |
 >>>>>>> 3999a81 (Added the 2f metric.)
+<<<<<<< HEAD
 >>>>>>> 0b6a150 (Added the 2f metric.)
+<<<<<<< HEAD
 >>>>>>> d259e8f (Added the 2f metric.)
+=======
+=======
+=======
+|2f        |1.00 |0.91 |0.75  |0.71 |0.75   |0.60 |0.94   |0.76  |0.79 |0.53   |0.69   |0.76      |
+|AQUA      |0.91 |1.00 |0.73  |0.72 |0.80   |0.64 |0.91   |0.76  |0.81 |0.55   |0.68   |0.81      |
+|CDPAM     |0.75 |0.73 |1.00  |0.61 |0.84   |0.66 |0.67   |0.63  |0.85 |0.62   |0.77   |0.87      |
+|DPAM      |0.71 |0.72 |0.61  |1.00 |0.64   |0.54 |0.71   |0.61  |0.67 |0.66   |0.57   |0.64      |
+|GVPMOS    |0.75 |0.80 |0.84  |0.64 |1.00   |0.74 |0.69   |0.63  |0.96 |0.62   |0.78   |0.95      |
+|MOS       |0.60 |0.64 |0.66  |0.54 |0.74   |1.00 |0.56   |0.54  |0.74 |0.52   |0.58   |0.73      |
+|PARLAQ    |0.94 |0.91 |0.67  |0.71 |0.69   |0.56 |1.00   |0.79  |0.71 |0.56   |0.65   |0.67      |
+|PEAQB     |0.76 |0.76 |0.63  |0.61 |0.63   |0.54 |0.79   |1.00  |0.67 |0.58   |0.65   |0.65      |
+|PESQ      |0.79 |0.81 |0.85  |0.67 |0.96   |0.74 |0.71   |0.67  |1.00 |0.64   |0.75   |0.95      |
+|ViSQOL    |0.53 |0.55 |0.62  |0.66 |0.62   |0.52 |0.56   |0.58  |0.64 |1.00   |0.73   |0.59      |
+|WARP-Q    |0.69 |0.68 |0.77  |0.57 |0.78   |0.58 |0.65   |0.65  |0.75 |0.73   |1.00   |0.72      |
+|Zimtohrli |0.76 |0.81 |0.87  |0.64 |0.95   |0.73 |0.67   |0.65  |0.95 |0.59   |0.72   |1.00      |
+>>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
+>>>>>>> 58b6cb9 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
+>>>>>>> 307f062 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 
 ### Score type MOS Spearman correlation in order
 
@@ -1171,12 +1362,15 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 |PESQ       |0.74                 |
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 |GVPMOS     |0.69                 |
 =======
 |GVPMOS     |0.74                 |
 |Zimtohrli  |0.73                 |
 >>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 =======
+=======
+>>>>>>> 307f062 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 |GVPMOS     |0.74                 |
 |Zimtohrli  |0.73                 |
 =======
@@ -1189,11 +1383,20 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 |2f         |0.60                 |
 =======
 >>>>>>> a751c4d (Added the AQUA metric.)
+=======
+|GVPMOS     |0.69                 |
+=======
+|GVPMOS     |0.74                 |
+|Zimtohrli  |0.73                 |
+>>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
+|CDPAM      |0.66                 |
+|AQUA       |0.64                 |
+|2f         |0.60                 |
+>>>>>>> 58b6cb9 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 |WARP-Q     |0.58                 |
 |PARLAQ     |0.56                 |
 |PEAQB      |0.54                 |
 |DPAM       |0.54                 |
-|2f         |0.52                 |
 |ViSQOL     |0.52                 |
 |Zimtohrli  |NaN                  |
 
@@ -1321,6 +1524,7 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 =======
 |          |2f   |AQUA |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |
 |----------|-----|-----|------|-----|-------|-----|-------|------|-----|-------|-------|----------|
+<<<<<<< HEAD
 |2f        |1.00 |0.70 |0.39  |0.28 |0.55   |0.56 |0.66   |0.61  |0.67 |0.72   |0.12   |0.67      |
 |AQUA      |0.70 |1.00 |0.30  |0.25 |0.36   |0.46 |0.77   |0.55  |0.73 |0.56   |0.18   |0.69      |
 |CDPAM     |0.39 |0.30 |1.00  |0.19 |0.42   |0.44 |0.20   |0.21  |0.35 |0.41   |0.08   |0.38      |
@@ -1334,8 +1538,28 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 |WARP-Q    |0.12 |0.18 |0.08  |0.02 |0.00   |0.07 |0.26   |0.22  |0.22 |0.02   |1.00   |0.14      |
 |Zimtohrli |0.67 |0.69 |0.38  |0.20 |0.53   |0.64 |0.63   |0.46  |0.74 |0.73   |0.14   |1.00      |
 >>>>>>> 3999a81 (Added the 2f metric.)
+<<<<<<< HEAD
 >>>>>>> 0b6a150 (Added the 2f metric.)
+<<<<<<< HEAD
 >>>>>>> d259e8f (Added the 2f metric.)
+=======
+=======
+=======
+|2f        |1.00 |0.65 |0.44  |0.24 |0.58   |0.54 |0.53   |0.61  |0.61 |0.70   |0.07   |0.67      |
+|AQUA      |0.65 |1.00 |0.30  |0.25 |0.47   |0.46 |0.77   |0.55  |0.73 |0.56   |0.18   |0.69      |
+|CDPAM     |0.44 |0.30 |1.00  |0.19 |0.44   |0.44 |0.20   |0.21  |0.35 |0.41   |0.08   |0.38      |
+|DPAM      |0.24 |0.25 |0.19  |1.00 |0.20   |0.19 |0.28   |0.18  |0.27 |0.28   |0.02   |0.20      |
+|GVPMOS    |0.58 |0.47 |0.44  |0.20 |1.00   |0.91 |0.50   |0.34  |0.65 |0.61   |0.09   |0.64      |
+|MOS       |0.54 |0.46 |0.44  |0.19 |0.91   |1.00 |0.47   |0.28  |0.60 |0.61   |0.07   |0.64      |
+|PARLAQ    |0.53 |0.77 |0.20  |0.28 |0.50   |0.47 |1.00   |0.55  |0.81 |0.49   |0.26   |0.63      |
+|PEAQB     |0.61 |0.55 |0.21  |0.18 |0.34   |0.28 |0.55   |1.00  |0.66 |0.28   |0.22   |0.46      |
+|PESQ      |0.61 |0.73 |0.35  |0.27 |0.65   |0.60 |0.81   |0.66  |1.00 |0.57   |0.22   |0.74      |
+|ViSQOL    |0.70 |0.56 |0.41  |0.28 |0.61   |0.61 |0.49   |0.28  |0.57 |1.00   |0.02   |0.73      |
+|WARP-Q    |0.07 |0.18 |0.08  |0.02 |0.09   |0.07 |0.26   |0.22  |0.22 |0.02   |1.00   |0.14      |
+|Zimtohrli |0.67 |0.69 |0.38  |0.20 |0.64   |0.64 |0.63   |0.46  |0.74 |0.73   |0.14   |1.00      |
+>>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
+>>>>>>> 58b6cb9 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
+>>>>>>> 307f062 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 
 ### Score type MOS Spearman correlation in order
 
@@ -1343,10 +1567,13 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 |-----------|---------------------|
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 |GVPMOS     |0.78                 |
 =======
 =======
 >>>>>>> 62123e9 (Hacked together a replacement of the ellitic filters with the tabuli)
+=======
+>>>>>>> 307f062 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 |GVPMOS     |0.91                 |
 |Zimtohrli  |0.64                 |
 >>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
@@ -1354,11 +1581,21 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 |PESQ       |0.60                 |
 |2f         |0.54                 |
 =======
+=======
+>>>>>>> 58b6cb9 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 |GVPMOS     |0.78                 |
+=======
+|GVPMOS     |0.91                 |
+|Zimtohrli  |0.64                 |
+>>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 |ViSQOL     |0.61                 |
 |PESQ       |0.60                 |
+<<<<<<< HEAD
 |2f         |0.56                 |
 >>>>>>> 0735430 (Hacked together a replacement of the ellitic filters with the tabuli)
+=======
+|2f         |0.54                 |
+>>>>>>> 58b6cb9 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 |PARLAQ     |0.47                 |
 |AQUA       |0.46                 |
 |CDPAM      |0.44                 |
@@ -1376,6 +1613,7 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 |CDPAM      |0.71     |0.049     |
 |ViSQOL     |0.71     |4.2       |
 |DPAM       |0.69     |0.73      |
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 |Zimtohrli  |0.52     |1.6e-06   |
@@ -1397,6 +1635,8 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 =======
 =======
 >>>>>>> 62123e9 (Hacked together a replacement of the ellitic filters with the tabuli)
+=======
+>>>>>>> 307f062 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 |GVPMOS     |0.51     |1.5       |
 |WARP-Q     |0.49     |1.3       |
 |PEAQB      |0.49     |-3.9      |
@@ -1407,6 +1647,8 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 >>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 =======
 =======
+=======
+>>>>>>> 58b6cb9 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 |Zimtohrli  |0.52     |1.6e-06   |
 |GVPMOS     |0.51     |3         |
 |WARP-Q     |0.49     |1.3       |
@@ -1435,8 +1677,22 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 |2f         |0.48     |-0.48     |
 |PARLAQ     |0.48     |30        |
 >>>>>>> 3999a81 (Added the 2f metric.)
+<<<<<<< HEAD
 >>>>>>> 0b6a150 (Added the 2f metric.)
+<<<<<<< HEAD
 >>>>>>> d259e8f (Added the 2f metric.)
+=======
+=======
+=======
+|GVPMOS     |0.51     |1.5       |
+|WARP-Q     |0.49     |1.3       |
+|PEAQB      |0.49     |-3.9      |
+|PARLAQ     |0.48     |30        |
+|AQUA       |0.48     |0.018     |
+|2f         |0.48     |-14       |
+>>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
+>>>>>>> 58b6cb9 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
+>>>>>>> 307f062 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 |PESQ       |0.48     |1         |
 
 ## tcd-voip
@@ -1563,6 +1819,7 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 =======
 |          |2f   |AQUA |CDPAM |DPAM |GVPMOS |MOS  |PARLAQ |PEAQB |PESQ |ViSQOL |WARP-Q |Zimtohrli |
 |----------|-----|-----|------|-----|-------|-----|-------|------|-----|-------|-------|----------|
+<<<<<<< HEAD
 |2f        |1.00 |0.70 |0.62  |0.81 |0.55   |0.70 |0.71   |0.84  |0.76 |0.72   |0.61   |0.62      |
 |AQUA      |0.70 |1.00 |0.63  |0.48 |0.39   |0.50 |0.90   |0.75  |0.59 |0.49   |0.57   |0.57      |
 |CDPAM     |0.62 |0.63 |1.00  |0.51 |0.68   |0.73 |0.54   |0.55  |0.64 |0.76   |0.79   |0.86      |
@@ -1576,8 +1833,28 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 |WARP-Q    |0.61 |0.57 |0.79  |0.48 |0.67   |0.78 |0.56   |0.58  |0.77 |0.57   |1.00   |0.80      |
 |Zimtohrli |0.62 |0.57 |0.86  |0.47 |0.70   |0.65 |0.59   |0.68  |0.68 |0.64   |0.80   |1.00      |
 >>>>>>> 3999a81 (Added the 2f metric.)
+<<<<<<< HEAD
 >>>>>>> 0b6a150 (Added the 2f metric.)
+<<<<<<< HEAD
 >>>>>>> d259e8f (Added the 2f metric.)
+=======
+=======
+=======
+|2f        |1.00 |0.72 |0.65  |0.77 |0.53   |0.70 |0.73   |0.84  |0.76 |0.72   |0.61   |0.65      |
+|AQUA      |0.72 |1.00 |0.63  |0.48 |0.45   |0.50 |0.90   |0.75  |0.59 |0.49   |0.57   |0.57      |
+|CDPAM     |0.65 |0.63 |1.00  |0.51 |0.74   |0.73 |0.54   |0.55  |0.64 |0.76   |0.79   |0.86      |
+|DPAM      |0.77 |0.48 |0.51  |1.00 |0.36   |0.57 |0.44   |0.59  |0.57 |0.71   |0.48   |0.47      |
+|GVPMOS    |0.53 |0.45 |0.74  |0.36 |1.00   |0.63 |0.41   |0.41  |0.49 |0.63   |0.63   |0.68      |
+|MOS       |0.70 |0.50 |0.73  |0.57 |0.63   |1.00 |0.52   |0.54  |0.84 |0.65   |0.78   |0.65      |
+|PARLAQ    |0.73 |0.90 |0.54  |0.44 |0.41   |0.52 |1.00   |0.81  |0.70 |0.36   |0.56   |0.59      |
+|PEAQB     |0.84 |0.75 |0.55  |0.59 |0.41   |0.54 |0.81   |1.00  |0.74 |0.45   |0.58   |0.68      |
+|PESQ      |0.76 |0.59 |0.64  |0.57 |0.49   |0.84 |0.70   |0.74  |1.00 |0.46   |0.77   |0.68      |
+|ViSQOL    |0.72 |0.49 |0.76  |0.71 |0.63   |0.65 |0.36   |0.45  |0.46 |1.00   |0.57   |0.64      |
+|WARP-Q    |0.61 |0.57 |0.79  |0.48 |0.63   |0.78 |0.56   |0.58  |0.77 |0.57   |1.00   |0.80      |
+|Zimtohrli |0.65 |0.57 |0.86  |0.47 |0.68   |0.65 |0.59   |0.68  |0.68 |0.64   |0.80   |1.00      |
+>>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
+>>>>>>> 58b6cb9 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
+>>>>>>> 307f062 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 
 ### Score type MOS Spearman correlation in order
 
@@ -1587,6 +1864,7 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 |WARP-Q     |0.78                 |
 |CDPAM      |0.73                 |
 |2f         |0.70                 |
+<<<<<<< HEAD
 <<<<<<< HEAD
 |ViSQOL     |0.65                 |
 <<<<<<< HEAD
@@ -1606,7 +1884,14 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 =======
 =======
 |GVPMOS     |0.70                 |
+=======
+>>>>>>> 58b6cb9 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 |ViSQOL     |0.65                 |
+<<<<<<< HEAD
+=======
+|Zimtohrli  |0.65                 |
+|GVPMOS     |0.63                 |
+>>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 |DPAM       |0.57                 |
 |PEAQB      |0.54                 |
 |PARLAQ     |0.52                 |
@@ -1688,7 +1973,7 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 =======
 |Zimtohrli  |0.10 |0.56      |0.76      |0.69       |
 |ViSQOL     |0.12 |0.52      |0.80      |0.68       |
-|2f         |0.13 |0.48      |0.80      |0.66       |
+|2f         |0.13 |0.48      |0.79      |0.67       |
 |PESQ       |0.15 |0.34      |0.84      |0.65       |
 |CDPAM      |0.15 |0.44      |0.73      |0.62       |
 |PARLAQ     |0.19 |0.45      |0.78      |0.59       |
@@ -1696,8 +1981,18 @@ Revision v0.1.10-32-gb70f33d, branch work, origin git@github.com:google/zimtohrl
 |PEAQB      |0.23 |0.28      |0.85      |0.55       |
 |DPAM       |0.32 |0.19      |0.69      |0.46       |
 |WARP-Q     |0.34 |0.07      |0.78      |0.48       |
+<<<<<<< HEAD
 |GVPMOS     |0.41 |0.01      |0.78      |0.41       |
 >>>>>>> b70f33d (Added the AQUA metric.)
+<<<<<<< HEAD
 >>>>>>> a751c4d (Added the AQUA metric.)
+<<<<<<< HEAD
 >>>>>>> a8eaa92 (Added the AQUA metric.)
+=======
+=======
+=======
+|GVPMOS     |0.43 |0.13      |0.91      |0.41       |
+>>>>>>> e4eb57f (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
+>>>>>>> 58b6cb9 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
+>>>>>>> 307f062 (New COMPARISON.md with latest version of 2f, PARLAQ, and GVPMOS.)
 
