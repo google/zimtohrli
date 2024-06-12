@@ -147,5 +147,6 @@ func (b *Bar) Update(total, completed, errors int) {
 	b.total = total
 	b.lastRender = now
 
+	os.Stderr.SetWriteDeadline(time.Now().Add(100 * time.Millisecond))
 	fmt.Fprintf(os.Stderr, "\r%s%s%s", prefix, b.filler(prefix, suffix), suffix)
 }
