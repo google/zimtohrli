@@ -71,28 +71,6 @@ void HwyAbsDiff(const hwy::AlignedNDArray<float, 2>& array_a,
   }
 }
 
-template <bool mean>
-float HwyNorm(hwy::Span<const float> span, float order, float max) {
-  if (max == 0) {
-    return 0;
-  }
-
-  const Vec order_vec = Set(d, order);
-  const Vec max_reciprocal = Div(Set(d, 1), Set(d, max));
-  double sum = 0;
-  for (size_t index = 0; index < span.size(); index += Lanes(d)) {
-    const Vec downscaled_values =
-        Mul(Load(d, span.data() + index), max_reciprocal);
-    const Vec pows = Exp(d, Mul(order_vec, Log(d, downscaled_values)));
-    sum += static_cast<double>(ReduceSum(d, pows));
-  }
-  if constexpr (mean) {
-    sum /= static_cast<double>(span.size());
-  }
-  return static_cast<float>(max *
-                            std::pow(sum, 1 / static_cast<double>(order)));
-}
-
 // Returns 10^(db / 20):
 // y = 10^(db / 20)
 // ln(y) = db/20 * ln(10)
