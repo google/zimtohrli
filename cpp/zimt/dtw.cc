@@ -75,7 +75,7 @@ float HwyDeltaNorm(hwy::Span<const float> span_a,
         Sub(Load(d, span_a.data() + index), Load(d, span_b.data() + index));
     sumvec = MulAdd(delta, delta, sumvec);
   }
-  return sqrt(static_cast<double>(ReduceSum(d, sumvec)));
+  return std::sqrt(ReduceSum(d, sumvec));
 }
 
 }  // namespace HWY_NAMESPACE
