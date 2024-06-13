@@ -208,7 +208,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		board, err := bundles.Leaderboard()
+		board, err := bundles.Leaderboard(15)
 		if err != nil {
 			log.Fatal(err)
 		}
