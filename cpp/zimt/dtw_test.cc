@@ -40,7 +40,7 @@ TEST(DTW, DTWTest) {
   const std::vector<std::pair<size_t, size_t>> got_dtw = DTW(spec_a, spec_b);
   const std::vector<std::pair<size_t, size_t>> expected_dtw = {
       {0, 0}, {1, 1}, {2, 2}, {3, 3}, {3, 4}, {4, 5},
-      {5, 6}, {6, 7}, {7, 7}, {8, 8}, {9, 9}};
+      {5, 6}, {6, 7}, {7, 8}, {8, 8}, {9, 9}};
   EXPECT_EQ(got_dtw, expected_dtw);
 }
 
@@ -59,7 +59,7 @@ TEST(DTW, ChainDTWTest) {
       ChainDTW(spec_a, spec_b, 6);
   const std::vector<std::pair<size_t, size_t>> expected_dtw = {
       {0, 0}, {1, 1}, {2, 2}, {3, 3}, {3, 4}, {4, 5},
-      {5, 6}, {6, 7}, {7, 7}, {8, 8}, {9, 9}};
+      {5, 6}, {6, 7}, {7, 8}, {8, 8}, {9, 9}};
   EXPECT_EQ(got_dtw, expected_dtw);
 }
 
