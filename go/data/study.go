@@ -618,7 +618,7 @@ Created at %s
 
 	fmt.Fprintf(res, "## Global leaderboard across all studies\n\n")
 
-	board, err := r.Leaderboard()
+	board, err := r.Leaderboard(2)
 	if err != nil {
 		return "", err
 	}
@@ -628,6 +628,7 @@ Created at %s
 
 // MSEScore is MSE for a score type across a set of studies.
 type MSEScore struct {
+	Decimals  int
 	ScoreType ScoreType
 	MSE       float64
 	MinScore  float64
@@ -641,7 +642,8 @@ type MSEScores []MSEScore
 func (m MSEScores) String() string {
 	table := Table{Row{"Score type", "MSE", "Min score", "Max score", "Mean score"}, nil}
 	for _, score := range m {
-		table = append(table, Row{string(score.ScoreType), fmt.Sprintf("%.2f", score.MSE), fmt.Sprintf("%.2f", score.MinScore), fmt.Sprintf("%.2f", score.MaxScore), fmt.Sprintf("%.2f", score.MeanScore)})
+		precisionString := fmt.Sprintf("%%.%df", score.Decimals)
+		table = append(table, Row{string(score.ScoreType), fmt.Sprintf(precisionString, score.MSE), fmt.Sprintf(precisionString, score.MinScore), fmt.Sprintf(precisionString, score.MaxScore), fmt.Sprintf(precisionString, score.MeanScore)})
 	}
 	return fmt.Sprintf("### Mean square error (1 - Spearman correlation, or 1 - accuracy) per score type\n\n%s", table.String())
 }
@@ -659,7 +661,7 @@ func (m MSEScores) Swap(i, j int) {
 }
 
 // Leaderboard returns the sorted mean squared errors for each score type that is represented in all bundles.
-func (r ReferenceBundles) Leaderboard() (MSEScores, error) {
+func (r ReferenceBundles) Leaderboard(decimals int) (MSEScores, error) {
 	representedScoreTypes := map[ScoreType]int{}
 	for index, bundle := range r {
 		if index == 0 {
@@ -726,6 +728,7 @@ func (r ReferenceBundles) Leaderboard() (MSEScores, error) {
 	numStudiesRecpripcal := 1.0 / float64(len(r))
 	for scoreType, squareSum := range sumOfSquares {
 		result = append(result, MSEScore{
+			Decimals:  decimals,
 			ScoreType: scoreType,
 			MSE:       squareSum * numStudiesRecpripcal,
 			MeanScore: sums[scoreType] * numStudiesRecpripcal,

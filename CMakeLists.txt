@@ -85,7 +85,7 @@ add_custom_command(
         $$\(find ${protobuf_BINARY_DIR} -name \"*.o\" ! -ipath \"*/google/protobuf/compiler/main.cc.o\"\)
         -o ${zimtohrli_goohrli_object}
     COMMAND ${CMAKE_AR} rcs ${zimtohrli_goohrli_archive} ${zimtohrli_goohrli_object}
-    DEPENDS zimtohrli_goohrli_glue
+    DEPENDS zimtohrli_goohrli_glue zimtohrli_base zimtohrli_visqol_adapter
 )
 add_custom_target(zimtohrli_goohrli ALL DEPENDS ${zimtohrli_goohrli_archive})
 
