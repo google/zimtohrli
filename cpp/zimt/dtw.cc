@@ -77,12 +77,23 @@ float HwyDeltaNorm(hwy::Span<const float> span_a, hwy::Span<const float> span_b,
   const Vec order_vec = Set(d, order);
   const Vec max_reciprocal = Div(Set(d, 1), Set(d, max));
   double sum = 0;
-  for (size_t index = 0; index < span_a.size(); index += Lanes(d)) {
-    const Vec delta =
-        Sub(Load(d, span_a.data() + index), Load(d, span_b.data() + index));
-    const Vec downscaled_values = Mul(delta, max_reciprocal);
-    const Vec pows = Exp(d, Mul(order_vec, Log(d, downscaled_values)));
-    sum += static_cast<double>(ReduceSum(d, pows));
+  if (order == 2.0) {
+    // Faster special case without Exp/Log for order == 2.0, the usual case.
+    for (size_t index = 0; index < span_a.size(); index += Lanes(d)) {
+      const Vec delta =
+          Sub(Load(d, span_a.data() + index), Load(d, span_b.data() + index));
+      const Vec pows = Mul(delta, delta);
+      sum += static_cast<double>(ReduceSum(d, pows));
+    }
+    sum /= max * max;
+  } else {
+    for (size_t index = 0; index < span_a.size(); index += Lanes(d)) {
+      const Vec delta =
+          Sub(Load(d, span_a.data() + index), Load(d, span_b.data() + index));
+      const Vec downscaled_values = Mul(delta, max_reciprocal);
+      const Vec pows = Exp(d, Mul(order_vec, Log(d, downscaled_values)));
+      sum += static_cast<double>(ReduceSum(d, pows));
+    }
   }
   return static_cast<float>(max *
                             std::pow(sum, 1 / static_cast<double>(order)));
