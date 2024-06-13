@@ -203,7 +203,7 @@ func (c CorrelationTable) String() string {
 	for _, scores := range c {
 		row := Row{string(scores[0].ScoreTypeA)}
 		for _, score := range scores {
-			row = append(row, fmt.Sprintf("%.2f", score.Score))
+			row = append(row, fmt.Sprintf("%.15f", score.Score))
 		}
 		tableResult = append(tableResult, row)
 		if scores[0].ScoreTypeA == MOS {
@@ -273,7 +273,7 @@ func (a JNDAccuracyScores) String() string {
 	table := Table{Row{"Score type", "Accuracy", "Threshold"}}
 	table = append(table, nil)
 	for _, score := range a {
-		table = append(table, Row{string(score.ScoreType), fmt.Sprintf("%.2f", score.Accuracy), fmt.Sprintf("%.2v", score.Threshold)})
+		table = append(table, Row{string(score.ScoreType), fmt.Sprintf("%.15f", score.Accuracy), fmt.Sprintf("%.15v", score.Threshold)})
 	}
 	return fmt.Sprintf("### Maximal audibility classification accuracy and threshold per score type\n\n%s", table.String())
 }
@@ -311,12 +311,9 @@ func ternarySearch(f func(int) float64, left, right int) int {
 	return (left + right) / 2
 }
 
-<<<<<<< HEAD
 // JNDAccuracyAndThreshold returns the treshold for the score type that provides the highest accuracy at
 // predicting the JND score (whether a human observer was able to detect the distortion), and the
 // accuracy it provided.
-=======
->>>>>>> 1bd81e3 (Refactored CutFullyMasked to avoid an extra loop.)
 func (r *ReferenceBundle) JNDAccuracyAndThreshold(scoreType ScoreType) (float64, float64, error) {
 	if !r.IsJND() {
 		return 0, 0, fmt.Errorf("cannot compute JND accuracy on non-JND references")
@@ -410,8 +407,7 @@ func (r ReferenceBundles) CalculateZimtohrliMSE(z *goohrli.Goohrli) (float64, er
 	for _, bundle := range r {
 		bar := progress.New(fmt.Sprintf("Calculating for %v", filepath.Base(bundle.Dir)))
 		pool := &worker.Pool[any]{
-			Workers:  runtime.NumCPU(),
-			OnChange: bar.Update,
+			Workers: runtime.NumCPU(),
 		}
 		if err := bundle.Calculate(map[ScoreType]Measurement{Zimtohrli: z.NormalizedAudioDistance}, pool, true); err != nil {
 			return 0, err
@@ -536,7 +532,7 @@ func (r ReferenceBundles) Optimize(startStep, numSteps float64, logger func(Opti
 		return err
 	}
 	logger(OptimizationEvent{Parameters: z.Parameters(), Step: 0, Loss: loss, Temp: 1})
-	log.Printf("Created initial solution %v with loss %.2f", z, loss)
+	log.Printf("Created initial solution %v with loss %.15f", z, loss)
 	for step := startStep; step < numSteps; step++ {
 		rng := rand.New(rand.NewSource(int64(step)))
 		temp := 1.0 - (step+1)/numSteps
@@ -546,7 +542,7 @@ func (r ReferenceBundles) Optimize(startStep, numSteps float64, logger func(Opti
 		if err != nil {
 			return err
 		}
-		log.Printf("Step %v, temp %v, old loss %.2f, new loss %.2f", step, temp, loss, newLoss)
+		log.Printf("Step %v, temp %v, old loss %.15f, new loss %.15f", step, temp, loss, newLoss)
 		logger(OptimizationEvent{Parameters: newZ.Parameters(), Step: int(step), Loss: newLoss, Temp: temp})
 		if newLoss < loss {
 			z = newZ
@@ -558,7 +554,7 @@ func (r ReferenceBundles) Optimize(startStep, numSteps float64, logger func(Opti
 			if dice < acceptanceProb {
 				z = newZ
 				loss = newLoss
-				log.Printf("*** Accepting poorer solution due to acceptanceProb=%.2f > dice=%.2f", acceptanceProb, dice)
+				log.Printf("*** Accepting poorer solution due to acceptanceProb=%.15f > dice=%.15f", acceptanceProb, dice)
 			} else {
 				log.Print("Discarding poorer solution")
 			}

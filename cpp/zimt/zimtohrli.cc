@@ -283,33 +283,17 @@ void Zimtohrli::Spectrogram(
            partial_energy_channels_db.shape()[1]);
   CHECK_EQ(partial_energy_channels_db.shape()[0], spectrogram.shape()[0]);
   CHECK_EQ(partial_energy_channels_db.shape()[1], spectrogram.shape()[1]);
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-  cam_filterbank->filter.Filter(signal, state, channels);
-=======
->>>>>>> b191d40 (stash)
+  //  cam_filterbank->filter.Filter(signal, state, channels);
   // Using a tabuli::Rotators instead of the cam_filterbank filter.
   std::vector<float> freqs;
   std::vector<float> gains;
   for (size_t i = 0; i < cam_filterbank->filter.Size(); ++i) {
     freqs.push_back(cam_filterbank->thresholds_hz[{1}][i]);
-<<<<<<< HEAD
-<<<<<<< HEAD
     gains.push_back(1.0);
-=======
-    gains.push_back(tabuli::GetRotatorGains(gains.size()));
->>>>>>> 62123e9 (Hacked together a replacement of the ellitic filters with the tabuli)
-=======
-    gains.push_back(1.0);
->>>>>>> 2ab74c3 (..)
   }
   tabuli::Rotators rots(1, freqs, gains, cam_filterbank->sample_rate, 1.0f);
   rots.Filter(signal, channels);
-<<<<<<< HEAD
-=======
->>>>>>> 872b1cb (..)
->>>>>>> b191d40 (stash)
+
   ComputeEnergy(channels, energy_channels_db);
   ToDb(energy_channels_db, full_scale_sine_db, epsilon, energy_channels_db);
   if (apply_masking) {
