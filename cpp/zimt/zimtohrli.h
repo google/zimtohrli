@@ -219,12 +219,26 @@ struct Zimtohrli {
                    hwy::AlignedNDArray<float, 2>& partial_energy_channels_db,
                    hwy::AlignedNDArray<float, 2>& spectrogram) const;
 
-  // Spectrogram without chunk processing.
+  // Spectrogram defaulting to a fresh filter bank state.
   void Spectrogram(hwy::Span<const float> signal,
                    hwy::AlignedNDArray<float, 2>& channels,
                    hwy::AlignedNDArray<float, 2>& energy_channels_db,
                    hwy::AlignedNDArray<float, 2>& partial_energy_channels_db,
                    hwy::AlignedNDArray<float, 2>& spectrogram) const;
+
+  // Memory thrifty spectrogram calculation that computes one chunk (samples per
+  // perceptual sample rate period) at a time.
+  //
+  // Since it only computes one chunk at a time it only needs a chunk of
+  // channels, energy_channels_db, and partial_energy_channels_db that it
+  // allocates and reuses.
+  //
+  // signal is a span of audio samples between -1 and 1.
+  //
+  // Returns a (num_downscaled_samples, num_channels)-shaped array of Phons
+  // values reprecenting the perceptual intensity of each channel.
+  hwy::AlignedNDArray<float, 2> StreamingSpectrogram(
+      hwy::Span<const float> signal) const;
 
   // Returns the perceptual distance between the two spectrograms.
   //

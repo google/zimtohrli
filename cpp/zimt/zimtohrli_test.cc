@@ -494,6 +494,60 @@ void BM_SpectrogramDistanceVsSeconds(benchmark::State& state) {
 }
 BENCHMARK_RANGE(BM_SpectrogramDistanceVsSeconds, 1, 8);
 
+void BM_StreamingSpectrogram(benchmark::State& state) {
+  const size_t sample_rate = 48000;
+  Zimtohrli z{.cam_filterbank = Cam{}.CreateFilterbank(sample_rate)};
+  hwy::AlignedNDArray<float, 1> signal(
+      {static_cast<size_t>(sample_rate * state.range(0))});
+  for (auto s : state) {
+    z.StreamingSpectrogram(signal[{}]);
+  }
+  state.SetItemsProcessed(signal.size() * state.iterations());
+}
+BENCHMARK_RANGE(BM_StreamingSpectrogram, 1, 32);
+
+void BM_PreallocSpectrogram(benchmark::State& state) {
+  const size_t sample_rate = 48000;
+  Zimtohrli z{.cam_filterbank = Cam{}.CreateFilterbank(sample_rate)};
+  hwy::AlignedNDArray<float, 1> signal(
+      {static_cast<size_t>(sample_rate * state.range(0))});
+  hwy::AlignedNDArray<float, 2> channels(
+      {signal.shape()[1], z.cam_filterbank->filter.Size()});
+  hwy::AlignedNDArray<float, 2> energy_channels_db(
+      {static_cast<size_t>(100 * state.range(0)), channels.shape()[1]});
+  hwy::AlignedNDArray<float, 2> partial_energy_channels_db(
+      {static_cast<size_t>(100 * state.range(0)), channels.shape()[1]});
+  hwy::AlignedNDArray<float, 2> spectrogram(
+      {energy_channels_db.shape()[0], energy_channels_db.shape()[1]});
+  for (auto s : state) {
+    z.Spectrogram(signal[{}], channels, energy_channels_db,
+                  partial_energy_channels_db, spectrogram);
+  }
+  state.SetItemsProcessed(signal.size() * state.iterations());
+}
+BENCHMARK_RANGE(BM_PreallocSpectrogram, 1, 32);
+
+void BM_RepeatedAllocSpectrogram(benchmark::State& state) {
+  const size_t sample_rate = 48000;
+  Zimtohrli z{.cam_filterbank = Cam{}.CreateFilterbank(sample_rate)};
+  hwy::AlignedNDArray<float, 1> signal(
+      {static_cast<size_t>(sample_rate * state.range(0))});
+  for (auto s : state) {
+    hwy::AlignedNDArray<float, 2> channels(
+        {signal.shape()[1], z.cam_filterbank->filter.Size()});
+    hwy::AlignedNDArray<float, 2> energy_channels_db(
+        {static_cast<size_t>(100 * state.range(0)), channels.shape()[1]});
+    hwy::AlignedNDArray<float, 2> partial_energy_channels_db(
+        {static_cast<size_t>(100 * state.range(0)), channels.shape()[1]});
+    hwy::AlignedNDArray<float, 2> spectrogram(
+        {energy_channels_db.shape()[0], energy_channels_db.shape()[1]});
+    z.Spectrogram(signal[{}], channels, energy_channels_db,
+                  partial_energy_channels_db, spectrogram);
+  }
+  state.SetItemsProcessed(signal.size() * state.iterations());
+}
+BENCHMARK_RANGE(BM_RepeatedAllocSpectrogram, 1, 32);
+
 void BM_SpectrogramDistanceVsResolution(benchmark::State& state) {
   const size_t sample_rate = 48000;
   const float seconds_of_audio = 1;

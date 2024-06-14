@@ -26,34 +26,6 @@
 
 namespace {
 
-struct AnalysisObject {
-  // clang-format off
-  PyObject_HEAD
-  zimtohrli::Analysis *analysis;
-  // clang-format on
-};
-
-void Analysis_dealloc(AnalysisObject* self) {
-  if (self->analysis) {
-    delete self->analysis;
-    self->analysis = nullptr;
-  }
-  Py_TYPE(self)->tp_free((PyObject*)self);
-}
-
-PyTypeObject AnalysisType = {
-    // clang-format off
-    .ob_base = PyVarObject_HEAD_INIT(nullptr, 0)
-    .tp_name = "pyohrli.Analysis",
-    // clang-format on
-    .tp_basicsize = sizeof(AnalysisObject),
-    .tp_itemsize = 0,
-    .tp_dealloc = (destructor)Analysis_dealloc,
-    .tp_flags = Py_TPFLAGS_DEFAULT,
-    .tp_doc = PyDoc_STR("Python wrapper around C++ zimtohrli::Analysis."),
-    .tp_new = PyType_GenericNew,
-};
-
 struct PyohrliObject {
   // clang-format off
   PyObject_HEAD
@@ -99,15 +71,20 @@ struct BufferDeleter {
   void operator()(Py_buffer* buffer) const { PyBuffer_Release(buffer); }
 };
 
-// Plain C++ function to analyze a Python buffer object using Zimtohrli.
+PyObject* BadArgument(const std::string& message) {
+  PyErr_SetString(PyExc_TypeError, message.c_str());
+  return nullptr;
+}
+
+// Plain C++ function to copy a Python buffer object to a hwy::AlignedNDArray.
 //
-// Calls to Analyze never need to be cleaned up (with e.g. delete or DECREF)
+// Calls to CopyBuffer never need to be cleaned up (with e.g. delete or DECREF)
 // afterwards.
 //
 // If the return value is std::nullopt that means a Python error is set and the
 // current operation should be terminated ASAP.
-std::optional<zimtohrli::Analysis> Analyze(
-    const zimtohrli::Zimtohrli& zimtohrli, PyObject* buffer_object) {
+std::optional<hwy::AlignedNDArray<float, 1>> CopyBuffer(
+    PyObject* buffer_object) {
   Py_buffer buffer_view;
   if (PyObject_GetBuffer(buffer_object, &buffer_view, PyBUF_C_CONTIGUOUS)) {
     PyErr_SetString(PyExc_TypeError, "object is not buffer");
@@ -124,71 +101,7 @@ std::optional<zimtohrli::Analysis> Analyze(
   }
   hwy::AlignedNDArray<float, 1> signal_array({buffer_view.len / sizeof(float)});
   hwy::CopyBytes(buffer_view.buf, signal_array.data(), buffer_view.len);
-  hwy::AlignedNDArray<float, 2> channels(
-      {signal_array.size(), zimtohrli.cam_filterbank->filter.Size()});
-  return std::optional<zimtohrli::Analysis>{
-      zimtohrli.Analyze(signal_array[{}], channels)};
-}
-
-PyObject* BadArgument(const std::string& message) {
-  PyErr_SetString(PyExc_TypeError, message.c_str());
-  return nullptr;
-}
-
-PyObject* Pyohrli_analyze(PyohrliObject* self, PyObject* const* args,
-                          Py_ssize_t nargs) {
-  if (nargs != 1) {
-    return BadArgument("not exactly 1 argument provided");
-  }
-  std::optional<zimtohrli::Analysis> analysis =
-      Analyze(*self->zimtohrli, args[0]);
-  if (!analysis.has_value()) {
-    return nullptr;
-  }
-  AnalysisObject* result = PyObject_New(AnalysisObject, &AnalysisType);
-  if (result == nullptr) {
-    return nullptr;
-  }
-  try {
-    result->analysis = new zimtohrli::Analysis{
-        .energy_channels_db = std::move(analysis->energy_channels_db),
-        .partial_energy_channels_db =
-            std::move(analysis->partial_energy_channels_db),
-        .spectrogram = std::move(analysis->spectrogram)};
-    return (PyObject*)result;
-  } catch (const std::bad_alloc&) {
-    // Technically, this object should be deleted with PyObject_Del, but
-    // XDECREF includes a null check which we want anyway.
-    Py_XDECREF((PyObject*)result);
-    return PyErr_NoMemory();
-  }
-}
-
-// Plain C++ function to compute distance between two zimtohrli::Analysis.
-//
-// Calls to Distance never need to be cleaned up (with e.g. delete or DECREF)
-// afterwards.
-PyObject* Distance(const zimtohrli::Zimtohrli& zimtohrli,
-                   const zimtohrli::Analysis& analysis_a,
-                   const zimtohrli::Analysis& analysis_b) {
-  const zimtohrli::Distance distance =
-      zimtohrli.Distance(false, analysis_a.spectrogram, analysis_b.spectrogram);
-  return PyFloat_FromDouble(distance.value);
-}
-
-PyObject* Pyohrli_analysis_distance(PyohrliObject* self, PyObject* const* args,
-                                    Py_ssize_t nargs) {
-  if (nargs != 2) {
-    return BadArgument("not exactly 2 arguments provided");
-  }
-  if (!Py_IS_TYPE(args[0], &AnalysisType)) {
-    return BadArgument("argument 0 is not an Analysis instance");
-  }
-  if (!Py_IS_TYPE(args[1], &AnalysisType)) {
-    return BadArgument("argument 1 is not an Analysis instance");
-  }
-  return Distance(*self->zimtohrli, *((AnalysisObject*)args[0])->analysis,
-                  *((AnalysisObject*)args[1])->analysis);
+  return signal_array;
 }
 
 PyObject* Pyohrli_distance(PyohrliObject* self, PyObject* const* args,
@@ -196,24 +109,26 @@ PyObject* Pyohrli_distance(PyohrliObject* self, PyObject* const* args,
   if (nargs != 2) {
     return BadArgument("not exactly 2 arguments provided");
   }
-  const std::optional<zimtohrli::Analysis> analysis_a =
-      Analyze(*self->zimtohrli, args[0]);
-  if (!analysis_a.has_value()) {
+  const std::optional<hwy::AlignedNDArray<float, 1>> signal_a =
+      CopyBuffer(args[0]);
+  if (!signal_a.has_value()) {
     return nullptr;
   }
-  const std::optional<zimtohrli::Analysis> analysis_b =
-      Analyze(*self->zimtohrli, args[1]);
-  if (!analysis_b.has_value()) {
+  const std::optional<hwy::AlignedNDArray<float, 1>> signal_b =
+      CopyBuffer(args[1]);
+  if (!signal_b.has_value()) {
     return nullptr;
   }
-  return Distance(*self->zimtohrli, analysis_a.value(), analysis_b.value());
+  const hwy::AlignedNDArray<float, 2> spectrogram_a =
+      self->zimtohrli->StreamingSpectrogram((*signal_a)[{}]);
+  const hwy::AlignedNDArray<float, 2> spectrogram_b =
+      self->zimtohrli->StreamingSpectrogram((*signal_b)[{}]);
+  const zimtohrli::Distance distance =
+      self->zimtohrli->Distance(false, spectrogram_a, spectrogram_b);
+  return PyFloat_FromDouble(distance.value);
 }
 
 PyMethodDef Pyohrli_methods[] = {
-    {"analyze", (PyCFunction)Pyohrli_analyze, METH_FASTCALL,
-     "Returns an analysis of the provided signal."},
-    {"analysis_distance", (PyCFunction)Pyohrli_analysis_distance, METH_FASTCALL,
-     "Returns the distance between the two provided analyses."},
     {"distance", (PyCFunction)Pyohrli_distance, METH_FASTCALL,
      "Returns the distance between the two provided signals."},
     {nullptr} /* Sentinel */
@@ -262,15 +177,6 @@ PyModuleDef PyohrliModule = {
 PyMODINIT_FUNC PyInit__pyohrli(void) {
   PyObject* m = PyModule_Create(&PyohrliModule);
   if (m == nullptr) return nullptr;
-
-  if (PyType_Ready(&AnalysisType) < 0) {
-    Py_DECREF(m);
-    return nullptr;
-  }
-  if (PyModule_AddObjectRef(m, "Analysis", (PyObject*)&AnalysisType) < 0) {
-    Py_DECREF(m);
-    return nullptr;
-  }
 
   if (PyType_Ready(&PyohrliType) < 0) {
     Py_DECREF(m);

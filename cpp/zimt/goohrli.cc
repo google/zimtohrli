@@ -88,28 +88,20 @@ void FreeZimtohrli(Zimtohrli zimtohrli) {
   delete static_cast<zimtohrli::Zimtohrli*>(zimtohrli);
 }
 
-Analysis Analyze(Zimtohrli zimtohrli, float* data, int size) {
+float Distance(Zimtohrli zimtohrli, float* data_a, int size_a, float* data_b,
+               int size_b) {
   zimtohrli::Zimtohrli* z = static_cast<zimtohrli::Zimtohrli*>(zimtohrli);
-  hwy::AlignedNDArray<float, 1> signal({static_cast<size_t>(size)});
-  hwy::CopyBytes(data, signal.data(), size * sizeof(float));
-  hwy::AlignedNDArray<float, 2> channels(
-      {signal.shape()[0], z->cam_filterbank->filter.Size()});
-  zimtohrli::Analysis analysis = z->Analyze(signal[{}], channels);
-  return new zimtohrli::Analysis{
-      .energy_channels_db = std::move(analysis.energy_channels_db),
-      .partial_energy_channels_db =
-          std::move(analysis.partial_energy_channels_db),
-      .spectrogram = std::move(analysis.spectrogram)};
-}
-
-void FreeAnalysis(Analysis a) { delete static_cast<zimtohrli::Analysis*>(a); }
-
-float AnalysisDistance(Zimtohrli zimtohrli, Analysis a, Analysis b) {
-  zimtohrli::Zimtohrli* z = static_cast<zimtohrli::Zimtohrli*>(zimtohrli);
-  zimtohrli::Analysis* analysis_a = static_cast<zimtohrli::Analysis*>(a);
-  zimtohrli::Analysis* analysis_b = static_cast<zimtohrli::Analysis*>(b);
-  return z->Distance(false, analysis_a->spectrogram, analysis_b->spectrogram)
-      .value;
+  hwy::AlignedNDArray<float, 1> signal_a({static_cast<size_t>(size_a)});
+  hwy::CopyBytes(data_a, signal_a.data(), size_a * sizeof(float));
+  hwy::AlignedNDArray<float, 1> signal_b({static_cast<size_t>(size_b)});
+  hwy::CopyBytes(data_b, signal_b.data(), size_b * sizeof(float));
+  const hwy::AlignedNDArray<float, 2> spectrogram_a =
+      z->StreamingSpectrogram(signal_a[{}]);
+  const hwy::AlignedNDArray<float, 2> spectrogram_b =
+      z->StreamingSpectrogram(signal_b[{}]);
+  const zimtohrli::Distance distance =
+      z->Distance(false, spectrogram_a, spectrogram_b);
+  return distance.value;
 }
 
 ZimtohrliParameters GetZimtohrliParameters(const Zimtohrli zimtohrli) {

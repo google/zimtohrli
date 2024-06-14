@@ -316,34 +316,9 @@ func (g *Goohrli) NormalizedAudioDistance(audioA, audioB *audio.Audio) (float64,
 	return result, nil
 }
 
-// Analysis is a Go wrapper around zimthrli::Analysis.
-type Analysis struct {
-	analysis C.Analysis
-}
-
-// Analyze returns an analysis of the signal.
-func (g *Goohrli) Analyze(signal []float32) *Analysis {
-	result := &Analysis{
-		analysis: C.Analyze(g.zimtohrli, (*C.float)(&signal[0]), C.int(len(signal))),
-	}
-	runtime.SetFinalizer(result, func(a *Analysis) {
-		C.FreeAnalysis(a.analysis)
-	})
-	return result
-}
-
-// AnalysisDistance returns the Zimtohrli distance between two analyses.
-func (g *Goohrli) AnalysisDistance(analysisA *Analysis, analysisB *Analysis) float32 {
-	return float32(C.AnalysisDistance(g.zimtohrli, analysisA.analysis, analysisB.analysis))
-}
-
 // Distance returns the Zimtohrli distance between two signals.
 func (g *Goohrli) Distance(signalA []float32, signalB []float32) float64 {
-	analysisA := C.Analyze(g.zimtohrli, (*C.float)(&signalA[0]), C.int(len(signalA)))
-	defer C.FreeAnalysis(analysisA)
-	analysisB := C.Analyze(g.zimtohrli, (*C.float)(&signalB[0]), C.int(len(signalB)))
-	defer C.FreeAnalysis(analysisB)
-	return float64(C.AnalysisDistance(g.zimtohrli, analysisA, analysisB))
+	return float64(C.Distance(g.zimtohrli, (*C.float)(&signalA[0]), C.int(len(signalA)), (*C.float)(&signalB[0]), C.int(len(signalB))))
 }
 
 // ViSQOL is a Go wrapper around zimtohrli::ViSQOL.
