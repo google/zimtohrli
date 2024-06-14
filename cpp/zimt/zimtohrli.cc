@@ -289,16 +289,10 @@ void Zimtohrli::Spectrogram(
   }
 
   int downsample = signal.size() / energy_channels_db.shape()[0];
-  /* old code from hwycomputeenergy */
-  //  const size_t num_out_samples = energy_channels.shape()[0];
-  // const size_t downscaling = sample_channels.shape()[0] / num_out_samples;
 
-  //  printf("downsample %d\n", downsample);
   tabuli::Rotators rots(1, freqs, gains, cam_filterbank->sample_rate, 1.0f);
   rots.FilterAndDownsample(signal, energy_channels_db, downsample);
 
-  // ComputeEnergy(channels, energy_channels_db);
-  ToDb(energy_channels_db, full_scale_sine_db, epsilon, energy_channels_db);
   if (apply_masking) {
     masking.CutFullyMasked(energy_channels_db, cam_filterbank->cam_delta,
                            partial_energy_channels_db);

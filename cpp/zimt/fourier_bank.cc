@@ -43,6 +43,11 @@ float GetRotatorGains(int i) {
   return kRotatorGains[i];
 }
 
+float SimpleDb(float energy) {
+  static const float full_scale_sine_db = 78.3;
+  return 10 * log10(channels[{out_ix}][k] + 1e-9) + full_scale_sine_db;
+}
+
 void Rotators::FilterAndDownsample(hwy::Span<const float> signal,
                                    hwy::AlignedNDArray<float, 2>& channels,
                                    int downsampling) {
@@ -55,7 +60,8 @@ void Rotators::FilterAndDownsample(hwy::Span<const float> signal,
       if (input_ix >= signal.size()) {
         if (out_ix < channels.shape()[0]) {
           for (int k = 0; k < kNumRotators; ++k) {
-            channels[{out_ix}][k] *= scaling_for_downsampling;
+            channels[{out_ix}][k] =
+                SimpleDb(scaling_for_downsampling * channels[{out_ix}][k]);
           }
         }
         if (out_ix != channels.shape()[0] - 1) {
@@ -83,7 +89,8 @@ void Rotators::FilterAndDownsample(hwy::Span<const float> signal,
       }
     }
     for (int k = 0; k < kNumRotators; ++k) {
-      channels[{out_ix}][k] *= scaling_for_downsampling;
+      channels[{out_ix}][k] =
+          SimpleDb(scaling_for_downsampling * channels[{out_ix}][k]);
     }
     ++out_ix;
     if (out_ix >= channels.shape()[0]) {
