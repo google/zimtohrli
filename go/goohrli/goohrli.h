@@ -76,13 +76,6 @@ Zimtohrli CreateZimtohrli(ZimtohrliParameters params);
 // Deletes a zimtohrli::Zimtohrli.
 void FreeZimtohrli(Zimtohrli z);
 
-// void* representation of zimtohrli::Analysis.
-typedef void* Analysis;
-
-// Returns a zimtohrli::Analysis produced by the provided zimtohrli::Zimtohrli
-// and using the provided perceptual_sample_rate and data.
-Analysis Analyze(Zimtohrli zimtohrli, float* data, int size);
-
 // Plain C version of zimtohrli::EnergyAndMaxAbsAmplitude.
 typedef struct {
   float EnergyDBFS;
@@ -106,12 +99,9 @@ EnergyAndMaxAbsAmplitude NormalizeAmplitude(float max_abs_amplitude,
 // (zimtohrli::Distance(..., perceptual_sample_rate, ...) of 100Hz.
 float MOSFromZimtohrli(float zimtohrli_distance);
 
-// Deletes a zimtohrli::Analysis.
-void FreeAnalysis(Analysis a);
-
-// Returns the Zimtohrli distance between two analyses using the provided
-// zimtohrli::Zimtohrli.
-float AnalysisDistance(Zimtohrli zimtohrli, Analysis a, Analysis b);
+// Returns the Zimtohrli distance between data_b and data_b.
+float Distance(Zimtohrli zimtohrli, float* data_a, int size_a, float* data_b,
+               int size_b);
 
 // Sets the parameters.
 //

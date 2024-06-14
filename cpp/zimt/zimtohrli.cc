@@ -266,6 +266,55 @@ Distance Zimtohrli::Distance(
   }
 }
 
+hwy::AlignedNDArray<float, 2> Zimtohrli::StreamingSpectrogram(
+    hwy::Span<const float> signal) const {
+  hwy::AlignedNDArray<float, 2> chunk_energy_db_buffer(
+      {1, cam_filterbank->filter.Size()});
+  hwy::AlignedNDArray<float, 2> chunk_partial_energy_db_buffer(
+      {1, cam_filterbank->filter.Size()});
+  hwy::AlignedNDArray<float, 2> chunk_spectrogram_buffer(
+      {1, cam_filterbank->filter.Size()});
+  const size_t samples_per_chunk =
+      static_cast<size_t>(cam_filterbank->sample_rate / perceptual_sample_rate);
+  hwy::AlignedNDArray<float, 2> chunk_channels_buffer(
+      {samples_per_chunk, cam_filterbank->filter.Size()});
+  hwy::AlignedNDArray<float, 2> spectrogram(
+      {static_cast<size_t>(signal.size() / samples_per_chunk),
+       cam_filterbank->filter.Size()});
+  FilterbankState filter_state = cam_filterbank->filter.NewState();
+  for (size_t step = 0; (step + 1) * samples_per_chunk < signal.size();
+       ++step) {
+    cam_filterbank->filter.Filter(
+        hwy::Span<const float>(signal.data() + step * samples_per_chunk,
+                               samples_per_chunk),
+        filter_state, chunk_channels_buffer);
+    ComputeEnergy(chunk_channels_buffer, chunk_energy_db_buffer);
+    ToDb(chunk_energy_db_buffer, full_scale_sine_db, epsilon,
+         chunk_energy_db_buffer);
+    if (apply_masking) {
+      masking.CutFullyMasked(chunk_energy_db_buffer, cam_filterbank->cam_delta,
+                             chunk_partial_energy_db_buffer);
+    } else {
+      hwy::CopyBytes(chunk_energy_db_buffer.data(),
+                     chunk_partial_energy_db_buffer.data(),
+                     chunk_energy_db_buffer.memory_size() * sizeof(float));
+    }
+    if (apply_loudness) {
+      loudness.PhonsFromSPL(chunk_partial_energy_db_buffer,
+                            cam_filterbank->thresholds_hz,
+                            chunk_spectrogram_buffer);
+    } else {
+      hwy::CopyBytes(
+          chunk_partial_energy_db_buffer.data(),
+          chunk_spectrogram_buffer.data(),
+          chunk_partial_energy_db_buffer.memory_size() * sizeof(float));
+    }
+    hwy::CopyBytes(chunk_spectrogram_buffer.data(), spectrogram[{step}].data(),
+                   chunk_spectrogram_buffer.memory_size() * sizeof(float));
+  }
+  return spectrogram;
+}
+
 void Zimtohrli::Spectrogram(
     hwy::Span<const float> signal, FilterbankState& state,
     hwy::AlignedNDArray<float, 2>& channels,

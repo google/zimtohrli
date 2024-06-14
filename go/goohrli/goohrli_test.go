@@ -124,15 +124,9 @@ func TestGoohrli(t *testing.T) {
 		for index := 0; index < len(soundA); index++ {
 			soundA[index] = float32(math.Sin(2 * math.Pi * tc.freqA * float64(index) / params.SampleRate))
 		}
-		analysisA := g.Analyze(soundA)
 		soundB := make([]float32, int(params.SampleRate))
 		for index := 0; index < len(soundB); index++ {
 			soundB[index] = float32(math.Sin(2 * math.Pi * tc.freqB * float64(index) / params.SampleRate))
-		}
-		analysisB := g.Analyze(soundB)
-		analysisDistance := float64(g.AnalysisDistance(analysisA, analysisB))
-		if d := rdiff(analysisDistance, tc.distance); d > 0.1 {
-			t.Errorf("Distance = %v, want %v", analysisDistance, tc.distance)
 		}
 		distance := float64(g.Distance(soundA, soundB))
 		if d := rdiff(distance, tc.distance); d > 0.1 {
