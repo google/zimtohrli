@@ -285,6 +285,7 @@ void Zimtohrli::Spectrogram(
   std::vector<float> gains;
   for (size_t i = 0; i < cam_filterbank->filter.Size(); ++i) {
     freqs.push_back(cam_filterbank->thresholds_hz[{1}][i]);
+    //freqs.push_back(20.0 * pow(1000.0, 1.0 * i / (cam_filterbank->filter.Size() - 1)));
     gains.push_back(1.0);
   }
 

@@ -20,7 +20,7 @@
 
 namespace tabuli {
 
-constexpr int64_t kNumRotators = 128;
+constexpr int64_t kNumRotators = 150;
 
 float GetRotatorGains(int i);
 

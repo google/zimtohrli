@@ -19,7 +19,7 @@
 namespace tabuli {
 
 float GetRotatorGains(int i) {
-  static const float kRotatorGains[kNumRotators] = {
+  static const float kRotatorGains[128] = {
       1.050645, 1.948438, 3.050339, 3.967913, 4.818584, 5.303335, 5.560281,
       5.490826, 5.156689, 4.547374, 3.691308, 2.666868, 1.539254, 0.656948,
       0.345893, 0.327111, 0.985318, 1.223506, 0.447645, 0.830961, 1.075181,
