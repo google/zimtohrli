@@ -20,6 +20,8 @@ add_library(zimtohrli_base STATIC
     cpp/zimt/elliptic.h
     cpp/zimt/filterbank.cc
     cpp/zimt/filterbank.h
+    cpp/zimt/fourier_bank.h
+    cpp/zimt/fourier_bank.cc
     cpp/zimt/loudness.cc
     cpp/zimt/loudness.h
     cpp/zimt/masking.cc

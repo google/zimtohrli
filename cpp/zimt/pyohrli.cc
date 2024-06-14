@@ -124,10 +124,8 @@ std::optional<zimtohrli::Analysis> Analyze(
   }
   hwy::AlignedNDArray<float, 1> signal_array({buffer_view.len / sizeof(float)});
   hwy::CopyBytes(buffer_view.buf, signal_array.data(), buffer_view.len);
-  hwy::AlignedNDArray<float, 2> channels(
-      {signal_array.size(), zimtohrli.cam_filterbank->filter.Size()});
   return std::optional<zimtohrli::Analysis>{
-      zimtohrli.Analyze(signal_array[{}], channels)};
+      zimtohrli.Analyze(signal_array[{}])};
 }
 
 PyObject* BadArgument(const std::string& message) {

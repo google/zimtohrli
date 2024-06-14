@@ -300,8 +300,6 @@ int Main(int argc, char* argv[]) {
     const size_t num_downscaled_samples_a = static_cast<size_t>(
         std::ceil(static_cast<float>(file_a->Frames().shape()[1]) *
                   z.perceptual_sample_rate / z.cam_filterbank->sample_rate));
-    hwy::AlignedNDArray<float, 2> channels_a(
-        {file_a->Frames().shape()[1], z.cam_filterbank->filter.Size()});
     hwy::AlignedNDArray<float, 2> energy_channels_db_a(
         {num_downscaled_samples_a, z.cam_filterbank->filter.Size()});
     hwy::AlignedNDArray<float, 2> partial_energy_channels_db_a(
@@ -311,7 +309,7 @@ int Main(int argc, char* argv[]) {
          ++channel_index) {
       hwy::AlignedNDArray<float, 2> spectrogram(
           {num_downscaled_samples_a, z.cam_filterbank->filter.Size()});
-      z.Spectrogram(file_a->Frames()[{channel_index}], channels_a,
+      z.Spectrogram(file_a->Frames()[{channel_index}],
                     energy_channels_db_a, partial_energy_channels_db_a,
                     spectrogram);
       file_a_spectrograms.push_back(std::move(spectrogram));
@@ -322,8 +320,6 @@ int Main(int argc, char* argv[]) {
       const size_t num_downscaled_samples_b = static_cast<size_t>(
           std::ceil(static_cast<float>(file_b.Frames().shape()[1]) *
                     z.perceptual_sample_rate / z.cam_filterbank->sample_rate));
-      hwy::AlignedNDArray<float, 2> channels_b(
-          {file_b.Frames().shape()[1], z.cam_filterbank->filter.Size()});
       hwy::AlignedNDArray<float, 2> energy_channels_db_b(
           {num_downscaled_samples_b, z.cam_filterbank->filter.Size()});
       hwy::AlignedNDArray<float, 2> partial_energy_channels_db_b(
@@ -333,7 +329,7 @@ int Main(int argc, char* argv[]) {
       float sum_of_squares = 0;
       for (size_t channel_index = 0; channel_index < file_a->Info().channels;
            ++channel_index) {
-        z.Spectrogram(file_b.Frames()[{channel_index}], channels_b,
+        z.Spectrogram(file_b.Frames()[{channel_index}],
                       energy_channels_db_b, partial_energy_channels_db_b,
                       spectrogram_b);
         const float distance =

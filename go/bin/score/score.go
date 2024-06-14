@@ -78,6 +78,7 @@ func main() {
 		}
 		optimizeLog := func(ev data.OptimizationEvent) {}
 		if *optimizeLogfile != "" {
+			fmt.Println(optimizeLogfile)
 			f, err := os.OpenFile(*optimizeLogfile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
 			if err != nil {
 				log.Fatal(err)
@@ -139,7 +140,6 @@ func main() {
 			bar := progress.New("Calculating")
 			pool := &worker.Pool[any]{
 				Workers:  *workers,
-				OnChange: bar.Update,
 				FailFast: *failFast,
 			}
 			if err := bundle.Calculate(measurements, pool, *force); err != nil {

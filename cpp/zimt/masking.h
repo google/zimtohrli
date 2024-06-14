@@ -19,22 +19,6 @@
 
 namespace zimtohrli {
 
-// Populates the energy_channels with the (possibly downsampled) energy of the
-// sample_channels.
-//
-// Input and output contains linear energy values.
-//
-// sample_channels is a (num_samples, num_channels)-shaped array with samples.
-//
-// energy_channels is a (downscaled_num_samples, num_channels)-shaped array with
-// energy (mean square of samples).
-//
-// num_downscaled_samples must be less than num_samples, and is typically 100
-// x duration of the sound for a perceptual intensity sample rate of 100Hz
-// which has proven reasonable for human hearing time resolution.
-void ComputeEnergy(const hwy::AlignedNDArray<float, 2>& sample_channels,
-                   hwy::AlignedNDArray<float, 2>& energy_channels);
-
 // Populates energy_channels_db with the dB energy value of
 // energy_channels_linear.
 //

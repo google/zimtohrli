@@ -45,7 +45,7 @@ CamFilterbank Cam::CreateFilterbank(float sample_rate) const {
 
   int sections = -1;
   for (float left_cam = low_threshold_cam;
-       left_cam + cam_delta < high_threshold_cam; left_cam += cam_delta) {
+       left_cam + 0.5 * cam_delta < high_threshold_cam; left_cam += cam_delta) {
     float left_hz = HzFromCam(left_cam);
     float right_hz = HzFromCam(left_cam + cam_delta);
     const std::vector<BACoeffs> filter_coeffs = DigitalSOSBandPass(
