@@ -43,36 +43,6 @@ namespace HWY_NAMESPACE {
 const hwy::HWY_NAMESPACE::ScalableTag<float> d;
 using Vec = hwy::HWY_NAMESPACE::Vec<decltype(d)>;
 
-void HwyComputeEnergy(const hwy::AlignedNDArray<float, 2>& sample_channels,
-                      hwy::AlignedNDArray<float, 2>& energy_channels) {
-  const size_t num_out_samples = energy_channels.shape()[0];
-  const size_t downscaling = sample_channels.shape()[0] / num_out_samples;
-  const size_t num_in_samples = num_out_samples * downscaling;
-  const size_t num_channels = sample_channels.shape()[1];
-  const auto downscaling_reciprocal_vec = Set(d, 1.0f / downscaling);
-  Vec accumulator = Set(d, 0);
-  Vec samples = Set(d, 0);
-  size_t energy_sample_index = 0;
-
-  for (size_t sample_index = 0; sample_index < num_in_samples;
-       sample_index += downscaling) {
-    for (size_t channel_index = 0; channel_index < num_channels;
-         channel_index += Lanes(d)) {
-      accumulator = Set(d, 0);
-      for (size_t downscale_index = 0; downscale_index < downscaling;
-           ++downscale_index) {
-        samples =
-            Load(d, sample_channels[{sample_index + downscale_index}].data() +
-                        channel_index);
-        accumulator = Add(samples, accumulator);
-      }
-      Store(Mul(downscaling_reciprocal_vec, accumulator), d,
-            energy_channels[{energy_sample_index}].data() + channel_index);
-    }
-    ++energy_sample_index;
-  }
-}
-
 void HwyToDb(const hwy::AlignedNDArray<float, 2>& energy_channels_linear,
              float full_scale_sine_db, float epsilon,
              hwy::AlignedNDArray<float, 2>& energy_channels_db) {
@@ -239,18 +209,10 @@ HWY_AFTER_NAMESPACE();
 
 namespace zimtohrli {
 
-HWY_EXPORT(HwyComputeEnergy);
 HWY_EXPORT(HwyToDb);
 HWY_EXPORT(HwyToLinear);
 HWY_EXPORT(HwyFullMasking);
 HWY_EXPORT(HwyCutFullyMasked);
-
-void ComputeEnergy(const hwy::AlignedNDArray<float, 2>& sample_channels,
-                   hwy::AlignedNDArray<float, 2>& energy_channels) {
-  CHECK_GE(sample_channels.shape()[0], energy_channels.shape()[0]);
-  CHECK_EQ(sample_channels.shape()[1], energy_channels.shape()[1]);
-  HWY_DYNAMIC_DISPATCH(HwyComputeEnergy)(sample_channels, energy_channels);
-}
 
 void ToDb(const hwy::AlignedNDArray<float, 2>& energy_channels_linear,
           float full_scale_sine_db, float epsilon,

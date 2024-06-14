@@ -24,14 +24,6 @@ constexpr int64_t kNumRotators = 128;
 
 float GetRotatorGains(int i);
 
-enum FilterMode {
-  IDENTITY,
-  AMPLITUDE,
-  PHASE,
-};
-
-float BarkFreq(float v);
-
 struct PerChannel {
   // [0..1] is for real and imag of 1st leaking accumulation
   // [2..3] is for real and imag of 2nd leaking accumulation
@@ -53,19 +45,17 @@ struct Rotators {
   float window[kNumRotators];
   float gain[kNumRotators];
 
-  int FindMedian3xLeaker(float window);
-
   Rotators() = default;
   Rotators(int num_channels, std::vector<float> frequency,
            std::vector<float> filter_gains, const float sample_rate,
            float global_gain);
 
-  void Filter(hwy::Span<const float> signal,
-              hwy::AlignedNDArray<float, 2>& channels);
+  void FilterAndDownsample(hwy::Span<const float> signal,
+                           hwy::AlignedNDArray<float, 2>& channels,
+                           int downsample);
 
   void OccasionallyRenormalize();
   void IncrementAll(float signal);
-  float GetSample(int c, int i, FilterMode mode = IDENTITY) const;
   std::vector<float> rotator_frequency;
 };
 

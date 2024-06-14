@@ -214,14 +214,12 @@ struct Zimtohrli {
   // case it will be populated with the spectrogram content after the function
   // returns.
   void Spectrogram(hwy::Span<const float> signal, FilterbankState& state,
-                   hwy::AlignedNDArray<float, 2>& channels,
                    hwy::AlignedNDArray<float, 2>& energy_channels_db,
                    hwy::AlignedNDArray<float, 2>& partial_energy_channels_db,
                    hwy::AlignedNDArray<float, 2>& spectrogram) const;
 
   // Spectrogram without chunk processing.
   void Spectrogram(hwy::Span<const float> signal,
-                   hwy::AlignedNDArray<float, 2>& channels,
                    hwy::AlignedNDArray<float, 2>& energy_channels_db,
                    hwy::AlignedNDArray<float, 2>& partial_energy_channels_db,
                    hwy::AlignedNDArray<float, 2>& spectrogram) const;
@@ -252,12 +250,10 @@ struct Zimtohrli {
   //
   // channels is a (num_samples, num_channels)-shaped array that will be
   // populated with the audio samples in the individual channels.
-  Analysis Analyze(hwy::Span<const float> signal, FilterbankState& state,
-                   hwy::AlignedNDArray<float, 2>& channels) const;
+  Analysis Analyze(hwy::Span<const float> signal, FilterbankState& state) const;
 
   // Analyze without chunk processing.
-  Analysis Analyze(hwy::Span<const float> signal,
-                   hwy::AlignedNDArray<float, 2>& channels) const;
+  Analysis Analyze(hwy::Span<const float> signal) const;
 
   // Convenience method to compare multi channel audios.
   //

@@ -270,13 +270,9 @@ Distance Zimtohrli::Distance(
 
 void Zimtohrli::Spectrogram(
     hwy::Span<const float> signal, FilterbankState& state,
-    hwy::AlignedNDArray<float, 2>& channels,
     hwy::AlignedNDArray<float, 2>& energy_channels_db,
     hwy::AlignedNDArray<float, 2>& partial_energy_channels_db,
     hwy::AlignedNDArray<float, 2>& spectrogram) const {
-  CHECK_EQ(signal.size(), channels.shape()[0]);
-  CHECK_GE(channels.shape()[0], energy_channels_db.shape()[0]);
-  CHECK_EQ(channels.shape()[1], energy_channels_db.shape()[1]);
   CHECK_EQ(energy_channels_db.shape()[0],
            partial_energy_channels_db.shape()[0]);
   CHECK_EQ(energy_channels_db.shape()[1],
@@ -291,10 +287,17 @@ void Zimtohrli::Spectrogram(
     freqs.push_back(cam_filterbank->thresholds_hz[{1}][i]);
     gains.push_back(1.0);
   }
-  tabuli::Rotators rots(1, freqs, gains, cam_filterbank->sample_rate, 1.0f);
-  rots.Filter(signal, channels);
 
-  ComputeEnergy(channels, energy_channels_db);
+  int downsample = signal.size() / energy_channels_db.shape()[0];
+  /* old code from hwycomputeenergy */
+  //  const size_t num_out_samples = energy_channels.shape()[0];
+  // const size_t downscaling = sample_channels.shape()[0] / num_out_samples;
+
+  //  printf("downsample %d\n", downsample);
+  tabuli::Rotators rots(1, freqs, gains, cam_filterbank->sample_rate, 1.0f);
+  rots.FilterAndDownsample(signal, energy_channels_db, downsample);
+
+  // ComputeEnergy(channels, energy_channels_db);
   ToDb(energy_channels_db, full_scale_sine_db, epsilon, energy_channels_db);
   if (apply_masking) {
     masking.CutFullyMasked(energy_channels_db, cam_filterbank->cam_delta,
@@ -314,38 +317,37 @@ void Zimtohrli::Spectrogram(
 }
 
 void Zimtohrli::Spectrogram(
-    hwy::Span<const float> signal, hwy::AlignedNDArray<float, 2>& channels,
+    hwy::Span<const float> signal,
     hwy::AlignedNDArray<float, 2>& energy_channels_db,
     hwy::AlignedNDArray<float, 2>& partial_energy_channels_db,
     hwy::AlignedNDArray<float, 2>& spectrogram) const {
   FilterbankState new_state = cam_filterbank->filter.NewState();
-  Spectrogram(signal, new_state, channels, energy_channels_db,
+  Spectrogram(signal, new_state, energy_channels_db,
               partial_energy_channels_db, spectrogram);
 }
 
 Analysis Zimtohrli::Analyze(hwy::Span<const float> signal,
-                            FilterbankState& state,
-                            hwy::AlignedNDArray<float, 2>& channels) const {
+                            FilterbankState& state) const {
   const size_t num_downscaled_samples = static_cast<size_t>(std::max(
       1.0f, std::ceil(static_cast<float>(signal.size()) *
                       perceptual_sample_rate / cam_filterbank->sample_rate)));
+  size_t filters = cam_filterbank->filter.Size();
   hwy::AlignedNDArray<float, 2> energy_channels_db(
-      {num_downscaled_samples, channels.shape()[1]});
+      {num_downscaled_samples, filters});
   hwy::AlignedNDArray<float, 2> partial_energy_channels_db(
-      {num_downscaled_samples, channels.shape()[1]});
+      {num_downscaled_samples, filters});
   hwy::AlignedNDArray<float, 2> spectrogram(
-      {num_downscaled_samples, channels.shape()[1]});
-  Spectrogram(signal, state, channels, energy_channels_db,
+      {num_downscaled_samples, filters});
+  Spectrogram(signal, state, energy_channels_db,
               partial_energy_channels_db, spectrogram);
   return {.energy_channels_db = std::move(energy_channels_db),
           .partial_energy_channels_db = std::move(partial_energy_channels_db),
           .spectrogram = std::move(spectrogram)};
 }
 
-Analysis Zimtohrli::Analyze(hwy::Span<const float> signal,
-                            hwy::AlignedNDArray<float, 2>& channels) const {
+Analysis Zimtohrli::Analyze(hwy::Span<const float> signal) const {
   FilterbankState new_state = cam_filterbank->filter.NewState();
-  return Analyze(signal, new_state, channels);
+  return Analyze(signal, new_state);
 }
 
 AnalysisDTW::AnalysisDTW(const Analysis& analysis_a, const Analysis& analysis_b,
@@ -393,15 +395,11 @@ Comparison Zimtohrli::Compare(
   std::vector<std::vector<AnalysisDTW>> dtw(frames_b_span.size());
   for (size_t audio_channel_index = 0; audio_channel_index < num_audio_channels;
        ++audio_channel_index) {
-    hwy::AlignedNDArray<float, 2> channels_a(
-        {frames_a.shape()[1], cam_filterbank->filter.Size()});
     Analysis current_analysis_a =
-        Analyze(frames_a[{audio_channel_index}], channels_a);
+        Analyze(frames_a[{audio_channel_index}]);
     for (size_t b_index = 0; b_index < frames_b_span.size(); ++b_index) {
-      hwy::AlignedNDArray<float, 2> channels_b(
-          {frames_b_span[b_index]->shape()[1], cam_filterbank->filter.Size()});
       Analysis current_analysis_b =
-          Analyze((*frames_b_span[b_index])[{audio_channel_index}], channels_b);
+          Analyze((*frames_b_span[b_index])[{audio_channel_index}]);
 
       const AnalysisDTW current_analysis_dtw =
           unwarp_window_seconds == 0
