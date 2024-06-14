@@ -45,7 +45,7 @@ float GetRotatorGains(int i) {
 
 float SimpleDb(float energy) {
   static const float full_scale_sine_db = 78.3;
-  return 10 * log10(channels[{out_ix}][k] + 1e-9) + full_scale_sine_db;
+  return 10 * log10(energy + 1e-9) + full_scale_sine_db;
 }
 
 void Rotators::FilterAndDownsample(hwy::Span<const float> signal,
