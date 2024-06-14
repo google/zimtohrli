@@ -43,24 +43,52 @@ float GetRotatorGains(int i) {
   return kRotatorGains[i];
 }
 
-void Rotators::Filter(hwy::Span<const float> signal,
-                      hwy::AlignedNDArray<float, 2>& channels) {
-  const int audio_channel = 0;
-
+void Rotators::FilterAndDownsample(hwy::Span<const float> signal,
+                                   hwy::AlignedNDArray<float, 2>& channels,
+                                   int downsampling) {
+  float scaling_for_downsampling = 1.0f / downsampling;
   size_t out_ix = 0;
-  OccasionallyRenormalize();
-  for (int64_t i = 0; i < signal.size(); ++i) {
-    if ((i & 0xfff) == 0) {
-      OccasionallyRenormalize();
+  for (int64_t ii = 0; ii < signal.size(); ii += downsampling) {
+    OccasionallyRenormalize();
+    for (int64_t zz = 0; zz < downsampling; ++zz) {
+      int64_t input_ix = ii + zz;
+      if (input_ix >= signal.size()) {
+        if (out_ix < channels.shape()[0]) {
+          for (int k = 0; k < kNumRotators; ++k) {
+            channels[{out_ix}][k] *= scaling_for_downsampling;
+          }
+        }
+        if (out_ix != channels.shape()[0] - 1) {
+          fprintf(stderr,
+                  "strange thing #9831021 happened in FilterAndDownsample\n");
+          abort();
+        }
+        return;
+      }
+      IncrementAll(signal[input_ix]);
+      if (zz == 0) {
+        for (int k = 0; k < kNumRotators; ++k) {
+          float energy =
+              channel[0].accu[4][k] * channel[0].accu[4][k] +
+              channel[0].accu[5][k] * channel[0].accu[5][k];
+          channels[{out_ix}][k] = energy;
+        }
+      } else {
+        for (int k = 0; k < kNumRotators; ++k) {
+          float energy =
+              channel[0].accu[4][k] * channel[0].accu[4][k] +
+              channel[0].accu[5][k] * channel[0].accu[5][k];
+          channels[{out_ix}][k] += energy;
+        }
+      }
     }
-    IncrementAll(signal[i]);
     for (int k = 0; k < kNumRotators; ++k) {
-      float energy =
-          channel[0].accu[4][k] * channel[0].accu[4][k] +
-          channel[0].accu[5][k] * channel[0].accu[5][k];
-      channels[{out_ix}][k] = energy;
+      channels[{out_ix}][k] *= scaling_for_downsampling;
     }
     ++out_ix;
+    if (out_ix >= channels.shape()[0]) {
+      return;
+    }
   }
 }
 
@@ -109,19 +137,20 @@ void Rotators::IncrementAll(float signal) {
     rot[2][i] = tr;
     rot[3][i] = tc;
     const float w = window[i];
-    int c = 0;
-    channel[c].accu[0][i] *= w;
-    channel[c].accu[1][i] *= w;
-    channel[c].accu[2][i] *= w;
-    channel[c].accu[3][i] *= w;
-    channel[c].accu[4][i] *= w;
-    channel[c].accu[5][i] *= w;
-    channel[c].accu[2][i] += channel[c].accu[0][i];
-    channel[c].accu[3][i] += channel[c].accu[1][i];
-    channel[c].accu[4][i] += channel[c].accu[2][i];
-    channel[c].accu[5][i] += channel[c].accu[3][i];
-    channel[c].accu[0][i] += rot[2][i] * signal;
-    channel[c].accu[1][i] += rot[3][i] * signal;
+    for (int c = 0; c < 1; ++c) {
+      channel[c].accu[0][i] *= w;
+      channel[c].accu[1][i] *= w;
+      channel[c].accu[2][i] *= w;
+      channel[c].accu[3][i] *= w;
+      channel[c].accu[4][i] *= w;
+      channel[c].accu[5][i] *= w;
+      channel[c].accu[2][i] += channel[c].accu[0][i];
+      channel[c].accu[3][i] += channel[c].accu[1][i];
+      channel[c].accu[4][i] += channel[c].accu[2][i];
+      channel[c].accu[5][i] += channel[c].accu[3][i];
+      channel[c].accu[0][i] += rot[2][i] * signal;
+      channel[c].accu[1][i] += rot[3][i] * signal;
+    }
   }
 }
 

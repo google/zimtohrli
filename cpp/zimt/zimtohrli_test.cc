@@ -235,10 +235,8 @@ TEST(Zimtohrli, AnalysisTest) {
 
   hwy::AlignedNDArray<float, 2> signal =
       CreateSignal(sample_rate, seconds_of_audio, {{channel_hz, 1.0}});
-  hwy::AlignedNDArray<float, 2> channels(
-      {signal.shape()[1], z.cam_filterbank->filter.Size()});
 
-  Analysis result = z.Analyze(signal[{0}], channels);
+  Analysis result = z.Analyze(signal[{0}]);
 
   EXPECT_EQ(PeakChannel(result.spectrogram), channel);
   EXPECT_NEAR(result.energy_channels_db[{last_energy_sample}][channel],
@@ -334,11 +332,9 @@ TEST(Zimtohrli, ComparisonTest) {
   audio_b.push_back(std::move(audio_b_frames));
   audio_b_pointers.push_back(&audio_b[0]);
   CreateAudio(sample_rate, {{{channel_1_hz, 1.0}}}, audio_b[0]);
-  hwy::AlignedNDArray<float, 2> channels(
-      {audio_a.shape()[1], z.cam_filterbank->filter.Size()});
 
-  Analysis analysis_a = z.Analyze(audio_a[{0}], channels);
-  Analysis analysis_b = z.Analyze(audio_b[0][{0}], channels);
+  Analysis analysis_a = z.Analyze(audio_a[{0}]);
+  Analysis analysis_b = z.Analyze(audio_b[0][{0}]);
 
   Comparison comparison = z.Compare(audio_a, audio_b_pointers);
 
@@ -425,7 +421,7 @@ TEST(Zimtohrli, SpectrogramTest) {
   const float low_channel_amplitude = 1.0;
   z.Spectrogram(CreateSignal(sample_rate, seconds_of_audio,
                              {{low_channel_hz, low_channel_amplitude}})[{0}],
-                channels, energy_channels_db, partial_energy_channels_db,
+                energy_channels_db, partial_energy_channels_db,
                 spectrogram);
   EXPECT_EQ(PeakChannel(spectrogram), low_channel);
   EXPECT_NEAR(energy_channels_db[{last_energy_sample}][low_channel],
@@ -442,7 +438,7 @@ TEST(Zimtohrli, SpectrogramTest) {
   const float high_channel_amplitude = 0.1;
   z.Spectrogram(CreateSignal(sample_rate, seconds_of_audio,
                              {{high_channel_hz, high_channel_amplitude}})[{0}],
-                channels, energy_channels_db, partial_energy_channels_db,
+                energy_channels_db, partial_energy_channels_db,
                 spectrogram);
   EXPECT_EQ(PeakChannel(spectrogram), high_channel);
   EXPECT_NEAR(energy_channels_db[{last_energy_sample}][high_channel],
@@ -455,7 +451,7 @@ TEST(Zimtohrli, SpectrogramTest) {
   z.Spectrogram(CreateSignal(sample_rate, seconds_of_audio,
                              {{low_channel_hz, low_channel_amplitude},
                               {high_channel_hz, high_channel_amplitude}})[{0}],
-                channels, energy_channels_db, partial_energy_channels_db,
+                energy_channels_db, partial_energy_channels_db,
                 spectrogram);
   EXPECT_EQ(PeakChannel(spectrogram), low_channel);
   EXPECT_NEAR(spectrogram[{last_energy_sample}][low_channel],
@@ -484,9 +480,9 @@ void BM_SpectrogramDistanceVsSeconds(benchmark::State& state) {
       {energy_channels_db.shape()[0], energy_channels_db.shape()[1]});
 
   for (auto s : state) {
-    z1.Spectrogram(signal[{}], channels, energy_channels_db,
+    z1.Spectrogram(signal[{}], energy_channels_db,
                    partial_energy_channels_db, spectrogram1);
-    z2.Spectrogram(signal[{}], channels, energy_channels_db,
+    z2.Spectrogram(signal[{}], energy_channels_db,
                    partial_energy_channels_db, spectrogram2);
     z1.Distance(false, spectrogram1, spectrogram2);
   }
@@ -517,9 +513,9 @@ void BM_SpectrogramDistanceVsResolution(benchmark::State& state) {
       {energy_channels_db.shape()[0], energy_channels_db.shape()[1]});
 
   for (auto s : state) {
-    z1.Spectrogram(signal[{}], channels, energy_channels_db,
+    z1.Spectrogram(signal[{}], energy_channels_db,
                    partial_energy_channels_db, spectrogram1);
-    z2.Spectrogram(signal[{}], channels, energy_channels_db,
+    z2.Spectrogram(signal[{}], energy_channels_db,
                    partial_energy_channels_db, spectrogram2);
     z1.Distance(false, spectrogram1, spectrogram2);
   }
@@ -594,11 +590,11 @@ TEST(Zimtohrli, FindMaxDistortionTest) {
        offset += chunk.shape()[1]) {
     hwy::CopyBytes(signal[{0}].data() + offset, chunk[{0}].data(),
                    sizeof(float) * chunk.shape()[1]);
-    z1.Spectrogram(chunk[{0}], z1_state, channels, energy_channels_db,
+    z1.Spectrogram(chunk[{0}], z1_state, energy_channels_db,
                    partial_energy_channels_db, spectrogram1);
     hwy::CopyBytes(distortion.data() + offset, chunk.data(),
                    sizeof(float) * chunk.shape()[1]);
-    z2.Spectrogram(chunk[{0}], z2_state, channels, energy_channels_db,
+    z2.Spectrogram(chunk[{0}], z2_state, energy_channels_db,
                    partial_energy_channels_db, spectrogram2);
     const float distance = z1.Distance(false, spectrogram1, spectrogram2).value;
     if (distance > max_distance) {

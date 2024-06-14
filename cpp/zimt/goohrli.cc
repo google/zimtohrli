@@ -103,9 +103,7 @@ Analysis Analyze(Zimtohrli zimtohrli, float* data, int size) {
   zimtohrli::Zimtohrli* z = static_cast<zimtohrli::Zimtohrli*>(zimtohrli);
   hwy::AlignedNDArray<float, 1> signal({static_cast<size_t>(size)});
   hwy::CopyBytes(data, signal.data(), size * sizeof(float));
-  hwy::AlignedNDArray<float, 2> channels(
-      {signal.shape()[0], tabuli::kNumRotators});
-  zimtohrli::Analysis analysis = z->Analyze(signal[{}], channels);
+  zimtohrli::Analysis analysis = z->Analyze(signal[{}]);
   return new zimtohrli::Analysis{
       .energy_channels_db = std::move(analysis.energy_channels_db),
       .partial_energy_channels_db =

@@ -31,50 +31,6 @@ void CheckNear(hwy::Span<float> span, std::vector<float> expected) {
               testing::Pointwise(testing::FloatNear(1e-5), expected));
 }
 
-TEST(Masking, ComputeEnergyTest) {
-  hwy::AlignedNDArray<float, 2> sample_channels({10, 2});
-  for (size_t sample_index = 0; sample_index < sample_channels.shape()[0];
-       ++sample_index) {
-    sample_channels[{sample_index}] = {
-        static_cast<float>(sample_index + 1),
-        static_cast<float>((sample_index + 1) * 2)};
-  }
-  hwy::AlignedNDArray<float, 2> got_energy_downsampled_2x({5, 2});
-  ComputeEnergy(sample_channels, got_energy_downsampled_2x);
-  CheckNear(got_energy_downsampled_2x[{0}],
-            {(1.0 + 4.0) / 2.0, (4.0 + 16.0) / 2.0});
-  CheckNear(got_energy_downsampled_2x[{1}],
-            {(9.0 + 16.0) / 2.0, (36.0 + 64.0) / 2.0});
-  CheckNear(got_energy_downsampled_2x[{2}],
-            {(25.0 + 36.0) / 2.0, (100.0 + 144.0) / 2.0});
-  CheckNear(got_energy_downsampled_2x[{3}],
-            {(49.0 + 64.0) / 2.0, (14.0 * 14.0 + 16.0 * 16.0) / 2.0});
-  CheckNear(got_energy_downsampled_2x[{4}],
-            {(81.0 + 100.0) / 2.0, (18.0 * 18.0 + 400.0) / 2.0});
-
-  hwy::AlignedNDArray<float, 2> got_energy_downsampled_5x({2, 2});
-  ComputeEnergy(sample_channels, got_energy_downsampled_5x);
-  CheckNear(got_energy_downsampled_5x[{0}],
-            {(1.0 + 4.0 + 9.0 + 16.0 + 25.0) / 5.0,
-             (4.0 + 16.0 + 36.0 + 64.0 + 100.0) / 5.0});
-  CheckNear(got_energy_downsampled_5x[{1}],
-            {(36.0 + 49.0 + 64.0 + 81.0 + 100.0) / 5.0,
-             (144.0 + 14.0 * 14.0 + 16.0 * 16.0 + 18.0 * 18.0 + 400.0) / 5.0});
-}
-
-void BM_ComputeEnergy(benchmark::State& state) {
-  const size_t sample_rate = 48000;
-  const hwy::AlignedNDArray<float, 2> sample_channels(
-      {sample_rate * state.range(0), 1024});
-  hwy::AlignedNDArray<float, 2> energy_channels(
-      {100 * static_cast<size_t>(state.range(0)), 1024});
-  for (auto s : state) {
-    ComputeEnergy(sample_channels, energy_channels);
-  }
-  state.SetItemsProcessed(sample_channels.size() * state.iterations());
-}
-BENCHMARK_RANGE(BM_ComputeEnergy, 1, 64);
-
 TEST(Masking, ToDbToLinear) {
   hwy::AlignedNDArray<float, 2> energy_channels_linear({2, 2});
   energy_channels_linear[{0}] = {0.1, 0.01};
