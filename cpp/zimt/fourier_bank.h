@@ -22,8 +22,6 @@ namespace tabuli {
 
 constexpr int64_t kNumRotators = 150;
 
-float GetRotatorGains(int i);
-
 struct PerChannel {
   // [0..1] is for real and imag of 1st leaking accumulation
   // [2..3] is for real and imag of 2nd leaking accumulation
@@ -47,8 +45,7 @@ struct Rotators {
 
   Rotators() = default;
   Rotators(int num_channels, std::vector<float> frequency,
-           std::vector<float> filter_gains, const float sample_rate,
-           float global_gain);
+           std::vector<float> filter_gains, const float sample_rate);
 
   void FilterAndDownsample(hwy::Span<const float> signal,
                            hwy::AlignedNDArray<float, 2>& channels,

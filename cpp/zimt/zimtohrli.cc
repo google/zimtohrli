@@ -291,7 +291,7 @@ void Zimtohrli::Spectrogram(
 
   int downsample = signal.size() / energy_channels_db.shape()[0];
 
-  tabuli::Rotators rots(1, freqs, gains, cam_filterbank->sample_rate, 1.0f);
+  tabuli::Rotators rots(1, freqs, gains, cam_filterbank->sample_rate);
   rots.FilterAndDownsample(signal, energy_channels_db, downsample);
 
   if (apply_masking) {
