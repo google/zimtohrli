@@ -176,11 +176,11 @@ std::ostream& operator<<(std::ostream& outs, const DistanceData& data) {
   return outs;
 }
 
-float GetMetric(float zimtohrli_score) {
+float GetMetric(const zimtohrli::Zimtohrli& z, float zimtohrli_score) {
   if (absl::GetFlag(FLAGS_output_zimtohrli_distance)) {
     return zimtohrli_score;
   }
-  return MOSFromZimtohrli(zimtohrli_score);
+  return z.mos_mapper.Map(zimtohrli_score);
 }
 
 int Main(int argc, char* argv[]) {
@@ -340,7 +340,7 @@ int Main(int argc, char* argv[]) {
             z.Distance(false, file_a_spectrograms[channel_index], spectrogram_b)
                 .value;
         if (per_channel) {
-          std::cout << GetMetric(distance) << std::endl;
+          std::cout << GetMetric(z, distance) << std::endl;
         } else {
           sum_of_squares += distance * distance;
         }
@@ -348,8 +348,8 @@ int Main(int argc, char* argv[]) {
       if (!per_channel) {
         for (int file_b_index = 0; file_b_index < file_b_vector.size();
              ++file_b_index) {
-          std::cout << GetMetric(std::sqrt(sum_of_squares /
-                                           float(file_a->Info().channels)))
+          std::cout << GetMetric(z, std::sqrt(sum_of_squares /
+                                              float(file_a->Info().channels)))
                     << std::endl;
         }
       }
@@ -413,13 +413,13 @@ int Main(int argc, char* argv[]) {
         const float distance = phons_channel_distance.distance.value;
         sum_of_squares += distance * distance;
 
-        std::cout << "    Channel MOS: " << MOSFromZimtohrli(distance)
+        std::cout << "    Channel MOS: " << z.mos_mapper.Map(distance)
                   << std::endl;
       }
       const float zimtohrli_file_distance =
           std::sqrt(sum_of_squares / float(comparison.analysis_a.size()));
       std::cout << "  File distance: " << zimtohrli_file_distance << std::endl;
-      std::cout << "  File MOS: " << MOSFromZimtohrli(zimtohrli_file_distance)
+      std::cout << "  File MOS: " << z.mos_mapper.Map(zimtohrli_file_distance)
                 << std::endl;
     }
     return 0;

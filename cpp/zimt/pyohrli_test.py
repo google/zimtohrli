@@ -75,8 +75,9 @@ class PyohrliTest(unittest.TestCase):
         dict(zimtohrli_distance=1.0, mos=1.1411819458007812),
     )
     def test_mos_from_zimtohrli(self, zimtohrli_distance: float, mos: float):
+        metric = pyohrli.Pyohrli(48000.0)
         self.assertAlmostEqual(
-            mos, pyohrli.mos_from_zimtohrli(zimtohrli_distance), places=3
+            mos, metric.mos_from_zimtohrli(zimtohrli_distance), places=3
         )
 
 

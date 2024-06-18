@@ -41,6 +41,7 @@ func TestMeasureAndNormalize(t *testing.T) {
 }
 
 func TestMOSFromZimtohrli(t *testing.T) {
+	g := New(DefaultParameters(48000))
 	for _, tc := range []struct {
 		zimtDistance float64
 		wantMOS      float64
@@ -66,7 +67,7 @@ func TestMOSFromZimtohrli(t *testing.T) {
 			wantMOS:      1.1411819458007812,
 		},
 	} {
-		if mos := MOSFromZimtohrli(tc.zimtDistance); math.Abs(mos-tc.wantMOS) > 1e-2 {
+		if mos := g.MOSFromZimtohrli(tc.zimtDistance); math.Abs(mos-tc.wantMOS) > 1e-2 {
 			t.Errorf("MOSFromZimtohrli(%v) = %v, want %v", tc.zimtDistance, mos, tc.wantMOS)
 		}
 	}

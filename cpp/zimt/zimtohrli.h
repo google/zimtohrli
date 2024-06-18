@@ -25,6 +25,7 @@
 #include "zimt/cam.h"
 #include "zimt/loudness.h"
 #include "zimt/masking.h"
+#include "zimt/mos.h"
 
 namespace zimtohrli {
 
@@ -325,6 +326,9 @@ struct Zimtohrli {
 
   // Perceptual intensity model.
   Loudness loudness;
+
+  // MOS mapping model.
+  MOSMapper mos_mapper;
 
   // Whether the masking model is applied when creating spectrograms.
   bool apply_masking = true;

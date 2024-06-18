@@ -516,6 +516,10 @@ func (r ReferenceBundles) Split(rng *rand.Rand, split float64) (ReferenceBundles
 	return left, right
 }
 
+func (r ReferenceBundles) OptimizeMapping() ([]float32, error) {
+	return nil, nil
+}
+
 // OptimizationEvent is a step in the optimization process.
 type OptimizationEvent struct {
 	Parameters goohrli.Parameters

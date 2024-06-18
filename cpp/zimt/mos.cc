@@ -21,19 +21,14 @@ namespace zimtohrli {
 
 namespace {
 
-const std::array<float, 3> params = {1.000e+00, -7.449e-09, 3.344e+00};
-
-float sigmoid(float x) {
+float sigmoid(const std::array<float, 3>& params, float x) {
   return params[0] / (params[1] + std::exp(params[2] * x));
 }
 
-const float zero_crossing_reciprocal = 1.0 / sigmoid(0);
-
 }  // namespace
 
-// Optimized using `mos_mapping.ipynb`.
-float MOSFromZimtohrli(float zimtohrli_distance) {
-  return 1.0 + 4.0 * sigmoid(zimtohrli_distance) * zero_crossing_reciprocal;
+float MOSMapper::Map(float zimtohrli_distance) const {
+  return 1.0 + 4.0 * sigmoid(params, zimtohrli_distance) / sigmoid(params, 0);
 }
 
 }  // namespace zimtohrli

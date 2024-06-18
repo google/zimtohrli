@@ -103,11 +103,12 @@ func main() {
 	}
 
 	if *zimtohrli {
+		g := goohrli.New(zimtohrliParameters)
 		getMetric := func(f float64) float64 {
 			if *outputZimtohrliDistance {
 				return f
 			}
-			return goohrli.MOSFromZimtohrli(f)
+			return g.MOSFromZimtohrli(f)
 		}
 
 		if err := zimtohrliParameters.Update([]byte(*zimtohrliParametersJSON)); err != nil {
@@ -117,7 +118,6 @@ func main() {
 			log.Printf("Using %+v", zimtohrliParameters)
 		}
 		zimtohrliParameters.SampleRate = signalA.Rate
-		g := goohrli.New(zimtohrliParameters)
 		if *perChannel {
 			for channelIndex := range signalA.Samples {
 				measurement := goohrli.Measure(signalA.Samples[channelIndex])

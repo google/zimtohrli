@@ -15,15 +15,28 @@
 #ifndef CPP_ZIMT_MOS_H_
 #define CPP_ZIMT_MOS_H_
 
+#include <array>
+
 namespace zimtohrli {
 
-// Returns a _very_approximate_ mean opinion score based on the
-// provided Zimtohrli distance.
-// This is calibrated using default settings of v0.1.5, with a
-// minimum channel bandwidth (zimtohrli::Cam.minimum_bandwidth_hz)
-// of 5Hz and perceptual sample rate
-// (zimtohrli::Distance(..., perceptual_sample_rate, ...) of 100Hz.
-float MOSFromZimtohrli(float zimtohrli_distance);
+// Maps from Zimtohrli distance to MOS.
+struct MOSMapper {
+  // Returns a _very_approximate_ mean opinion score based on the
+  // provided Zimtohrli distance.
+  //
+  // Computed by:
+  // s(x) = params[0] / (params[1] + e^(params[2] * x))
+  // MOS = 1 + 4 * s(distance)) / s(0)
+  //
+  // This is calibrated using default settings of v0.1.5, with a
+  // minimum channel bandwidth (zimtohrli::Cam.minimum_bandwidth_hz)
+  // of 5Hz and perceptual sample rate
+  // (zimtohrli::Distance(..., perceptual_sample_rate, ...) of 100Hz.
+  float Map(float zimtohrli_distance) const;
+
+  // Params used when mapping Zimtohrli distance to MOS.
+  std::array<float, 3> params = {1.000e+00, -7.449e-09, 3.344e+00};
+};
 
 }  // namespace zimtohrli
 
