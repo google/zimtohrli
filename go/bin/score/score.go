@@ -60,9 +60,10 @@ func main() {
 	optimizeNumSteps := flag.Float64("optimize_num_steps", 1000, "Number of steps for the simulated annealing.")
 	workers := flag.Int("workers", runtime.NumCPU(), "Number of concurrent workers for tasks.")
 	failFast := flag.Bool("fail_fast", false, "Whether to panic immediately on any error.")
+	optimizeMapping := flag.String("optimize_mapping", "", "Glob to directories with databases to optimize the MOS mapping for.")
 	flag.Parse()
 
-	if *details == "" && *calculate == "" && *correlate == "" && *accuracy == "" && *leaderboard == "" && *report == "" && *optimize == "" {
+	if *details == "" && *calculate == "" && *correlate == "" && *accuracy == "" && *leaderboard == "" && *report == "" && *optimize == "" && *optimizeMapping == "" {
 		flag.Usage()
 		os.Exit(1)
 	}
@@ -88,10 +89,21 @@ func main() {
 				f.Sync()
 			}
 		}
-		err = bundles.Optimize(*optimizeStartStep, *optimizeNumSteps, optimizeLog)
+		if err = bundles.Optimize(*optimizeStartStep, *optimizeNumSteps, optimizeLog); err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	if *optimizeMapping != "" {
+		bundles, err := data.OpenBundles(*optimizeMapping)
 		if err != nil {
 			log.Fatal(err)
 		}
+		params, err := bundles.OptimizeMapping()
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(params)
 	}
 
 	if *calculate != "" {

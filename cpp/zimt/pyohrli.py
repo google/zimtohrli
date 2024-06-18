@@ -19,11 +19,6 @@ import numpy.typing as npt
 import _pyohrli
 
 
-def mos_from_zimtohrli(zimtohrli_distance: float) -> float:
-    """Returns an approximate mean opinion score based on the provided Zimtohrli distance."""
-    return _pyohrli.MOSFromZimtohrli(zimtohrli_distance)
-
-
 class Pyohrli:
     """Wrapper around C++ zimtohrli::Zimtohrli."""
 
@@ -55,6 +50,10 @@ class Pyohrli:
             np.asarray(signal_a).astype(np.float32).ravel().data,
             np.asarray(signal_b).astype(np.float32).ravel().data,
         )
+
+    def mos_from_zimtohrli(self, zimtohrli_distance: float) -> float:
+        """Returns an approximate mean opinion score based on the provided Zimtohrli distance."""
+        return self._cc_pyohrli.mos_from_zimtohrli(zimtohrli_distance)
 
     @property
     def full_scale_sine_db(self) -> float:

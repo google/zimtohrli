@@ -45,6 +45,11 @@ int NumLoudnessTFParams() {
   return NUM_LOUDNESS_T_F_PARAMS;
 }
 
+int NumMOSMapperParams() {
+  CHECK_EQ(NUM_MOS_MAPPER_PARAMS, zimtohrli::MOSMapper{}.params.size());
+  return NUM_MOS_MAPPER_PARAMS;
+}
+
 EnergyAndMaxAbsAmplitude Measure(const float* signal, int size) {
   hwy::AlignedNDArray<float, 1> signal_array({static_cast<size_t>(size)});
   hwy::CopyBytes(signal, signal_array.data(), size * sizeof(float));
@@ -67,11 +72,12 @@ EnergyAndMaxAbsAmplitude NormalizeAmplitude(float max_abs_amplitude,
       .MaxAbsAmplitude = measurements.max_abs_amplitude};
 }
 
-float MOSFromZimtohrli(float zimtohrli_distance) {
-  return zimtohrli::MOSFromZimtohrli(zimtohrli_distance);
+float MOSFromZimtohrli(const Zimtohrli zimtohrli, float zimtohrli_distance) {
+  const zimtohrli::Zimtohrli* z = static_cast<zimtohrli::Zimtohrli*>(zimtohrli);
+  return z->mos_mapper.Map(zimtohrli_distance);
 }
 
-Zimtohrli CreateZimtohrli(ZimtohrliParameters params) {
+Zimtohrli CreateZimtohrli(const ZimtohrliParameters params) {
   zimtohrli::Cam cam{.minimum_bandwidth_hz = params.FrequencyResolution,
                      .filter_order = params.FilterOrder,
                      .filter_pass_band_ripple = params.FilterPassBandRipple,
@@ -88,9 +94,9 @@ void FreeZimtohrli(Zimtohrli zimtohrli) {
   delete static_cast<zimtohrli::Zimtohrli*>(zimtohrli);
 }
 
-float Distance(Zimtohrli zimtohrli, float* data_a, int size_a, float* data_b,
-               int size_b) {
-  zimtohrli::Zimtohrli* z = static_cast<zimtohrli::Zimtohrli*>(zimtohrli);
+float Distance(const Zimtohrli zimtohrli, float* data_a, int size_a,
+               float* data_b, int size_b) {
+  const zimtohrli::Zimtohrli* z = static_cast<zimtohrli::Zimtohrli*>(zimtohrli);
   hwy::AlignedNDArray<float, 1> signal_a({static_cast<size_t>(size_a)});
   hwy::CopyBytes(data_a, signal_a.data(), size_a * sizeof(float));
   hwy::AlignedNDArray<float, 1> signal_b({static_cast<size_t>(size_b)});
@@ -105,7 +111,7 @@ float Distance(Zimtohrli zimtohrli, float* data_a, int size_a, float* data_b,
 }
 
 ZimtohrliParameters GetZimtohrliParameters(const Zimtohrli zimtohrli) {
-  zimtohrli::Zimtohrli* z = static_cast<zimtohrli::Zimtohrli*>(zimtohrli);
+  const zimtohrli::Zimtohrli* z = static_cast<zimtohrli::Zimtohrli*>(zimtohrli);
   ZimtohrliParameters result;
   result.SampleRate = z->cam_filterbank->sample_rate;
   const hwy::AlignedNDArray<float, 2>& thresholds =
@@ -133,6 +139,8 @@ ZimtohrliParameters GetZimtohrliParameters(const Zimtohrli zimtohrli) {
               sizeof(result.LoudnessLUParams));
   std::memcpy(result.LoudnessTFParams, z->loudness.t_f_params.data(),
               sizeof(result.LoudnessTFParams));
+  std::memcpy(result.MOSMapperParams, z->mos_mapper.params.data(),
+              sizeof(result.MOSMapperParams));
   return result;
 }
 
@@ -157,6 +165,8 @@ void SetZimtohrliParameters(Zimtohrli zimtohrli,
               sizeof(parameters.LoudnessLUParams));
   std::memcpy(z->loudness.t_f_params.data(), parameters.LoudnessTFParams,
               sizeof(parameters.LoudnessTFParams));
+  std::memcpy(z->mos_mapper.params.data(), parameters.MOSMapperParams,
+              sizeof(parameters.MOSMapperParams));
 }
 
 ZimtohrliParameters DefaultZimtohrliParameters(float sample_rate) {

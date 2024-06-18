@@ -128,9 +128,22 @@ PyObject* Pyohrli_distance(PyohrliObject* self, PyObject* const* args,
   return PyFloat_FromDouble(distance.value);
 }
 
+PyObject* Pyohrli_mos_from_zimtohrli(PyohrliObject* self, PyObject* const* args,
+                                     Py_ssize_t nargs) {
+  if (nargs != 1) {
+    return BadArgument("not exactly 1 argument provided");
+  }
+  return PyFloat_FromDouble(
+      self->zimtohrli->mos_mapper.Map(PyFloat_AsDouble(args[0])));
+}
+
 PyMethodDef Pyohrli_methods[] = {
     {"distance", (PyCFunction)Pyohrli_distance, METH_FASTCALL,
      "Returns the distance between the two provided signals."},
+    {"mos_from_zimtohrli", (PyCFunction)Pyohrli_mos_from_zimtohrli,
+     METH_FASTCALL,
+     "Returns an approximate mean opinion score based on the provided "
+     "Zimtohrli distance."},
     {nullptr} /* Sentinel */
 };
 
@@ -150,28 +163,11 @@ PyTypeObject PyohrliType = {
     .tp_new = PyType_GenericNew,
 };
 
-PyObject* MOSFromZimtohrli(PyohrliObject* self, PyObject* const* args,
-                           Py_ssize_t nargs) {
-  if (nargs != 1) {
-    return BadArgument("not exactly 1 argument provided");
-  }
-  return PyFloat_FromDouble(
-      zimtohrli::MOSFromZimtohrli(PyFloat_AsDouble(args[0])));
-}
-
-static PyMethodDef PyohrliModuleMethods[] = {
-    {"MOSFromZimtohrli", (PyCFunction)MOSFromZimtohrli, METH_FASTCALL,
-     "Returns an approximate mean opinion score based on the provided "
-     "Zimtohrli distance."},
-    {NULL, NULL, 0, NULL},
-};
-
 PyModuleDef PyohrliModule = {
     .m_base = PyModuleDef_HEAD_INIT,
     .m_name = "pyohrli",
     .m_doc = "Python wrapper around the C++ zimtohrli library.",
     .m_size = -1,
-    .m_methods = PyohrliModuleMethods,
 };
 
 PyMODINIT_FUNC PyInit__pyohrli(void) {

@@ -58,11 +58,6 @@ func NormalizeAmplitude(maxAbsAmplitude float32, signal []float32) EnergyAndMaxA
 	}
 }
 
-// MOSFromZimtohrli returns an approximate mean opinion score for a given zimtohrli distance.
-func MOSFromZimtohrli(zimtohrliDistance float64) float64 {
-	return float64(C.MOSFromZimtohrli(C.float(zimtohrliDistance)))
-}
-
 // Goohrli is a Go wrapper around zimtohrli::Zimtohrli.
 type Goohrli struct {
 	zimtohrli C.Zimtohrli
@@ -107,6 +102,7 @@ const (
 	numLoudnessAFParams = 10
 	numLoudnessLUParams = 16
 	numLoudnessTFParams = 13
+	numMOSMapperParams  = 3
 )
 
 // Parameters contains the parameters used by a Goohrli instance.
@@ -131,6 +127,7 @@ type Parameters struct {
 	LoudnessAFParams     [numLoudnessAFParams]float64
 	LoudnessLUParams     [numLoudnessLUParams]float64
 	LoudnessTFParams     [numLoudnessTFParams]float64
+	MOSMapperParams      [numMOSMapperParams]float64
 }
 
 var durationType = reflect.TypeOf(time.Second)
@@ -222,6 +219,12 @@ func cFromGoParameters(params Parameters) C.ZimtohrliParameters {
 	for i, f := range params.LoudnessTFParams {
 		cParams.LoudnessTFParams[i] = C.float(f)
 	}
+	if int(C.NumMOSMapperParams()) != len(params.MOSMapperParams) {
+		log.Panicf("C++ API uses %v parameters for MOS mapping, but Go API uses %v", C.NumMOSMapperParams(), len(params.MOSMapperParams))
+	}
+	for i, f := range params.MOSMapperParams {
+		cParams.MOSMapperParams[i] = C.float(f)
+	}
 	return cParams
 }
 
@@ -263,6 +266,12 @@ func goFromCParameters(cParams C.ZimtohrliParameters) Parameters {
 	for i, cFloat := range cParams.LoudnessTFParams {
 		result.LoudnessTFParams[i] = float64(cFloat)
 	}
+	if int(C.NumMOSMapperParams()) != len(result.MOSMapperParams) {
+		log.Panicf("C++ API uses %v parameters for MOS mapping, but Go API uses %v", C.NumMOSMapperParams(), len(result.MOSMapperParams))
+	}
+	for i, cFloat := range cParams.MOSMapperParams {
+		result.MOSMapperParams[i] = float64(cFloat)
+	}
 	return result
 }
 
@@ -285,6 +294,11 @@ func (g *Goohrli) Set(params Parameters) {
 
 func (g *Goohrli) String() string {
 	return fmt.Sprintf("%+v", g.Parameters())
+}
+
+// MOSFromZimtohrli returns an approximate mean opinion score for a given zimtohrli distance.
+func (g *Goohrli) MOSFromZimtohrli(zimtohrliDistance float64) float64 {
+	return float64(C.MOSFromZimtohrli(g.zimtohrli, C.float(zimtohrliDistance)))
 }
 
 // NormalizedAudioDistance returns the distance between the audio files after normalizing their amplitudes for the same max amplitude.
