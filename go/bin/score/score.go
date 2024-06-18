@@ -54,6 +54,7 @@ func main() {
 	leaderboard := flag.String("leaderboard", "", "Glob to directories with databases to compute leaderboard for.")
 	report := flag.String("report", "", "Glob to directories with databases to generate a report for.")
 	accuracy := flag.String("accuracy", "", "Glob to directories with databases to provide JND accuracy for.")
+	mos_mse := flag.String("mos_mse", "", "Glob to directories with databases to provide Zimtohrli-MOS to regular-MOS MSE for.")
 	optimize := flag.String("optimize", "", "Glob to directories with databases to optimize for.")
 	optimizeLogfile := flag.String("optimize_logfile", "", "File to write optimization events to.")
 	optimizeStartStep := flag.Float64("optimize_start_step", 1, "Start step for the simulated annealing.")
@@ -63,7 +64,7 @@ func main() {
 	optimizeMapping := flag.String("optimize_mapping", "", "Glob to directories with databases to optimize the MOS mapping for.")
 	flag.Parse()
 
-	if *details == "" && *calculate == "" && *correlate == "" && *accuracy == "" && *leaderboard == "" && *report == "" && *optimize == "" && *optimizeMapping == "" {
+	if *details == "" && *calculate == "" && *correlate == "" && *accuracy == "" && *leaderboard == "" && *report == "" && *optimize == "" && *optimizeMapping == "" && *mos_mse == "" {
 		flag.Usage()
 		os.Exit(1)
 	}
@@ -99,11 +100,20 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		params, err := bundles.OptimizeMapping()
+		result, err := bundles.OptimizeMapping()
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Println(params)
+		fmt.Printf("%+v\n", result)
+	}
+
+	makeZimtohrli := func() *goohrli.Goohrli {
+		if !reflect.DeepEqual(zimtohrliParameters, goohrli.DefaultParameters(zimtohrliParameters.SampleRate)) {
+			log.Printf("Using %+v", zimtohrliParameters)
+		}
+		zimtohrliParameters.SampleRate = sampleRate
+		z := goohrli.New(zimtohrliParameters)
+		return z
 	}
 
 	if *calculate != "" {
@@ -115,11 +125,7 @@ func main() {
 		for _, study := range studies {
 			measurements := map[data.ScoreType]data.Measurement{}
 			if *calculateZimtohrli {
-				if !reflect.DeepEqual(zimtohrliParameters, goohrli.DefaultParameters(zimtohrliParameters.SampleRate)) {
-					log.Printf("Using %+v", zimtohrliParameters)
-				}
-				zimtohrliParameters.SampleRate = sampleRate
-				z := goohrli.New(zimtohrliParameters)
+				z := makeZimtohrli()
 				measurements[data.ScoreType(*zimtohrliScoreType)] = z.NormalizedAudioDistance
 			}
 			if *calculateViSQOL {
@@ -199,6 +205,26 @@ func main() {
 				fmt.Println(accuracy)
 			} else {
 				fmt.Printf("Not computing accuracy for non-JND dataset %q\n\n", bundle.Dir)
+			}
+		}
+	}
+
+	if *mos_mse != "" {
+		bundles, err := data.OpenBundles(*mos_mse)
+		if err != nil {
+			log.Fatal(err)
+		}
+		for _, bundle := range bundles {
+			if bundle.IsJND() {
+				fmt.Printf("Not computing MOS MSE for JND dataset %q\n\n", bundle.Dir)
+			} else {
+				z := makeZimtohrli()
+				mse, err := bundle.ZimtohrliMOSMSE(z)
+				if err != nil {
+					log.Fatal(err)
+				}
+				fmt.Printf("## %v\n", bundle.Dir)
+				fmt.Printf("MSE between human MOS and Zimtohrli MOS: %.15f\n", mse)
 			}
 		}
 	}
