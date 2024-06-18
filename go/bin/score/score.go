@@ -54,7 +54,7 @@ func main() {
 	leaderboard := flag.String("leaderboard", "", "Glob to directories with databases to compute leaderboard for.")
 	report := flag.String("report", "", "Glob to directories with databases to generate a report for.")
 	accuracy := flag.String("accuracy", "", "Glob to directories with databases to provide JND accuracy for.")
-	mos_mse := flag.String("mos_mse", "", "Glob to directories with databases to provide Zimtohrli-MOS to regular-MOS MSE for.")
+	mse := flag.String("mse", "", "Glob to directories with databases to provide mean-square-error when predicting MOS or JND for.")
 	optimize := flag.String("optimize", "", "Glob to directories with databases to optimize for.")
 	optimizeLogfile := flag.String("optimize_logfile", "", "File to write optimization events to.")
 	optimizeStartStep := flag.Float64("optimize_start_step", 1, "Start step for the simulated annealing.")
@@ -64,7 +64,7 @@ func main() {
 	optimizeMapping := flag.String("optimize_mapping", "", "Glob to directories with databases to optimize the MOS mapping for.")
 	flag.Parse()
 
-	if *details == "" && *calculate == "" && *correlate == "" && *accuracy == "" && *leaderboard == "" && *report == "" && *optimize == "" && *optimizeMapping == "" && *mos_mse == "" {
+	if *details == "" && *calculate == "" && *correlate == "" && *accuracy == "" && *leaderboard == "" && *report == "" && *optimize == "" && *optimizeMapping == "" && *mse == "" {
 		flag.Usage()
 		os.Exit(1)
 	}
@@ -209,23 +209,19 @@ func main() {
 		}
 	}
 
-	if *mos_mse != "" {
-		bundles, err := data.OpenBundles(*mos_mse)
+	if *mse != "" {
+		bundles, err := data.OpenBundles(*mse)
 		if err != nil {
 			log.Fatal(err)
 		}
 		for _, bundle := range bundles {
-			if bundle.IsJND() {
-				fmt.Printf("Not computing MOS MSE for JND dataset %q\n\n", bundle.Dir)
-			} else {
-				z := makeZimtohrli()
-				mse, err := bundle.ZimtohrliMOSMSE(z)
-				if err != nil {
-					log.Fatal(err)
-				}
-				fmt.Printf("## %v\n", bundle.Dir)
-				fmt.Printf("MSE between human MOS and Zimtohrli MOS: %.15f\n", mse)
+			z := makeZimtohrli()
+			mse, err := bundle.ZimtohrliMSE(z)
+			if err != nil {
+				log.Fatal(err)
 			}
+			fmt.Printf("## %v\n", bundle.Dir)
+			fmt.Printf("MSE: %.15f\n\n", mse)
 		}
 	}
 
