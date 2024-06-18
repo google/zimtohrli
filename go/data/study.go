@@ -38,6 +38,7 @@ import (
 	"github.com/google/zimtohrli/go/goohrli"
 	"github.com/google/zimtohrli/go/progress"
 	"github.com/google/zimtohrli/go/worker"
+	"gonum.org/v1/gonum/optimize"
 
 	_ "github.com/mattn/go-sqlite3" // To open sqlite3-databases.
 )
@@ -95,9 +96,10 @@ type Study struct {
 
 // ReferenceBundle is a plain data type containing a bunch of references, typicall the content of a study.
 type ReferenceBundle struct {
-	Dir        string
-	References []*Reference
-	ScoreTypes map[ScoreType]int
+	Dir             string
+	References      []*Reference
+	ScoreTypes      map[ScoreType]int
+	ScoreTypeLimits map[ScoreType][2]*float64
 }
 
 // ReferenceBundles is a slice of ReferenceBundle.
@@ -122,8 +124,20 @@ func (r *ReferenceBundle) SortedTypes() ScoreTypes {
 // Add adds a reference to a bundle.
 func (r *ReferenceBundle) Add(ref *Reference) {
 	for _, dist := range ref.Distortions {
-		for scoreType := range dist.Scores {
+		for scoreType, value := range dist.Scores {
 			r.ScoreTypes[scoreType]++
+			if r.ScoreTypeLimits[scoreType][0] == nil || *r.ScoreTypeLimits[scoreType][0] > value {
+				valueCopy := value
+				limits := r.ScoreTypeLimits[scoreType]
+				limits[0] = &valueCopy
+				r.ScoreTypeLimits[scoreType] = limits
+			}
+			if r.ScoreTypeLimits[scoreType][1] == nil || *r.ScoreTypeLimits[scoreType][1] < value {
+				valueCopy := value
+				limits := r.ScoreTypeLimits[scoreType]
+				limits[1] = &valueCopy
+				r.ScoreTypeLimits[scoreType] = limits
+			}
 		}
 	}
 	r.References = append(r.References, ref)
@@ -132,8 +146,9 @@ func (r *ReferenceBundle) Add(ref *Reference) {
 // ToBundle returns a reference bundle for this study.
 func (s *Study) ToBundle() (*ReferenceBundle, error) {
 	result := &ReferenceBundle{
-		Dir:        s.dir,
-		ScoreTypes: map[ScoreType]int{},
+		Dir:             s.dir,
+		ScoreTypes:      map[ScoreType]int{},
+		ScoreTypeLimits: map[ScoreType][2]*float64{},
 	}
 	if err := s.ViewEachReference(func(ref *Reference) error {
 		result.Add(ref)
@@ -384,6 +399,44 @@ func (r *ReferenceBundle) JNDAccuracy() (JNDAccuracyScores, error) {
 	return result, nil
 }
 
+// MOSMSE returns the precision when predicting the MOS score.
+func (r *ReferenceBundle) ZimtohrliMOSMSE(z *goohrli.Goohrli) (float64, error) {
+	if r.IsJND() {
+		return 0, fmt.Errorf("cannot compute MOS precision on JND references")
+	}
+	if _, found := r.ScoreTypes[MOS]; !found {
+		return 0, fmt.Errorf("cannot compute MOS precision on a data set without MOS")
+	}
+
+	var mosScaler func(mos float64) float64
+	if math.Abs(*r.ScoreTypeLimits[MOS][0]-1) < 0.2 && math.Abs(*r.ScoreTypeLimits[MOS][1]-5) < 0.2 {
+		mosScaler = func(mos float64) float64 {
+			return mos
+		}
+	} else if math.Abs(*r.ScoreTypeLimits[MOS][0]) < 0.2 && math.Abs(*r.ScoreTypeLimits[MOS][1]-100) < 0.2 {
+		mosScaler = func(mos float64) float64 {
+			return 1 + 0.04*mos
+		}
+	} else {
+		return 0, fmt.Errorf("minimum MOS %v and maximum MOS %v are confusing", *r.ScoreTypeLimits[MOS][0], *r.ScoreTypeLimits[MOS][1])
+	}
+
+	sumOfSquares := 0.0
+	count := 0
+	for _, ref := range r.References {
+		for _, dist := range ref.Distortions {
+			mos, found := dist.Scores[MOS]
+			if !found {
+				return 0, fmt.Errorf("%+v doesn't have a MOS score", ref)
+			}
+			delta := mosScaler(mos) - z.MOSFromZimtohrli(dist.Scores[Zimtohrli])
+			sumOfSquares += delta * delta
+			count++
+		}
+	}
+	return sumOfSquares / float64(count), nil
+}
+
 // Studies is a slice of studies.
 type Studies []*Study
 
@@ -516,8 +569,59 @@ func (r ReferenceBundles) Split(rng *rand.Rand, split float64) (ReferenceBundles
 	return left, right
 }
 
-func (r ReferenceBundles) OptimizeMapping() ([]float32, error) {
-	return nil, nil
+type MappingOptimizationResult struct {
+	ParamsBefore []float64
+	MSEBefore    float64
+	ParamsAfter  []float64
+	MSEAfter     float64
+}
+
+func (r ReferenceBundles) OptimizeMapping() (*MappingOptimizationResult, error) {
+	z := goohrli.New(goohrli.DefaultParameters(48000))
+	errors := []error{}
+	p := optimize.Problem{
+		Func: func(x []float64) float64 {
+			params := z.Parameters()
+			for index := range params.MOSMapperParams {
+				params.MOSMapperParams[index] = math.Abs(x[index])
+			}
+			z.Set(params)
+			sum := 0.0
+			count := 0
+			for _, bundle := range r {
+				if !bundle.IsJND() {
+					mse, err := bundle.ZimtohrliMOSMSE(z)
+					if err != nil {
+						errors = append(errors, err)
+					}
+					sum += mse
+					count += 1
+				}
+			}
+			return sum / float64(count)
+		},
+		Status: func() (optimize.Status, error) {
+			if len(errors) > 0 {
+				return optimize.Failure, fmt.Errorf("%+v", errors)
+			}
+			return optimize.NotTerminated, nil
+		},
+	}
+	startParams := z.Parameters().MOSMapperParams
+	result := &MappingOptimizationResult{
+		ParamsBefore: startParams[:],
+		MSEBefore:    p.Func(startParams[:]),
+	}
+	optResult, err := optimize.Minimize(p, startParams[:], nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	if err := optResult.Status.Err(); err != nil {
+		return nil, err
+	}
+	result.ParamsAfter = optResult.X
+	result.MSEAfter = optResult.F
+	return result, nil
 }
 
 // OptimizationEvent is a step in the optimization process.
