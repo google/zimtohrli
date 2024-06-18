@@ -399,42 +399,76 @@ func (r *ReferenceBundle) JNDAccuracy() (JNDAccuracyScores, error) {
 	return result, nil
 }
 
-// MOSMSE returns the precision when predicting the MOS score.
-func (r *ReferenceBundle) ZimtohrliMOSMSE(z *goohrli.Goohrli) (float64, error) {
+// ZimtohrliMSE returns the precision when predicting the MOS score or JND difference.
+func (r *ReferenceBundle) ZimtohrliMSE(z *goohrli.Goohrli) (float64, error) {
 	if r.IsJND() {
-		return 0, fmt.Errorf("cannot compute MOS precision on JND references")
-	}
-	if _, found := r.ScoreTypes[MOS]; !found {
-		return 0, fmt.Errorf("cannot compute MOS precision on a data set without MOS")
-	}
-
-	var mosScaler func(mos float64) float64
-	if math.Abs(*r.ScoreTypeLimits[MOS][0]-1) < 0.2 && math.Abs(*r.ScoreTypeLimits[MOS][1]-5) < 0.2 {
-		mosScaler = func(mos float64) float64 {
-			return mos
+		_, threshold, err := r.JNDAccuracyAndThreshold(Zimtohrli)
+		if err != nil {
+			return 0, err
 		}
-	} else if math.Abs(*r.ScoreTypeLimits[MOS][0]) < 0.2 && math.Abs(*r.ScoreTypeLimits[MOS][1]-100) < 0.2 {
-		mosScaler = func(mos float64) float64 {
-			return 1 + 0.04*mos
-		}
-	} else {
-		return 0, fmt.Errorf("minimum MOS %v and maximum MOS %v are confusing", *r.ScoreTypeLimits[MOS][0], *r.ScoreTypeLimits[MOS][1])
-	}
-
-	sumOfSquares := 0.0
-	count := 0
-	for _, ref := range r.References {
-		for _, dist := range ref.Distortions {
-			mos, found := dist.Scores[MOS]
-			if !found {
-				return 0, fmt.Errorf("%+v doesn't have a MOS score", ref)
+		sumOfSquares := 0.0
+		count := 0
+		for _, ref := range r.References {
+			for _, dist := range ref.Distortions {
+				jnd, found := dist.Scores[JND]
+				if !found {
+					return 0, fmt.Errorf("%+v doesn't have a JND score", ref)
+				}
+				zimt, found := dist.Scores[Zimtohrli]
+				if !found {
+					return 0, fmt.Errorf("%+v doesn't have a Zimtohrli score", ref)
+				}
+				switch jnd {
+				case 0:
+					if zimt >= threshold {
+						delta := zimt - threshold
+						sumOfSquares += delta * delta
+					}
+				case 1:
+					if zimt < threshold {
+						delta := zimt - threshold
+						sumOfSquares += delta * delta
+					}
+				default:
+					return 0, fmt.Errorf("%+v JND isn't 0 or 1", ref)
+				}
+				count++
 			}
-			delta := mosScaler(mos) - z.MOSFromZimtohrli(dist.Scores[Zimtohrli])
-			sumOfSquares += delta * delta
-			count++
 		}
+		return sumOfSquares / float64(count), nil
+	} else {
+		var mosScaler func(mos float64) float64
+		if math.Abs(*r.ScoreTypeLimits[MOS][0]-1) < 0.2 && math.Abs(*r.ScoreTypeLimits[MOS][1]-5) < 0.2 {
+			mosScaler = func(mos float64) float64 {
+				return mos
+			}
+		} else if math.Abs(*r.ScoreTypeLimits[MOS][0]) < 0.2 && math.Abs(*r.ScoreTypeLimits[MOS][1]-100) < 0.2 {
+			mosScaler = func(mos float64) float64 {
+				return 1 + 0.04*mos
+			}
+		} else {
+			return 0, fmt.Errorf("minimum MOS %v and maximum MOS %v are confusing", *r.ScoreTypeLimits[MOS][0], *r.ScoreTypeLimits[MOS][1])
+		}
+
+		sumOfSquares := 0.0
+		count := 0
+		for _, ref := range r.References {
+			for _, dist := range ref.Distortions {
+				mos, found := dist.Scores[MOS]
+				if !found {
+					return 0, fmt.Errorf("%+v doesn't have a MOS score", ref)
+				}
+				zimt, found := dist.Scores[Zimtohrli]
+				if !found {
+					return 0, fmt.Errorf("%+v doesn't have a Zimtohrli score", ref)
+				}
+				delta := mosScaler(mos) - z.MOSFromZimtohrli(zimt)
+				sumOfSquares += delta * delta
+				count++
+			}
+		}
+		return sumOfSquares / float64(count), nil
 	}
-	return sumOfSquares / float64(count), nil
 }
 
 // Studies is a slice of studies.
@@ -569,6 +603,7 @@ func (r ReferenceBundles) Split(rng *rand.Rand, split float64) (ReferenceBundles
 	return left, right
 }
 
+// MappingOptimizationResult contains the results of optimizing the MOS mapping.
 type MappingOptimizationResult struct {
 	ParamsBefore []float64
 	MSEBefore    float64
@@ -576,6 +611,7 @@ type MappingOptimizationResult struct {
 	MSEAfter     float64
 }
 
+// OptimizeMOSMapping optimizes the MOS mapping parameters.
 func (r ReferenceBundles) OptimizeMapping() (*MappingOptimizationResult, error) {
 	z := goohrli.New(goohrli.DefaultParameters(48000))
 	errors := []error{}
@@ -590,7 +626,7 @@ func (r ReferenceBundles) OptimizeMapping() (*MappingOptimizationResult, error) 
 			count := 0
 			for _, bundle := range r {
 				if !bundle.IsJND() {
-					mse, err := bundle.ZimtohrliMOSMSE(z)
+					mse, err := bundle.ZimtohrliMSE(z)
 					if err != nil {
 						errors = append(errors, err)
 					}
