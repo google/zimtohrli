@@ -294,16 +294,8 @@ void Zimtohrli::Spectrogram(
   tabuli::Rotators rots(1, freqs, gains, cam_filterbank->sample_rate);
   rots.FilterAndDownsample(signal, energy_channels_db, downsample);
 
-  hwy::CopyBytes(energy_channels_db.data(), partial_energy_channels_db.data(),
+  hwy::CopyBytes(energy_channels_db.data(), spectrogram.data(),
                  energy_channels_db.memory_size() * sizeof(float));
-  if (apply_loudness) {
-    loudness.PhonsFromSPL(partial_energy_channels_db,
-                          cam_filterbank->thresholds_hz, spectrogram);
-
-  } else {
-    hwy::CopyBytes(partial_energy_channels_db.data(), spectrogram.data(),
-                   partial_energy_channels_db.memory_size() * sizeof(float));
-  }
 }
 
 void Zimtohrli::Spectrogram(
