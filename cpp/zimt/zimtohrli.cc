@@ -294,13 +294,8 @@ void Zimtohrli::Spectrogram(
   tabuli::Rotators rots(1, freqs, gains, cam_filterbank->sample_rate);
   rots.FilterAndDownsample(signal, energy_channels_db, downsample);
 
-  if (apply_masking) {
-    masking.CutFullyMasked(energy_channels_db, cam_filterbank->cam_delta,
-                           partial_energy_channels_db);
-  } else {
-    hwy::CopyBytes(energy_channels_db.data(), partial_energy_channels_db.data(),
-                   energy_channels_db.memory_size() * sizeof(float));
-  }
+  hwy::CopyBytes(energy_channels_db.data(), partial_energy_channels_db.data(),
+                 energy_channels_db.memory_size() * sizeof(float));
   if (apply_loudness) {
     loudness.PhonsFromSPL(partial_energy_channels_db,
                           cam_filterbank->thresholds_hz, spectrogram);
