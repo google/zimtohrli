@@ -23,7 +23,6 @@ import (
 	"io"
 	"log"
 	"math"
-	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -96,10 +95,17 @@ type Study struct {
 
 // ReferenceBundle is a plain data type containing a bunch of references, typicall the content of a study.
 type ReferenceBundle struct {
-	Dir             string
-	References      []*Reference
-	ScoreTypes      map[ScoreType]int
+	// Dir is the directory of the source study.
+	Dir string
+	// References are all the reference sounds of the bundle.
+	References []*Reference
+	// ScoreTypes are the number of scores of each type in the bundle.
+	ScoreTypes map[ScoreType]int
+	// ScoreTypeLimits are the upper/lower limits of each score type in the bundle.
 	ScoreTypeLimits map[ScoreType][2]*float64
+
+	// mosScaler returns the MOS score provided scaled to 1-5. Useful for datasets where the MOS is scaled up to 0-100.
+	mosScaler func(float64) float64
 }
 
 // ReferenceBundles is a slice of ReferenceBundle.
@@ -109,6 +115,24 @@ type ReferenceBundles []*ReferenceBundle
 func (r *ReferenceBundle) IsJND() bool {
 	_, res := r.ScoreTypes[JND]
 	return res
+}
+
+// ScaledMOS returns the MOS score scaled to 1-5.
+func (r *ReferenceBundle) ScaledMOS(mos float64) (float64, error) {
+	if r.mosScaler == nil {
+		if math.Abs(*r.ScoreTypeLimits[MOS][0]-1) < 0.2 && math.Abs(*r.ScoreTypeLimits[MOS][1]-5) < 0.2 {
+			r.mosScaler = func(mos float64) float64 {
+				return mos
+			}
+		} else if math.Abs(*r.ScoreTypeLimits[MOS][0]) < 0.2 && math.Abs(*r.ScoreTypeLimits[MOS][1]-100) < 0.2 {
+			r.mosScaler = func(mos float64) float64 {
+				return 1 + 0.04*mos
+			}
+		} else {
+			return 0, fmt.Errorf("minimum MOS %v and maximum MOS %v are confusing", *r.ScoreTypeLimits[MOS][0], *r.ScoreTypeLimits[MOS][1])
+		}
+	}
+	return r.mosScaler(mos), nil
 }
 
 // SortedTypes returns the score types of a bundle, alphabetically ordered.
@@ -237,10 +261,25 @@ func (c CorrelationTable) String() string {
 func (r *ReferenceBundle) Correlation(typeA, typeB ScoreType) (float64, error) {
 	scoresA := []float64{}
 	scoresB := []float64{}
+	appender := func(scores *[]float64, typ ScoreType, dist *Distortion) error {
+		score := dist.Scores[typ]
+		if typ == MOS {
+			var err error
+			if score, err = r.ScaledMOS(score); err != nil {
+				return err
+			}
+		}
+		*scores = append(*scores, score)
+		return nil
+	}
 	for _, ref := range r.References {
 		for _, dist := range ref.Distortions {
-			scoresA = append(scoresA, dist.Scores[typeA])
-			scoresB = append(scoresB, dist.Scores[typeB])
+			if err := appender(&scoresA, typeA, dist); err != nil {
+				return 0, err
+			}
+			if err := appender(&scoresB, typeB, dist); err != nil {
+				return 0, err
+			}
 		}
 	}
 	if len(scoresA) != len(scoresB) {
@@ -272,6 +311,22 @@ func (r *ReferenceBundle) Correlate() (CorrelationTable, error) {
 		result = append(result, row)
 	}
 	return result, nil
+}
+
+// Correlate returns a table of all scores in the bundles Spearman correlated to each other.
+func (r ReferenceBundles) Correlate() (CorrelationTable, error) {
+	merged := &ReferenceBundle{
+		ScoreTypes:      map[ScoreType]int{},
+		ScoreTypeLimits: map[ScoreType][2]*float64{},
+	}
+	for _, bundle := range r {
+		if !bundle.IsJND() {
+			for _, ref := range bundle.References {
+				merged.Add(ref)
+			}
+		}
+	}
+	return merged.Correlate()
 }
 
 // JNDAccuracyScore contains the accuracy for a metric when used to predict audible differences, and the threshold when that accuracy was achieved.
@@ -399,6 +454,51 @@ func (r *ReferenceBundle) JNDAccuracy() (JNDAccuracyScores, error) {
 	return result, nil
 }
 
+// JNDAccuracy returns the accuracy of each score type when used to predict audible differences.
+func (r ReferenceBundles) JNDAccuracy() (JNDAccuracyScores, error) {
+	merged := &ReferenceBundle{
+		ScoreTypes:      map[ScoreType]int{},
+		ScoreTypeLimits: map[ScoreType][2]*float64{},
+	}
+	for _, bundle := range r {
+		if bundle.IsJND() {
+			for _, ref := range bundle.References {
+				merged.Add(ref)
+			}
+		}
+	}
+	return merged.JNDAccuracy()
+}
+
+// OptimizedZimtohrliMSE optimizes the MOS mapping and returns the ZimtohrliMSE using the optimized mapping.
+func (r ReferenceBundles) OptimizedZimtohrliMSE() (float64, error) {
+	optResult, err := r.OptimizeMapping()
+	if err != nil {
+		return 0, err
+	}
+	params := goohrli.DefaultParameters(aio.DefaultSampleRate)
+	copy(params.MOSMapperParams[:], optResult.ParamsAfter)
+	z := goohrli.New(params)
+	return r.ZimtohrliMSE(z, true)
+}
+
+// ZimtohrliMSE returns the mean square of the ZimtohrliMSE of the bundles.
+func (r ReferenceBundles) ZimtohrliMSE(z *goohrli.Goohrli, includeJND bool) (float64, error) {
+	sumOfSquares := 0.0
+	count := 0
+	for _, bundle := range r {
+		if includeJND || !bundle.IsJND() {
+			mse, err := bundle.ZimtohrliMSE(z)
+			if err != nil {
+				return 0, err
+			}
+			sumOfSquares += mse * mse
+			count += 1
+		}
+	}
+	return sumOfSquares / float64(count), nil
+}
+
 // ZimtohrliMSE returns the precision when predicting the MOS score or JND difference.
 func (r *ReferenceBundle) ZimtohrliMSE(z *goohrli.Goohrli) (float64, error) {
 	if r.IsJND() {
@@ -437,19 +537,6 @@ func (r *ReferenceBundle) ZimtohrliMSE(z *goohrli.Goohrli) (float64, error) {
 		}
 		return sumOfSquares / float64(count), nil
 	} else {
-		var mosScaler func(mos float64) float64
-		if math.Abs(*r.ScoreTypeLimits[MOS][0]-1) < 0.2 && math.Abs(*r.ScoreTypeLimits[MOS][1]-5) < 0.2 {
-			mosScaler = func(mos float64) float64 {
-				return mos
-			}
-		} else if math.Abs(*r.ScoreTypeLimits[MOS][0]) < 0.2 && math.Abs(*r.ScoreTypeLimits[MOS][1]-100) < 0.2 {
-			mosScaler = func(mos float64) float64 {
-				return 1 + 0.04*mos
-			}
-		} else {
-			return 0, fmt.Errorf("minimum MOS %v and maximum MOS %v are confusing", *r.ScoreTypeLimits[MOS][0], *r.ScoreTypeLimits[MOS][1])
-		}
-
 		sumOfSquares := 0.0
 		count := 0
 		for _, ref := range r.References {
@@ -462,7 +549,11 @@ func (r *ReferenceBundle) ZimtohrliMSE(z *goohrli.Goohrli) (float64, error) {
 				if !found {
 					return 0, fmt.Errorf("%+v doesn't have a Zimtohrli score", ref)
 				}
-				delta := mosScaler(mos) - z.MOSFromZimtohrli(zimt)
+				scaledMOS, err := r.ScaledMOS(mos)
+				if err != nil {
+					return 0, err
+				}
+				delta := scaledMOS - z.MOSFromZimtohrli(zimt)
 				sumOfSquares += delta * delta
 				count++
 			}
@@ -486,11 +577,8 @@ func (s Studies) ToBundles() (ReferenceBundles, error) {
 	return result, nil
 }
 
-// CalculateZimtohrliMSE returns the mean-squared-error for the Zimtohrli score
-// in the bundles. For JDN bundles this means 1 - accuracy, for the MOS bundles it means
-// 1 - Spearman correlation.
+// CalculateZimtohrliMSE calculates Zimtohrli scores for all examples in the bundles, optimizes the MOS mapping, and returns the resulting MSE.
 func (r ReferenceBundles) CalculateZimtohrliMSE(z *goohrli.Goohrli) (float64, error) {
-	sumOfSquares := 0.0
 	for _, bundle := range r {
 		bar := progress.New(fmt.Sprintf("Calculating for %v", filepath.Base(bundle.Dir)))
 		pool := &worker.Pool[any]{
@@ -500,107 +588,9 @@ func (r ReferenceBundles) CalculateZimtohrliMSE(z *goohrli.Goohrli) (float64, er
 		if err := bundle.Calculate(map[ScoreType]Measurement{Zimtohrli: z.NormalizedAudioDistance}, pool, true); err != nil {
 			return 0, err
 		}
-		if bundle.IsJND() {
-			accuracy, _, err := bundle.JNDAccuracyAndThreshold(Zimtohrli)
-			if err != nil {
-				return 0, err
-			}
-			e := (1 - accuracy)
-			sumOfSquares += e * e
-
-		} else {
-			correlation, err := bundle.Correlation(Zimtohrli, MOS)
-			if err != nil {
-				return 0, err
-			}
-			e := (1 - correlation)
-			sumOfSquares += e * e
-		}
 		bar.Finish()
 	}
-	return sumOfSquares / float64(len(r)), nil
-}
-
-func mutateFloat(f, min, max float64, rng *rand.Rand, temp float64) float64 {
-	r := math.Sqrt(temp) * rng.NormFloat64() * 0.2 * (max - min)
-	if f == min || r > 0 {
-		f += math.Abs(r)
-	} else if f == max || r < 0 {
-		f -= math.Abs(r)
-	} else if r == 0 {
-		return f
-	}
-	if f < min {
-		f = min
-	}
-	if f > max {
-		f = max
-	}
-	return f
-}
-
-func mutateInt(i, min, max int, rng *rand.Rand, temp float64) int {
-	if float64(i)*temp < 1 {
-		i += (rng.Int() % 3) - 1
-		if i < min {
-			i = min
-		}
-		if i > max {
-			i = max
-		}
-		return i
-	}
-	return int(mutateFloat(float64(i), float64(min), float64(max), rng, temp))
-}
-
-const sampleRate = 48000
-
-func mutate(z *goohrli.Goohrli, rng *rand.Rand, temp float64) *goohrli.Goohrli {
-	params := z.Parameters()
-	params.PerceptualSampleRate = mutateFloat(params.PerceptualSampleRate, 50, 150, rng, temp)
-	params.FrequencyResolution = mutateFloat(params.FrequencyResolution, 1, 15, rng, temp)
-	params.NSIMChannelWindow = mutateInt(params.NSIMChannelWindow, 3, 64, rng, temp)
-	params.NSIMStepWindow = mutateInt(params.NSIMStepWindow, 3, 64, rng, temp)
-	result := goohrli.New(params)
-	return result
-}
-
-// References returns the sum of the number of references in all the bundles.
-func (r ReferenceBundles) References() int {
-	res := 0
-	for _, bundle := range r {
-		res += len(bundle.References)
-	}
-	return res
-}
-
-// Split will split the bundle randomly in two parts, at the split provided.
-func (r ReferenceBundles) Split(rng *rand.Rand, split float64) (ReferenceBundles, ReferenceBundles) {
-	left := ReferenceBundles{}
-	right := ReferenceBundles{}
-	for _, bundle := range r {
-		newLeft := &ReferenceBundle{
-			Dir:        bundle.Dir,
-			References: nil,
-			ScoreTypes: map[ScoreType]int{},
-		}
-		left = append(left, newLeft)
-		newRight := &ReferenceBundle{
-			Dir:        bundle.Dir,
-			References: nil,
-			ScoreTypes: map[ScoreType]int{},
-		}
-		right = append(right, newRight)
-		numLeft := int(split * float64(len(bundle.References)))
-		indices := rng.Perm(len(bundle.References))
-		for _, index := range indices[:numLeft] {
-			newLeft.Add(bundle.References[index])
-		}
-		for _, index := range indices[numLeft:] {
-			newRight.Add(bundle.References[index])
-		}
-	}
-	return left, right
+	return r.OptimizedZimtohrliMSE()
 }
 
 // MappingOptimizationResult contains the results of optimizing the MOS mapping.
@@ -613,28 +603,20 @@ type MappingOptimizationResult struct {
 
 // OptimizeMOSMapping optimizes the MOS mapping parameters.
 func (r ReferenceBundles) OptimizeMapping() (*MappingOptimizationResult, error) {
-	z := goohrli.New(goohrli.DefaultParameters(48000))
+	startParams := goohrli.DefaultParameters(aio.DefaultSampleRate)
 	errors := []error{}
 	p := optimize.Problem{
 		Func: func(x []float64) float64 {
-			params := z.Parameters()
+			params := startParams
 			for index := range params.MOSMapperParams {
 				params.MOSMapperParams[index] = math.Abs(x[index])
 			}
-			z.Set(params)
-			sum := 0.0
-			count := 0
-			for _, bundle := range r {
-				if !bundle.IsJND() {
-					mse, err := bundle.ZimtohrliMSE(z)
-					if err != nil {
-						errors = append(errors, err)
-					}
-					sum += mse
-					count += 1
-				}
+			z := goohrli.New(params)
+			result, err := r.ZimtohrliMSE(z, false)
+			if err != nil {
+				errors = append(errors, err)
 			}
-			return sum / float64(count)
+			return result
 		},
 		Status: func() (optimize.Status, error) {
 			if len(errors) > 0 {
@@ -643,12 +625,11 @@ func (r ReferenceBundles) OptimizeMapping() (*MappingOptimizationResult, error) 
 			return optimize.NotTerminated, nil
 		},
 	}
-	startParams := z.Parameters().MOSMapperParams
 	result := &MappingOptimizationResult{
-		ParamsBefore: startParams[:],
-		MSEBefore:    p.Func(startParams[:]),
+		ParamsBefore: startParams.MOSMapperParams[:],
+		MSEBefore:    p.Func(startParams.MOSMapperParams[:]),
 	}
-	optResult, err := optimize.Minimize(p, startParams[:], nil, nil)
+	optResult, err := optimize.Minimize(p, startParams.MOSMapperParams[:], &optimize.Settings{Concurrent: runtime.NumCPU()}, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -660,50 +641,90 @@ func (r ReferenceBundles) OptimizeMapping() (*MappingOptimizationResult, error) 
 	return result, nil
 }
 
-// OptimizationEvent is a step in the optimization process.
-type OptimizationEvent struct {
+// OptimizeEvent is a step in the optimization process.
+type OptimizeEvent struct {
 	Parameters goohrli.Parameters
 	Step       int
-	Loss       float64
-	Temp       float64
+	MSE        float64
 }
 
-// Optimize will use simulated annealing to optimize a Zimtohrli metric for predicting
-// these bundles.
-func (r ReferenceBundles) Optimize(startStep, numSteps float64, logger func(OptimizationEvent)) error {
-	z := goohrli.New(goohrli.DefaultParameters(sampleRate))
-	loss, err := r.CalculateZimtohrliMSE(z)
+// Recorder logs optimization progress.
+type Recorder struct {
+	Output *os.File
+
+	startParameters goohrli.Parameters
+}
+
+func (r *Recorder) Init() error {
+	return nil
+}
+
+func (r *Recorder) paramsToX(p goohrli.Parameters) []float64 {
+	return []float64{p.FrequencyResolution / r.startParameters.FrequencyResolution}
+}
+
+func (r *Recorder) xToParams(x []float64) goohrli.Parameters {
+	cpy := r.startParameters
+	cpy.FrequencyResolution *= x[0]
+	return cpy
+}
+
+func (r *Recorder) Record(loc *optimize.Location, op optimize.Operation, stats *optimize.Stats) error {
+	params := r.xToParams(loc.X)
+	switch op {
+	case optimize.InitIteration:
+		log.Printf("Initialized solution %+v with MSE %v", params, loc.F)
+	case optimize.MajorIteration:
+		log.Printf("%v iterations, candidate solution %+v with MSE %v", stats.MajorIterations, params, loc.F)
+	case optimize.FuncEvaluation:
+		log.Printf("%v iterations, evaluated at %+v with MSE %v", stats.MajorIterations, params, loc.F)
+	case optimize.MethodDone:
+		log.Printf("Solution %+v found with MSE %v", loc.F, loc.X)
+	}
+	if r.Output == nil {
+		return nil
+	}
+	ev := OptimizeEvent{
+		Parameters: params,
+		Step:       stats.MajorIterations,
+		MSE:        loc.F,
+	}
+	b, err := json.Marshal(ev)
 	if err != nil {
 		return err
 	}
-	logger(OptimizationEvent{Parameters: z.Parameters(), Step: 0, Loss: loss, Temp: 1})
-	log.Printf("Created initial solution %v with loss %.2f", z, loss)
-	for step := startStep; step < numSteps; step++ {
-		rng := rand.New(rand.NewSource(int64(step)))
-		temp := 1.0 - (step+1)/numSteps
-		newZ := mutate(z, rng, temp)
-		log.Printf("Created new solution %+v", newZ)
-		newLoss, err := r.CalculateZimtohrliMSE(newZ)
-		if err != nil {
-			return err
-		}
-		log.Printf("Step %v, temp %v, old loss %.2f, new loss %.2f", step, temp, loss, newLoss)
-		logger(OptimizationEvent{Parameters: newZ.Parameters(), Step: int(step), Loss: newLoss, Temp: temp})
-		if newLoss < loss {
-			z = newZ
-			loss = newLoss
-			log.Print("*** Accepting better solution")
-		} else {
-			acceptanceProb := math.Exp(-(newLoss - loss) / temp)
-			dice := rng.Float64()
-			if dice < acceptanceProb {
-				z = newZ
-				loss = newLoss
-				log.Printf("*** Accepting poorer solution due to acceptanceProb=%.2f > dice=%.2f", acceptanceProb, dice)
-			} else {
-				log.Print("Discarding poorer solution")
+	if _, err := r.Output.WriteString(string(b) + "\n"); err != nil {
+		return err
+	}
+	return r.Output.Sync()
+}
+
+// Optimize will use optimize a Zimtohrli metric for predicting these bundles.
+func (r ReferenceBundles) Optimize(recorder *Recorder) error {
+	recorder.startParameters = goohrli.DefaultParameters(aio.DefaultSampleRate)
+	errors := []error{}
+	p := optimize.Problem{
+		Func: func(x []float64) float64 {
+			z := goohrli.New(recorder.xToParams(x))
+			mse, err := r.CalculateZimtohrliMSE(z)
+			if err != nil {
+				errors = append(errors, err)
 			}
-		}
+			return mse
+		},
+		Status: func() (optimize.Status, error) {
+			if len(errors) > 0 {
+				return optimize.Failure, fmt.Errorf("%+v", errors)
+			}
+			return optimize.NotTerminated, nil
+		},
+	}
+	optResult, err := optimize.Minimize(p, recorder.paramsToX(recorder.startParameters), &optimize.Settings{Recorder: recorder}, nil)
+	if err != nil {
+		return err
+	}
+	if err := optResult.Status.Err(); err != nil {
+		return err
 	}
 	return nil
 }
