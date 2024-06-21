@@ -52,13 +52,15 @@ float Loudness(int k, float val) {
     { 0.354, -3.5, 12.3, }, // 12500
   };
   const float *vals = &pars[k / 5][0];
-  val *= (70.0 + vals[1]) * (1.0 / 65.0);
+  static float constant1 = 33.13457678814273;
+  static float constant2 = 27.720606627666342;
+  val *= (constant1 + vals[1]) * (1.0 / constant2);
   return val;
 }
 
 float SimpleDb(float energy) {
   // ideally 78.3 db
-  static const float full_scale_sine_db = 75.27901963526045;
+  static const float full_scale_sine_db = 77.47500423191678;
   static const float exp_full_scale_sine_db = exp(full_scale_sine_db);
   // epsilon, but the biggest one you saw (~4.95e23)
   static const float epsilon = 1.0033294789821357e-09 * exp_full_scale_sine_db;
@@ -73,7 +75,7 @@ void FinalizeDb(hwy::AlignedNDArray<float, 2>& channels, float mul,
   static const double octaves_in_20_to_20000 = log(20000/20.)/log(2);
   static const double octaves_per_rot =
       octaves_in_20_to_20000 / float(kNumRotators - 1);
-  static const double masker_step_per_octave_up_0 = 15.892019717473835;
+  static const double masker_step_per_octave_up_0 = 15.795427054351489;
   static const double masker_step_per_octave_up_1 = 21.852019717473834;
   static const double masker_step_per_octave_up_2 = 20.79201971747383;
   static const double masker_step_per_rot_up_0 = octaves_per_rot * masker_step_per_octave_up_0;
@@ -140,6 +142,20 @@ void FinalizeDb(hwy::AlignedNDArray<float, 2>& channels, float mul,
   }
   for (int k = 0; k < kNumRotators; ++k) {
     channels[{out_ix}][k] = Loudness(k, channels[{out_ix}][k]);
+  }
+  // temporal masker
+  if (out_ix >= 3) {
+    for (int k = 0; k < kNumRotators; ++k) {
+      static const float temporal_masker0 = 0.1387454636244773;
+      channels[{out_ix}][k] -=
+          temporal_masker0 * (channels[{out_ix - 1}][k] - channels[{out_ix}][k]);
+      static const float temporal_masker1 = 0.08715440670406614;
+      channels[{out_ix}][k] -=
+          temporal_masker1 * (channels[{out_ix - 2}][k] - channels[{out_ix}][k]);
+      static const float temporal_masker2 = -0.03785233735225447;
+      channels[{out_ix}][k] -=
+          temporal_masker2 * (channels[{out_ix - 3}][k] - channels[{out_ix}][k]);
+    }
   }
 }
 
