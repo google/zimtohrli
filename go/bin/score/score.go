@@ -20,7 +20,9 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
+	"path/filepath"
 	"reflect"
 	"runtime"
 	"sort"
@@ -58,9 +60,13 @@ func main() {
 	workers := flag.Int("workers", runtime.NumCPU(), "Number of concurrent workers for tasks.")
 	failFast := flag.Bool("fail_fast", false, "Whether to panic immediately on any error.")
 	optimizeMapping := flag.String("optimize_mapping", "", "Glob to directories with databases to optimize the MOS mapping for.")
+	sample := flag.String("sample", "", "Glob to directories with databases to sample metadata and audio from.")
+	sampleDestination := flag.String("sample_destination", "", "Path to directory to put the sampled databases into.")
+	sampleFraction := flag.Float64("sample_fraction", 1.0, "Fraction of references to copy from the source databases.")
+	sampleSeed := flag.Int64("sample_seed", 0, "Seed when sampling a random fraction of references.")
 	flag.Parse()
 
-	if *details == "" && *calculate == "" && *correlate == "" && *accuracy == "" && *leaderboard == "" && *report == "" && *optimize == "" && *optimizeMapping == "" && *mse == "" && *optimizedMSE == "" {
+	if *details == "" && *calculate == "" && *correlate == "" && *accuracy == "" && *leaderboard == "" && *report == "" && *optimize == "" && *optimizeMapping == "" && *mse == "" && *optimizedMSE == "" && *sample == "" {
 		flag.Usage()
 		os.Exit(1)
 	}
@@ -70,6 +76,45 @@ func main() {
 	}
 	if zimtohrliParameters.SampleRate != aio.DefaultSampleRate {
 		log.Fatalf("Zimtohrli sample rates != %v not supported by this tool, since it loads all data set audio at %vHz.", aio.DefaultSampleRate, aio.DefaultSampleRate)
+	}
+
+	if *sample != "" {
+		if *sampleDestination == "" {
+			log.Fatal("`-sample_destination` required for sample operation")
+		}
+		bundles, err := data.OpenBundles(*sample)
+		if err != nil {
+			log.Fatal(err)
+		}
+		rng := rand.New(rand.NewSource(*sampleSeed))
+		for _, bundle := range bundles {
+			dest, err := data.OpenStudy(filepath.Join(*sampleDestination, filepath.Base(bundle.Dir)))
+			if err != nil {
+				log.Fatal(err)
+			}
+			func() {
+				defer dest.Close()
+				if *sampleFraction == 1.0 {
+					bar := progress.New(fmt.Sprintf("Copying %q", filepath.Base(bundle.Dir)))
+					if err := dest.Copy(bundle.Dir, bundle.References, bar.Update); err != nil {
+						log.Fatal(err)
+					}
+					bar.Finish()
+				} else {
+					numRefs := len(bundle.References)
+					numWanted := int(*sampleFraction * float64(numRefs))
+					toCopy := []*data.Reference{}
+					bar := progress.New(fmt.Sprintf("Copying %v of %q", *sampleFraction, filepath.Base(bundle.Dir)))
+					for _, index := range rng.Perm(numRefs)[:numWanted] {
+						toCopy = append(toCopy, bundle.References[index])
+					}
+					if err := dest.Copy(bundle.Dir, toCopy, bar.Update); err != nil {
+						log.Fatal(err)
+					}
+					bar.Finish()
+				}
+			}()
+		}
 	}
 
 	if *optimize != "" {
