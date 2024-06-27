@@ -1072,6 +1072,34 @@ func (s *Study) ViewEachReference(f func(*Reference) error) error {
 	return nil
 }
 
+// Copy inserts some reference into a study, and copies the audio files of the references and their distortions, assuming they are relative to the provided directory.
+func (s *Study) Copy(dir string, refs []*Reference, progress func(int, int, int)) error {
+	for index, ref := range refs {
+		refCopy := &Reference{}
+		*refCopy = *ref
+		newRefPath := fmt.Sprintf("%v_%v", filepath.Base(dir), filepath.Base(ref.Path))
+		refCopy.Path = newRefPath
+		if err := os.Symlink(filepath.Join(dir, ref.Path), filepath.Join(s.dir, newRefPath)); err != nil {
+			return err
+		}
+		for index, dist := range ref.Distortions {
+			distCopy := &Distortion{}
+			*distCopy = *dist
+			newDistPath := fmt.Sprintf("%v_%v", filepath.Base(dir), filepath.Base(dist.Path))
+			distCopy.Path = newDistPath
+			if err := os.Symlink(filepath.Join(dir, dist.Path), filepath.Join(s.dir, newDistPath)); err != nil {
+				return err
+			}
+			refCopy.Distortions[index] = distCopy
+		}
+		if err := s.Put([]*Reference{refCopy}); err != nil {
+			return err
+		}
+		progress(len(refs), index, 0)
+	}
+	return nil
+}
+
 // Put inserts some references into a study.
 func (s *Study) Put(refs []*Reference) error {
 	tx, err := s.db.Begin()
