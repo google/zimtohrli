@@ -52,15 +52,17 @@ float Loudness(int k, float val) {
     { 0.354, -3.5, 12.3, }, // 12500
   };
   const float *vals = &pars[k / 5][0];
-  static float constant1 = 33.10987678814273;
-  static float constant2 = 27.720606627666342;
+  static float constant1 = 48.70343225300608;
+  static float constant2 = 40.43827165462807;
+  static const float kMul = -2.7207126528654677;
+  val += kMul * vals[2];
   val *= (constant1 + vals[1]) * (1.0 / constant2);
   return val;
 }
 
 float SimpleDb(float energy) {
   // ideally 78.3 db
-  static const float full_scale_sine_db = 77.47500423191678;
+  static const float full_scale_sine_db = 77.39771094914877;
   static const float exp_full_scale_sine_db = exp(full_scale_sine_db);
   // epsilon, but the biggest one you saw (~4.95e23)
   static const float epsilon = 1.0033294789821357e-09 * exp_full_scale_sine_db;
@@ -75,23 +77,34 @@ void FinalizeDb(hwy::AlignedNDArray<float, 2>& channels, float mul,
   static const double octaves_in_20_to_20000 = log(20000/20.)/log(2);
   static const double octaves_per_rot =
       octaves_in_20_to_20000 / float(kNumRotators - 1);
-  static const double masker_step_per_octave_up_0 = 16.495427054351488;
-  static const double masker_step_per_octave_up_1 = 22.552019717473833;
-  static const double masker_step_per_octave_up_2 = 20.082159717473832;
+  static const double masker_step_per_octave_up_0 = 19.53945781131615;
+  static const double masker_step_per_octave_up_1 = 24.714118008386887;
+  static const double masker_step_per_octave_up_2 = 6.449301354309956;
   static const double masker_step_per_rot_up_0 = octaves_per_rot * masker_step_per_octave_up_0;
   static const double masker_step_per_rot_up_1 = octaves_per_rot * masker_step_per_octave_up_1;
   static const double masker_step_per_rot_up_2 = octaves_per_rot * masker_step_per_octave_up_2;
-  static const double masker_gap_up = 19.140338374861235;
-  static const float maskingStrengthUp = 0.1252262923615547;
-  static const float up_blur = 0.8738593591692092;
+  static const double masker_gap_up = 21.309406898722074;
+  static const float maskingStrengthUp = 0.2056434702527141;
+  static const float up_blur = 0.9442717063037425;
+  static const float fraction_up = 1.1657467617827404;
 
-  static const double masker_step_per_octave_down = 42.41172783112732;
+  static const double masker_step_per_octave_down = 53.40273959309446;
   static const double masker_step_per_rot_down = octaves_per_rot * masker_step_per_octave_down;
-  static const double masker_gap_down = 19.59079250393617;
-  static const float maskingStrengthDown = 0.19329999999999992;
-  static const float down_blur = 0.714425315233319;
+  static const double masker_gap_down = 19.08401096304284;
+  static const float maskingStrengthDown = 0.18030917038808858;
+  static const float down_blur = 0.7148792180987857;
 
-  static const float min_limit = -11.397341001787765;
+  static const float min_limit = -11.3968870989223;
+  static const float fraction_down = 1.0197608300379997;
+
+  static const float temporal0 = 0.09979167061501665;
+  static const float temporal1 = 0.14429505133534495;
+  static const float temporal2 = 0.009228598592129168;
+  static float weightp = 0.1792443302507868;
+  static float weightm = 0.7954490998745948;
+
+  static float mask_k = 0.08709005149742773;
+
   // Scan frequencies from bottom to top, let lower frequencies to mask higher frequencies.
   // 'masker' maintains the masking envelope from one bin to next.
   static const float temporal_masker0 = 0.13104546362447728;
@@ -226,7 +239,7 @@ Rotators::Rotators(int num_channels, std::vector<float> frequency,
     window[i] = std::pow(kWindow, bw * kBandwidthMagic);
     float windowM1 = 1.0f - window[i];
     float f = frequency[i] * 2.0f * M_PI / sample_rate;
-    static const float full_scale_sine_db = exp(75.27901963526045);
+    static const float full_scale_sine_db = exp(75.27858635739499);
     const float gainer = 2.0f * sqrt(full_scale_sine_db);
     gain[i] = gainer * filter_gains[i] * pow(windowM1, 3.0);
     rot[0][i] = float(std::cos(f));

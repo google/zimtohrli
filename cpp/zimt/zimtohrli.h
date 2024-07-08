@@ -288,7 +288,7 @@ struct Zimtohrli {
   size_t nsim_step_window = 16;
 
   // The window in channels when computing the NSIM.
-  size_t nsim_channel_window = 32;
+  size_t nsim_channel_window = 30;
 
   // The window of the dynamic time warp that matches audio signals.
   //
