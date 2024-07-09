@@ -199,8 +199,8 @@ float HwyNSIM(const hwy::AlignedNDArray<float, 2>& a,
         return Mul(delta_a, delta_b);
       });
   const Vec two = Set(d, 2.0);
-  const Vec C1 = Set(d, 0.17973327786546683);
-  const Vec C3 = Set(d, 0.18526360286546675);
+  const Vec C1 = Set(d, 0.19863327786546683);
+  const Vec C3 = Set(d, 0.17538360286546675);
   float nsim_sum = 0.0;
   const Vec num_channels_vec = Set(d, num_channels);
   const Vec zero = Zero(d);

@@ -73,6 +73,11 @@ float SimpleDb(float energy) {
 
 void FinalizeDb(hwy::AlignedNDArray<float, 2>& channels, float mul,
                 size_t out_ix) {
+  float masker_down[kNumRotators];
+  for (int k = 0; k < kNumRotators; ++k) {
+    float v = SimpleDb(mul * channels[{out_ix}][k]);
+    channels[{out_ix}][k] = Loudness(k, v);
+  }
   double masker = 0.0;
   static const double octaves_in_20_to_20000 = log(20000/20.)/log(2);
   static const double octaves_per_rot =
@@ -100,19 +105,18 @@ void FinalizeDb(hwy::AlignedNDArray<float, 2>& channels, float mul,
   static const float temporal0 = 0.09979167061501665;
   static const float temporal1 = 0.14429505133534495;
   static const float temporal2 = 0.009228598592129168;
-  static float weightp = 0.1792443302507868;
-  static float weightm = 0.7954490998745948;
+  static const float weightp = 0.1792443302507868;
+  static const float weightm = 0.7954490998745948;
 
-  static float mask_k = 0.08709005149742773;
+  static const float mask_k = 0.08709005149742773;
 
   // Scan frequencies from bottom to top, let lower frequencies to mask higher frequencies.
   // 'masker' maintains the masking envelope from one bin to next.
-  static const float temporal_masker0 = 0.13104546362447728;
-  static const float temporal_masker1 = 0.09719740670406614;
-  static const float temporal_masker2 = -0.03085233735225447;
-
   for (int k = 0; k < kNumRotators; ++k) {
-    float v = SimpleDb(mul * channels[{out_ix}][k]);
+    float v = channels[{out_ix}][k];
+    if (out_ix != 0) {
+      v = (1.0 - mask_k) * v + mask_k * channels[{out_ix - 1}][k];
+    }
     if (v < min_limit) {
       v = min_limit;
     }
@@ -123,12 +127,10 @@ void FinalizeDb(hwy::AlignedNDArray<float, 2>& channels, float mul,
     if (masker < v2) {
       masker = v2;
     }
-    float mask = masker - masker_gap_up;
-
+    float mask = fraction_up * masker - masker_gap_up;
     if (v < mask) {
       v = maskingStrengthUp * mask + (1.0 - maskingStrengthUp) * v;
     }
-
     channels[{out_ix}][k] = v;
     if (3 * k < kNumRotators) {
       masker -= masker_step_per_rot_up_0;
@@ -143,6 +145,9 @@ void FinalizeDb(hwy::AlignedNDArray<float, 2>& channels, float mul,
   masker = 0.0;
   for (int k = kNumRotators - 1; k >= 0; --k) {
     float v = channels[{out_ix}][k];
+    if (out_ix != 0) {
+      v = (1.0 - mask_k) * v + mask_k * channels[{out_ix - 1}][k];
+    }
     float v2 = (1 - down_blur) * v2 + down_blur * v;
     if (k == kNumRotators - 1) {
       v2 = v;
@@ -150,26 +155,36 @@ void FinalizeDb(hwy::AlignedNDArray<float, 2>& channels, float mul,
     if (masker < v) {
       masker = v;
     }
-    float mask = masker - masker_gap_down;
+    float mask = fraction_down * masker - masker_gap_down;
     if (v < mask) {
       v = maskingStrengthDown * mask + (1.0 - maskingStrengthDown) * v;
     }
     channels[{out_ix}][k] = v;
     masker -= masker_step_per_rot_down;
   }
-  for (int k = 0; k < kNumRotators; ++k) {
-    channels[{out_ix}][k] = Loudness(k, channels[{out_ix}][k]);
-  }
   // temporal masker
   if (out_ix >= 3) {
     for (int k = 0; k < kNumRotators; ++k) {
-      float v0 = (channels[{out_ix - 1}][k] - channels[{out_ix}][k]);
-      float v1 = (channels[{out_ix - 2}][k] - channels[{out_ix}][k]);
-      float v2 = (channels[{out_ix - 3}][k] - channels[{out_ix}][k]);
-
-      channels[{out_ix}][k] -= temporal_masker0 * v0 +
-                               temporal_masker1 * v1 +
-                               temporal_masker2 * v2;
+      float m = (temporal0 * channels[{out_ix - 1}][k] +
+                 temporal1 * channels[{out_ix - 2}][k] +
+                 temporal2 * channels[{out_ix - 3}][k]) / (temporal0 + temporal1 + temporal2);
+      if (m > channels[{out_ix}][k]) {
+        channels[{out_ix}][k] -= weightp * (m - channels[{out_ix}][k]);
+      } else {
+        channels[{out_ix}][k] -= weightm * (m - channels[{out_ix}][k]);
+      }
+      /*
+      // todo(jyrki): explore with this
+      static const float temporal_masker0 = 0.1387454636244773;
+      channels[{out_ix}][k] -=
+          temporal_masker0 * (channels[{out_ix - 1}][k] - channels[{out_ix}][k]);
+      static const float temporal_masker1 = 0.08715440670406614;
+      channels[{out_ix}][k] -=
+          temporal_masker1 * (channels[{out_ix - 2}][k] - channels[{out_ix}][k]);
+      static const float temporal_masker2 = -0.03785233735225447;
+      channels[{out_ix}][k] -=
+          temporal_masker2 * (channels[{out_ix - 3}][k] - channels[{out_ix}][k]);
+      */
     }
   }
 }
