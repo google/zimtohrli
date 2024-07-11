@@ -20,7 +20,7 @@
 
 namespace tabuli {
 
-constexpr int64_t kNumRotators = 150;
+constexpr int64_t kNumRotators = 128;
 
 struct PerChannel {
   // [0..1] is for real and imag of 1st leaking accumulation
