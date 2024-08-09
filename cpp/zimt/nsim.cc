@@ -199,8 +199,9 @@ float HwyNSIM(const hwy::AlignedNDArray<float, 2>& a,
         return Mul(delta_a, delta_b);
       });
   const Vec two = Set(d, 2.0);
-  const Vec C1 = Set(d, 0.19863327786546683);
-  const Vec C3 = Set(d, 0.17538360286546675);
+  const Vec C1 = Set(d, 64.820932997704162);
+  const Vec C3 = Set(d, 11.285860868315538);
+  const Vec C4 = Set(d, 1e-6 * 2.9262932000000021);
   float nsim_sum = 0.0;
   const Vec num_channels_vec = Set(d, num_channels);
   const Vec zero = Zero(d);
@@ -219,8 +220,9 @@ float HwyNSIM(const hwy::AlignedNDArray<float, 2>& a,
       const Vec intensity = Div(
           MulAdd(two, Mul(mean_a_vec, mean_b_vec), C1),
           MulAdd(mean_a_vec, mean_a_vec, MulAdd(mean_b_vec, mean_b_vec, C1)));
-      const Vec structure =
-          Div(Add(cov_vec, C3), MulAdd(std_a_vec, std_b_vec, C3));
+      const Vec structure_base = Div(Add(cov_vec, C3), MulAdd(std_a_vec, std_b_vec, C3));
+      const Vec structure_clamped = IfThenElse(Lt(structure_base, zero), zero, structure_base);
+      const Vec structure = Sqrt(Sqrt(Add(structure_clamped, C4)));
       const Vec channel_index_vec = Iota(d, channel_index);
       const Vec nsim = IfThenElse(Lt(channel_index_vec, num_channels_vec),
                                   Mul(intensity, structure), zero);
