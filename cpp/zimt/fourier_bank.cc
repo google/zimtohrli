@@ -73,17 +73,17 @@ float Loudness(float freq, float val) {
   const float *valsNext = &pars[high_ix][0];
   float vals1 = (1.0 - interp) * vals[1] + interp * valsNext[1];
   float vals2 = (1.0 - interp) * vals[2] + interp * valsNext[2];
-  static const float constant1 = 45.82980211617118;
-  static const float constant2 = 80.64186299717754;
-  static const float kMul = 3.4191209497307895;
+  static const float constant1 = 46.249442992274332;
+  static const float constant2 = 80.768552802927118;
+  static const float kMul = 3.4173486834828384;
   val *= (constant1 + vals1) * (1.0 / constant2);
   val += kMul * vals2;
   return val;
 }
 
 float SimpleDb(float energy) {
-  // ideally 78.3 db
-  static const float full_scale_sine_db = 75.572775538058821;
+  // ideally 78.3 db, but somehow this works better
+  static const float full_scale_sine_db = 75.868041059390563;
   static const float exp_full_scale_sine_db = exp(full_scale_sine_db);
   // epsilon, but the biggest one you saw (~4.95e23)
   static const float epsilon = 1.0033294789821357e-09 * exp_full_scale_sine_db;
@@ -93,69 +93,58 @@ float SimpleDb(float energy) {
   return kMul * log(energy + epsilon);
 }
 
-void PrepareMasker(hwy::AlignedNDArray<float, 2>& channels,
+void PrepareMasker(hwy::AlignedNDArray<float, 2>& freq,
                    float *masker,
                    size_t out_ix) {
-  if (out_ix < 3) {
-    for (int k = 0; k < kNumRotators; ++k) {
-      masker[k] = channels[{out_ix}][k];
-    }
-  } else {
-    // convolve in time and freq, 5 freq bins, 3 time bins
-    static const double c[12] = {
-      0.011551012731481482,
-      0.02009898726851852,
-      0.27419898726851855,
-
-      0.04009898726851849,
-      0.3270268229166667,
-      0.6400989872685185,
-
-      0.36397005208333333,
-      0.65050101273148142,
-      1.4265898726851856,
-
-      0.1,
-      1.2929090497685181,
-      8.5348843872685212,
-    };
-    static const double kMul = 0.92558468864724108;
-    static const float div = 1.0 / (2*(c[0]+c[1]+c[2]+c[3]+c[4]+c[5]+c[6]+c[7]+c[8])+c[9]+c[10]+c[11]);
-    for (int k = 0; k < kNumRotators; ++k) {
-      int prev3 = std::max(0, k - 3);
-      int prev2 = std::max(0, k - 2);
-      int prev1 = std::max(0, k - 1);
-      int currk = k;
-      int next1 = std::min<int>(kNumRotators - 1, k + 1);
-      int next2 = std::min<int>(kNumRotators - 1, k + 2);
-      int next3 = std::min<int>(kNumRotators - 1, k + 3);
-      size_t oi2 = out_ix - 2;
-      size_t oi1 = out_ix - 1;
-      size_t oi0 = out_ix - 0;
-
-      float v =
-          channels[{oi2}][prev3] * c[0] + channels[{oi1}][prev3] * c[1] + channels[{oi0}][prev3] * c[2] +
-          channels[{oi2}][prev2] * c[3] + channels[{oi1}][prev2] * c[4] + channels[{oi0}][prev2] * c[5] +
-          channels[{oi2}][prev1] * c[6] + channels[{oi1}][prev1] * c[7] + channels[{oi0}][prev1] * c[8] +
-          channels[{oi2}][currk] * c[9] + channels[{oi1}][currk] * c[10] + channels[{oi0}][currk] * c[11] +
-          channels[{oi2}][next1] * c[6] + channels[{oi1}][next1] * c[7] + channels[{oi0}][next1] * c[8] +
-          channels[{oi2}][next2] * c[3] + channels[{oi1}][next2] * c[4] + channels[{oi0}][next2] * c[5] +
-          channels[{oi2}][next3] * c[0] + channels[{oi1}][next3] * c[1] + channels[{oi0}][next3] * c[2];
-
-      masker[k] = v * div * kMul;
-    }
+  static const double kMul = 0.92558468864724108;
+  // convolve in time and freq, 5 freq bins, 3 time bins
+  static const double c[12] = {
+    0.011551012731481482,
+    0.02009898726851852,
+    0.27419898726851855,
+    0.04009898726851849,
+    0.32702682291666668,
+    0.64009898726851855,
+    0.36397005208333333,
+    0.65050101273148142,
+    1.5422942263604758,
+    0.10333000000000001,
+    1.3735024915962184,
+    7.4513898383588755,
+  };
+  static const float div = 1.0 / (2*(c[0]+c[1]+c[2]+c[3]+c[4]+c[5]+c[6]+c[7]+c[8])+c[9]+c[10]+c[11]);
+  const size_t oi2 = std::max<size_t>(2, out_ix) - 2;
+  const size_t oi1 = std::max<size_t>(1, out_ix) - 1;
+  const size_t oi0 = out_ix;
+  for (int k = 0; k < kNumRotators; ++k) {
+    int prev3 = std::max(0, k - 3);
+    int prev2 = std::max(0, k - 2);
+    int prev1 = std::max(0, k - 1);
+    int currk = k;
+    int next1 = std::min<int>(kNumRotators - 1, k + 1);
+    int next2 = std::min<int>(kNumRotators - 1, k + 2);
+    int next3 = std::min<int>(kNumRotators - 1, k + 3);
+    float v =
+        freq[{oi2}][prev3] * c[0] + freq[{oi1}][prev3] * c[1] + freq[{oi0}][prev3] * c[2] +
+        freq[{oi2}][prev2] * c[3] + freq[{oi1}][prev2] * c[4] + freq[{oi0}][prev2] * c[5] +
+        freq[{oi2}][prev1] * c[6] + freq[{oi1}][prev1] * c[7] + freq[{oi0}][prev1] * c[8] +
+        freq[{oi2}][currk] * c[9] + freq[{oi1}][currk] * c[10] + freq[{oi0}][currk] * c[11] +
+        freq[{oi2}][next1] * c[6] + freq[{oi1}][next1] * c[7] + freq[{oi0}][next1] * c[8] +
+        freq[{oi2}][next2] * c[3] + freq[{oi1}][next2] * c[4] + freq[{oi0}][next2] * c[5] +
+        freq[{oi2}][next3] * c[0] + freq[{oi1}][next3] * c[1] + freq[{oi0}][next3] * c[2];
+    masker[k] = v * div * kMul;
   }
   static const double octaves_in_20_to_20000 = log(20000/20.)/log(2);
   static const double octaves_per_rot =
       octaves_in_20_to_20000 / float(kNumRotators - 1);
-  static const double masker_step_per_octave_up_0 = 20.530166862351951;
-  static const double masker_step_per_octave_up_1 = 24.71276102911699;
-  static const double masker_step_per_octave_up_2 = 1.5390804378846834;
+  static const double masker_step_per_octave_up_0 = 20.982514311296299;
+  static const double masker_step_per_octave_up_1 = 27.165698567146499;
+  static const double masker_step_per_octave_up_2 = -22.32086488660067;
   static const double masker_step_per_rot_up_0 = octaves_per_rot * masker_step_per_octave_up_0;
   static const double masker_step_per_rot_up_1 = octaves_per_rot * masker_step_per_octave_up_1;
   static const double masker_step_per_rot_up_2 = octaves_per_rot * masker_step_per_octave_up_2;
 
-  static const double masker_step_per_octave_down = 22.474862790273633;
+  static const double masker_step_per_octave_down = 22.395986972317345;
   static const double masker_step_per_rot_down = octaves_per_rot * masker_step_per_octave_down;
   // propagate masker up
   float mask = 0;
@@ -196,8 +185,8 @@ void FinalizeDb(std::vector<float> rotator_frequency,
   PrepareMasker(channels, &masker[0], out_ix);
 
 
-  static const double masker_gap = 21.233031313853495;
-  static const float maskingStrength = 0.40144654396596807;
+  static const double masker_gap = 20.831477534908842;
+  static const float maskingStrength = 0.40206083915840007;
   static const float min_limit = 0;
 
   // Scan frequencies from bottom to top, let lower frequencies to mask higher frequencies.
