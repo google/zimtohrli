@@ -208,13 +208,10 @@ int Main(int argc, char* argv[]) {
     return 4;
   }
   std::vector<EnergyAndMaxAbsAmplitude> file_a_measurements;
-  float file_a_max_abs_amplitude = 0;
   for (size_t channel_index = 0; channel_index < file_a->Info().channels;
        ++channel_index) {
     EnergyAndMaxAbsAmplitude measurements =
         Measure(file_a->Frames()[{channel_index}]);
-    file_a_max_abs_amplitude =
-        std::max(file_a_max_abs_amplitude, measurements.max_abs_amplitude);
     file_a_measurements.push_back(measurements);
   }
   const bool verbose = absl::GetFlag(FLAGS_verbose);
