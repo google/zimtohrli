@@ -246,7 +246,7 @@ int Main(int argc, char* argv[]) {
       for (size_t channel_index = 0; channel_index < file_b->Info().channels;
            ++channel_index) {
         const EnergyAndMaxAbsAmplitude new_energy_and_max_abs_amplitude =
-            NormalizeAmplitude(file_a_max_abs_amplitude,
+            NormalizeAmplitude(file_a_measurements[channel_index].max_abs_amplitude,
                                file_b->Frames()[{channel_index}]);
         if (verbose) {
           std::cerr << "  Normalized channel " << channel_index << " energy = "
