@@ -73,9 +73,9 @@ float Loudness(float freq, float val) {
   const float *valsNext = &pars[high_ix][0];
   float vals1 = (1.0 - interp) * vals[1] + interp * valsNext[1];
   float vals2 = (1.0 - interp) * vals[2] + interp * valsNext[2];
-  static const float constant1 = 46.249442992274332;
-  static const float constant2 = 80.768552802927118;
-  static const float kMul = 3.4173486834828384;
+  static const float constant1 = 46.37287;
+  static const float constant2 = 80.892916;
+  static const float kMul = 3.41562;
   val *= (constant1 + vals1) * (1.0 / constant2);
   val += kMul * vals2;
   return val;
@@ -83,12 +83,12 @@ float Loudness(float freq, float val) {
 
 float SimpleDb(float energy) {
   // ideally 78.3 db, but somehow this works better
-  static const float full_scale_sine_db = 75.868041059390563;
+  static const float full_scale_sine_db = 75.8495;
   static const float exp_full_scale_sine_db = exp(full_scale_sine_db);
   // epsilon, but the biggest one you saw (~4.95e23)
   static const float epsilon = 1.0033294789821357e-09 * exp_full_scale_sine_db;
   // kMul allows faster log instead of log10 below, incorporating multiplying by 10 for decibel.
-  static const float kMul0 = 7.7911366413917413;
+  static const float kMul0 = 7.7888;
   static const float kMul = kMul0 / log(10);
   return kMul * log(energy + epsilon);
 }
@@ -96,21 +96,21 @@ float SimpleDb(float energy) {
 void PrepareMasker(hwy::AlignedNDArray<float, 2>& freq,
                    float *masker,
                    size_t out_ix) {
-  static const double kMul = 0.92558468864724108;
+  static const double kMul = 0.925585;
   // convolve in time and freq, 5 freq bins, 3 time bins
   static const double c[12] = {
-    0.011551012731481482,
-    0.02009898726851852,
-    0.27419898726851855,
-    0.04009898726851849,
-    0.32702682291666668,
-    0.64009898726851855,
-    0.36397005208333333,
-    0.65050101273148142,
-    1.5422942263604758,
-    0.10333000000000001,
-    1.3735024915962184,
-    7.4513898383588755,
+    0.011792864242897921,
+    0.02141444616229312,
+    0.27204462940133883,
+    0.04081130408323199,
+    0.32503380520713393,
+    0.63960360145409523,
+    0.36547565427708706,
+    0.64646959791651382,
+    1.5271657112757793,
+    0.10296035397317034,
+    1.3755662770950172,
+    7.4439086735915927,
   };
   static const float div = 1.0 / (2*(c[0]+c[1]+c[2]+c[3]+c[4]+c[5]+c[6]+c[7]+c[8])+c[9]+c[10]+c[11]);
   const size_t oi2 = std::max<size_t>(2, out_ix) - 2;
@@ -137,14 +137,78 @@ void PrepareMasker(hwy::AlignedNDArray<float, 2>& freq,
   static const double octaves_in_20_to_20000 = log(20000/20.)/log(2);
   static const double octaves_per_rot =
       octaves_in_20_to_20000 / float(kNumRotators - 1);
-  static const double masker_step_per_octave_up_0 = 20.982514311296299;
-  static const double masker_step_per_octave_up_1 = 27.165698567146499;
-  static const double masker_step_per_octave_up_2 = -22.32086488660067;
-  static const double masker_step_per_rot_up_0 = octaves_per_rot * masker_step_per_octave_up_0;
-  static const double masker_step_per_rot_up_1 = octaves_per_rot * masker_step_per_octave_up_1;
-  static const double masker_step_per_rot_up_2 = octaves_per_rot * masker_step_per_octave_up_2;
+  static const double masker_step_per_octave_upZ[30] = {
+    20.98103630850407,
+    20.98103630850407,
+    20.98103630850407,
+    20.98103630850407,
+    20.98103630850407,
+    20.971036308504068,
+    20.98103630850407,
+    20.98103630850407,
+    20.98103630850407,
+    20.98103630850407,
+    27.164728846693212,
+    27.164728846693212,
+    27.164728846693212,
+    27.164728846693212,
+    27.164728846693212,
+    27.164728846693212,
+    27.164728846693212,
+    27.234728846693212,
+    27.164728846693212,
+    27.164728846693212,
+    -23.182165772713049,
+    -23.66616577271305,
+    -23.182165772713049,
+    -22.936865772713052,
+    -23.112165772713048,
+    -23.19216577271305,
+    -23.182165772713049,
+    -23.182165772713049,
+    -23.182165772713049,
+    -23.182165772713049,
+  };
 
-  static const double masker_step_per_octave_down = 22.395986972317345;
+  // Strange masking (flip from usual positive to negative mask damping per
+  // octave in the higher freqs) -- this could be related to middle ear
+  // mechanisms having sprung mass, distributing lower and mid frequencies
+  // into higher frequencies more directly and causing masking.
+  // Could be a fluke.
+  static const double masker_step_per_octave_up[30] = {
+    20.98103630850407,
+    17.593036308504068,
+    23.781036308504071,
+    20.98103630850407,
+    20.98103630850407,
+    20.971036308504068,
+    20.98103630850407,
+    21.98103630850407,
+    22.98103630850407,
+    23.98103630850407,
+    24.164728846693212,
+    25.164728846693212,
+    26.164728846693212,
+    27.164728846693212,
+    27.164728846693212,
+    27.164728846693212,
+    27.164728846693212,
+    20.234728846693212,
+    17.432728846693212,
+    5.1647288466932118,
+    -5.1821657727130486,
+    -10.66616577271305,
+    -15.182165772713049,
+    -15.33686577271305,
+    -23.112165772713048,
+    -23.19216577271305,
+    -23.182165772713049,
+    -23.182165772713049,
+    -17.022165772713048,
+    -23.182165772713049,
+  };
+
+  static const double masker_step_per_octave_down = 22.2;
   static const double masker_step_per_rot_down = octaves_per_rot * masker_step_per_octave_down;
   // propagate masker up
   float mask = 0;
@@ -154,13 +218,7 @@ void PrepareMasker(hwy::AlignedNDArray<float, 2>& freq,
       mask = v;
     }
     masker[k] = std::max<float>(masker[k], mask);
-    if (3 * k < kNumRotators) {
-      mask -= masker_step_per_rot_up_0;
-    } else if (3 * k < 2 * kNumRotators) {
-      mask -= masker_step_per_rot_up_1;
-    } else {
-      mask -= masker_step_per_rot_up_2;
-    }
+    mask -= octaves_per_rot * masker_step_per_octave_up[30 * k / kNumRotators];
   }
   // propagate masker down
   mask = 0;
@@ -185,13 +243,44 @@ void FinalizeDb(std::vector<float> rotator_frequency,
   PrepareMasker(channels, &masker[0], out_ix);
 
 
-  static const double masker_gap = 20.831477534908842;
-  static const float maskingStrength = 0.40206083915840007;
+  static const double masker_gap = 20.832650866565942;
+  static const double maskingStrengthLut[8] = {
+    0.40243735146213372,
+    0.53929582802463372,
+    0.2330768290011962,
+    0.45162153347411349,
+    0.40441574013400872,
+    0.3624992033380407,
+    0.40282874306369626,
+    0.58086335243869625,
+  };
+  static const double mulLut[8] = {
+    1.0676829999999999,
+    0.89912999999999998,
+    0.90283000000000002,
+    1.0,
+    0.92053000000000007,
+    1.0,
+    1.0008999999999999,
+    0.93271699999999991,
+  };
+  static const double addLut[8] = {
+    0,
+    0.079470000000000013,
+    0.14000000000000001,
+    0,
+    0.0070000000000000001,
+    0.009470000000000001,
+    0,
+    0,
+  };
   static const float min_limit = 0;
 
   // Scan frequencies from bottom to top, let lower frequencies to mask higher frequencies.
   // 'masker' maintains the masking envelope from one bin to next.
   for (int k = 0; k < kNumRotators; ++k) {
+    int ix = 8 * k / kNumRotators;
+    float maskingStrength = maskingStrengthLut[ix];
     float v = channels[{out_ix}][k];
     double mask = masker[k] - masker_gap;
     if (v < min_limit) {
@@ -201,6 +290,8 @@ void FinalizeDb(std::vector<float> rotator_frequency,
       v = maskingStrength * mask + (1.0 - maskingStrength) * v;
     }
     channels[{out_ix}][k] = v;
+    channels[{out_ix}][k] *= mulLut[ix];
+    channels[{out_ix}][k] += addLut[ix];
   }
 }
 
@@ -269,7 +360,7 @@ Rotators::Rotators(int num_channels, std::vector<float> frequency,
     window[i] = std::pow(kWindow, bw * kBandwidthMagic);
     float windowM1 = 1.0f - window[i];
     float f = frequency[i] * 2.0f * M_PI / sample_rate;
-    static const float full_scale_sine_db = exp(76.63936108268561);
+    static const float full_scale_sine_db = exp(76.639635259053421);
     const float gainer = sqrt(full_scale_sine_db);
     gain[i] = gainer * filter_gains[i] * pow(windowM1, 3.0);
     rot[0][i] = float(std::cos(f));
