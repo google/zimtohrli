@@ -285,10 +285,10 @@ struct Zimtohrli {
   std::optional<CamFilterbank> cam_filterbank;
 
   // The window in perceptual_sample_rate time steps when compting the NSIM.
-  size_t nsim_step_window = 8;
+  size_t nsim_step_window = 6;
 
   // The window in channels when computing the NSIM.
-  size_t nsim_channel_window = 7;
+  size_t nsim_channel_window = 6; // TODO(jyrki): reduce further
 
   // The window of the dynamic time warp that matches audio signals.
   //
