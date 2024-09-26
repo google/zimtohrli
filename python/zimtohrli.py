@@ -15,6 +15,7 @@
 
 import dataclasses
 import jax.numpy as jnp
+import numpy as np
 import cam
 import loudness
 import masking
@@ -45,8 +46,8 @@ class Zimtohrli:
     def spectrogram(
         self,
         signal: audio_signal.Signal,
-        full_scale_sine_db: jnp.ndarray = jnp.asarray(90),
-        db_epsilon: jnp.ndarray = jnp.asarray(1e-9),
+        full_scale_sine_db: jnp.ndarray = np.asarray(90),
+        db_epsilon: jnp.ndarray = np.asarray(1e-9),
     ) -> audio_signal.Channels:
         """Returns a perceptual spectrogram of the signal.
 

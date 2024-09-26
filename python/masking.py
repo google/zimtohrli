@@ -14,14 +14,16 @@
 """Handles masking of sounds."""
 
 import dataclasses
+import functools
 from typing import Optional
 import jax
 import jax.numpy as jnp
+import numpy as np
 import cam
 import audio_signal
 
 
-@jax.tree_util.register_pytree_node_class
+@jax.tree_util.register_static
 @dataclasses.dataclass
 class Masking:
     """Handles masking of sounds.
@@ -131,7 +133,6 @@ class Masking:
             jax.jit(jax.vmap(full_masking_multi_maskers_multi_probes, (None, 1), 1)),
         )
 
-    @jax.jit
     def non_masked_energy(
         self, energy_channels_db: audio_signal.Channels
     ) -> audio_signal.Channels:
@@ -144,7 +145,7 @@ class Masking:
           energy_channels after having removed masked components.
         """
         cams = self.cam_model.cam_from_hz(energy_channels_db.freqs[:, 0])
-        cam_delta = cams[jnp.newaxis, ...] - cams[..., jnp.newaxis]
+        cam_delta = cams[np.newaxis, ...] - cams[..., np.newaxis]
         max_full_masking_db = jnp.max(
             self.full_masking_of_channels(cam_delta, energy_channels_db.samples), axis=0
         ).T
