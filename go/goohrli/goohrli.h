@@ -76,7 +76,7 @@ ZimtohrliParameters DefaultZimtohrliParameters(float sample_rate);
 typedef void* Zimtohrli;
 
 // Returns a zimtohrli::Zimtohrli for the given parameters.
-Zimtohrli CreateZimtohrli(ZimtohrliParameters params);
+Zimtohrli CreateZimtohrli(const ZimtohrliParameters params);
 
 // Deletes a zimtohrli::Zimtohrli.
 void FreeZimtohrli(Zimtohrli z);
@@ -88,7 +88,7 @@ typedef struct {
 } EnergyAndMaxAbsAmplitude;
 
 // Returns the energy in dB FS, and maximum absolute amplitude, of the signal.
-EnergyAndMaxAbsAmplitude Measure(float* signal, int size);
+EnergyAndMaxAbsAmplitude Measure(const float* signal, int size);
 
 // Normalizes the amplitudes of the signal so that it has the provided max
 // amplitude, and returns the new energ in dB FS, and the new maximum absolute
@@ -102,10 +102,10 @@ EnergyAndMaxAbsAmplitude NormalizeAmplitude(float max_abs_amplitude,
 // minimum channel bandwidth (zimtohrli::Cam.minimum_bandwidth_hz)
 // of 5Hz and perceptual sample rate
 // (zimtohrli::Distance(..., perceptual_sample_rate, ...) of 100Hz.
-float MOSFromZimtohrli(Zimtohrli zimtohrli, float zimtohrli_distance);
+float MOSFromZimtohrli(const Zimtohrli zimtohrli, float zimtohrli_distance);
 
 // Returns the Zimtohrli distance between data_b and data_b.
-float Distance(Zimtohrli zimtohrli, float* data_a, int size_a,
+float Distance(const Zimtohrli zimtohrli, float* data_a, int size_a,
                float* data_b, int size_b);
 
 // Sets the parameters.
@@ -116,7 +116,7 @@ void SetZimtohrliParameters(Zimtohrli zimtohrli,
                             ZimtohrliParameters parameters);
 
 // Returns the parameters.
-ZimtohrliParameters GetZimtohrliParameters(Zimtohrli zimtohrli);
+ZimtohrliParameters GetZimtohrliParameters(const Zimtohrli zimtohrli);
 
 // void* representation of zimtohrli::ViSQOL.
 typedef void* ViSQOL;
@@ -134,8 +134,8 @@ typedef struct {
 } MOSResult;
 
 // MOS returns a ViSQOL MOS between reference and distorted.
-MOSResult MOS(ViSQOL v, float sample_rate, float* reference,
-              int reference_size, float* distorted, int distorted_size);
+MOSResult MOS(const ViSQOL v, float sample_rate, const float* reference,
+              int reference_size, const float* distorted, int distorted_size);
 
 #ifdef __cplusplus
 }
