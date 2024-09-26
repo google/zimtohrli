@@ -28,6 +28,7 @@ import (
 )
 
 const (
+	// DefaultSampleRate is the default sample rate.
 	DefaultSampleRate = 48000
 )
 
