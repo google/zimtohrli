@@ -14,6 +14,7 @@
 """Tests for google3.third_party.zimtohrli.python.zimtohrli."""
 
 import unittest
+import jax
 import numpy as np
 import audio_signal
 import zimtohrli
@@ -29,11 +30,24 @@ class ZimtohrliTest(unittest.TestCase):
         signal_b[0:1] = 0.9
         sound_a = audio_signal.Signal(sample_rate=sample_rate, samples=signal_a)
         sound_b = audio_signal.Signal(sample_rate=sample_rate, samples=signal_b)
-        z = zimtohrli.Zimtohrli()
-        spectrogram_a = z.spectrogram(sound_a)
-        spectrogram_b = z.spectrogram(sound_b)
-        distance = z.distance(spectrogram_a, spectrogram_b)
+
+        def compute_distance(s_a, s_b):
+            z = zimtohrli.Zimtohrli()
+            spectrogram_a = z.spectrogram(s_a)
+            spectrogram_b = z.spectrogram(s_b)
+            distance = z.distance(spectrogram_a, spectrogram_b)
+            return distance
+
+        # Run it without jit
+        distance = compute_distance(sound_a, sound_b)
         self.assertGreater(distance, 0)
+
+        # Run it under jit
+        jit_compute_distance = jax.jit(compute_distance)
+        jit_distance = jit_compute_distance(sound_a, sound_b)
+        self.assertGreater(jit_distance, 0)
+
+        self.assertAlmostEqual(distance, jit_distance, delta=1e-5)
 
 
 if __name__ == "__main__":
