@@ -43,7 +43,8 @@ class CamTest(unittest.TestCase):
         dict(hz=10000, cam=35.316578),
     )
     def test_cam_from_hz(self, hz, cam):
-        self.assertAlmostEqual(self.cam.cam_from_hz(hz), cam)
+        self.assertAlmostEqual(self.cam.cam_from_hz(hz), cam,
+                               delta=1e-5)
 
     def test_channel_filter(self):
         fs = 48000

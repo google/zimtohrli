@@ -23,7 +23,7 @@ import elliptic
 import audio_signal
 
 
-@jax.tree_util.register_pytree_node_class
+@jax.tree_util.register_static
 @dataclasses.dataclass
 class Cam:
     """Handles converting between Hz and Cam.
@@ -80,7 +80,7 @@ class Cam:
                 - start_cam
             )
             stop_cam = self.cam_from_hz(self.maximum_channel_upper_bound)
-            self._hz_freqs = self.hz_from_cam(jnp.arange(start_cam, stop_cam, cam_step))
+            self._hz_freqs = self.hz_from_cam(np.arange(start_cam, stop_cam, cam_step))
 
     def hz_from_cam(self, cam: audio_signal.Numerical) -> audio_signal.Numerical:
         """Returns the Hz frequency for the provided Cam frequency."""
@@ -88,7 +88,7 @@ class Cam:
 
     def cam_from_hz(self, hz: audio_signal.Numerical) -> audio_signal.Numerical:
         """Returns the Cam frequency for the provided Hz frequency."""
-        return self.erbs_scale_1 * jnp.log10(self.erbs_offset + self.erbs_scale_2 * hz)
+        return self.erbs_scale_1 * np.log10(self.erbs_offset + self.erbs_scale_2 * hz)
 
     def channel_filter(self, sig: audio_signal.Signal) -> audio_signal.Channels:
         """Returns the signal filtered through a filter bank."""
@@ -109,7 +109,7 @@ class Cam:
                 )
             )
 
-        freqs_ary = jnp.asarray(freqs)
+        freqs_ary = np.asarray(freqs)
 
         return audio_signal.Channels(
             sample_rate=sig.sample_rate,

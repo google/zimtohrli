@@ -14,6 +14,7 @@
 """Generic classes containing signals."""
 
 import dataclasses
+import functools
 from typing import Union
 import jax
 import jax.numpy as jnp
@@ -31,15 +32,17 @@ NumericalArray = Union[
 ]
 
 
-@jax.tree_util.register_pytree_node_class
+@functools.partial(jax.tree_util.register_dataclass,
+                   data_fields=['samples'],
+                   meta_fields=['sample_rate'])
 @dataclasses.dataclass(frozen=True)
 class Signal:
     """Class defining a digital signal at a given sample rate.
 
     Attributes:
       sample_rate: The number of samples per second in the signal.
-      samples: A (num_samples,)-shaped array with the signal samples, in the range
-        -1 to 1.
+      samples: A (num_samples,)-shaped array with the signal samples, in the
+        range -1 to 1.
     """
 
     sample_rate: Numerical
@@ -53,15 +56,17 @@ class Signal:
         return cls(*children)
 
 
-@jax.tree_util.register_pytree_node_class
+@functools.partial(jax.tree_util.register_dataclass,
+                   data_fields=['samples'],
+                   meta_fields=['sample_rate', 'freqs'])
 @dataclasses.dataclass(frozen=True)
 class Channels:
     """Class defining a set of digital signals being related channels.
 
     Attributes:
       sample_rate: The number of samples per second in the signal.
-      samples: A (num_channels, num_samples)-shaped array with the samples of the
-        channel signals, in the range -1 to 1.
+      samples: A (num_channels, num_samples)-shaped array with the samples of
+        the channel signals, in the range -1 to 1.
       freqs: A (num_channels, 2)-shaped array with the low and high pass
         frequencies of the channels.
     """
@@ -110,13 +115,13 @@ class Channels:
         """Returns the channels in dB relative full_scale_sine_db.
 
         Make sure to only call this on Channels that are the result of calling
-        Channels.energy, since otherwise the dB conversion will get negative numbers
-        which will cause nans.
+        Channels.energy, since otherwise the dB conversion will get negative
+        numbers which will cause nans.
 
         Args:
           full_scale_sine_db: The reference dB SPL of a full scale sine.
-          db_epsilon: The epsilon to add to the energy before converting to dB to
-            avoid log of zero.
+          db_epsilon: The epsilon to add to the energy before converting to dB
+            to avoid log of zero.
 
         Returns:
           The energy in the channels in dB, downsample to the out_sample_rate.

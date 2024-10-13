@@ -493,7 +493,7 @@ func (r ReferenceBundles) ZimtohrliMSE(z *goohrli.Goohrli, includeJND bool) (flo
 				return 0, err
 			}
 			sumOfSquares += mse * mse
-			count += 1
+			count++
 		}
 	}
 	return sumOfSquares / float64(count), nil
@@ -601,7 +601,7 @@ type MappingOptimizationResult struct {
 	MSEAfter     float64
 }
 
-// OptimizeMOSMapping optimizes the MOS mapping parameters.
+// OptimizeMapping optimizes the MOS mapping parameters.
 func (r ReferenceBundles) OptimizeMapping() (*MappingOptimizationResult, error) {
 	startParams := goohrli.DefaultParameters(aio.DefaultSampleRate)
 	errors := []error{}
@@ -655,6 +655,7 @@ type Recorder struct {
 	startParameters goohrli.Parameters
 }
 
+// Init does nothing.
 func (r *Recorder) Init() error {
 	return nil
 }
@@ -669,6 +670,7 @@ func (r *Recorder) xToParams(x []float64) goohrli.Parameters {
 	return cpy
 }
 
+// Record prints optimization statistics to the log.
 func (r *Recorder) Record(loc *optimize.Location, op optimize.Operation, stats *optimize.Stats) error {
 	params := r.xToParams(loc.X)
 	switch op {
