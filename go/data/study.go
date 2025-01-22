@@ -117,8 +117,8 @@ func (r *ReferenceBundle) IsJND() bool {
 	return res
 }
 
-// ScaledMOS returns the MOS score scaled to 1-5.
-func (r *ReferenceBundle) ScaledMOS(mos float64) (float64, error) {
+// MOSScaler returns a function that scales MOS scores of this bundle to the range 1-5.
+func (r *ReferenceBundle) MOSScaler() (func(float64) float64, error) {
 	if r.mosScaler == nil {
 		if math.Abs(*r.ScoreTypeLimits[MOS][0]-1) < 0.2 && math.Abs(*r.ScoreTypeLimits[MOS][1]-5) < 0.2 {
 			r.mosScaler = func(mos float64) float64 {
@@ -129,10 +129,19 @@ func (r *ReferenceBundle) ScaledMOS(mos float64) (float64, error) {
 				return 1 + 0.04*mos
 			}
 		} else {
-			return 0, fmt.Errorf("minimum MOS %v and maximum MOS %v are confusing", *r.ScoreTypeLimits[MOS][0], *r.ScoreTypeLimits[MOS][1])
+			return nil, fmt.Errorf("minimum MOS %v and maximum MOS %v are confusing", *r.ScoreTypeLimits[MOS][0], *r.ScoreTypeLimits[MOS][1])
 		}
 	}
-	return r.mosScaler(mos), nil
+	return r.mosScaler, nil
+}
+
+// ScaledMOS returns the MOS score scaled to 1-5.
+func (r *ReferenceBundle) ScaledMOS(mos float64) (float64, error) {
+	scaler, err := r.MOSScaler()
+	if err != nil {
+		return 0, err
+	}
+	return scaler(mos), nil
 }
 
 // SortedTypes returns the score types of a bundle, alphabetically ordered.
@@ -1075,7 +1084,7 @@ func (s *Study) ViewEachReference(f func(*Reference) error) error {
 }
 
 // Copy inserts some reference into a study, and copies the audio files of the references and their distortions, assuming they are relative to the provided directory.
-func (s *Study) Copy(dir string, refs []*Reference, minMOS float64, progress func(int, int, int)) error {
+func (s *Study) Copy(dir string, refs []*Reference, minMOS float64, mosScaler func(float64) float64, progress func(int, int, int)) error {
 	for index, ref := range refs {
 		refCopy := &Reference{}
 		*refCopy = *ref
@@ -1086,7 +1095,7 @@ func (s *Study) Copy(dir string, refs []*Reference, minMOS float64, progress fun
 		}
 		for index, dist := range ref.Distortions {
 			distCopy := &Distortion{}
-			if distCopy.Scores[MOS] >= minMOS {
+			if mosScaler == nil || mosScaler(distCopy.Scores[MOS]) >= minMOS {
 				*distCopy = *dist
 				newDistPath := fmt.Sprintf("%v_%v", filepath.Base(dir), filepath.Base(dist.Path))
 				distCopy.Path = newDistPath
@@ -1151,9 +1160,9 @@ type Reference struct {
 	Distortions []*Distortion
 }
 
-func (r *Reference) HasMOSAbove(min float64) bool {
+func (r *Reference) HasMOSAbove(min float64, scaler func(float64) float64) bool {
 	for _, dist := range r.Distortions {
-		if dist.Scores[MOS] >= min {
+		if scaler(dist.Scores[MOS]) >= min {
 			return true
 		}
 	}
