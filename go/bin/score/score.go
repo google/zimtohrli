@@ -93,11 +93,15 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
+			scaler, err := bundle.MOSScaler()
+			if err != nil {
+				log.Fatal(err)
+			}
 			func() {
 				defer dest.Close()
 				if *sampleFraction == 1.0 {
 					bar := progress.New(fmt.Sprintf("Copying %q", filepath.Base(bundle.Dir)))
-					if err := dest.Copy(bundle.Dir, bundle.References, *sampleMinMOS, bar.Update); err != nil {
+					if err := dest.Copy(bundle.Dir, bundle.References, *sampleMinMOS, scaler, bar.Update); err != nil {
 						log.Fatal(err)
 					}
 					bar.Finish()
@@ -108,14 +112,14 @@ func main() {
 					bar := progress.New(fmt.Sprintf("Copying %v of %q", *sampleFraction, filepath.Base(bundle.Dir)))
 					for _, index := range rng.Perm(numRefs) {
 						ref := bundle.References[index]
-						if ref.HasMOSAbove(*sampleMinMOS) {
+						if ref.HasMOSAbove(*sampleMinMOS, scaler) {
 							toCopy = append(toCopy, bundle.References[index])
 						}
 						if len(toCopy) >= numWanted {
 							break
 						}
 					}
-					if err := dest.Copy(bundle.Dir, toCopy, *sampleMinMOS, bar.Update); err != nil {
+					if err := dest.Copy(bundle.Dir, toCopy, *sampleMinMOS, scaler, bar.Update); err != nil {
 						log.Fatal(err)
 					}
 					bar.Finish()
