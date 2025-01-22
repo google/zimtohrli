@@ -61,6 +61,7 @@ func main() {
 	failFast := flag.Bool("fail_fast", false, "Whether to panic immediately on any error.")
 	optimizeMapping := flag.String("optimize_mapping", "", "Glob to directories with databases to optimize the MOS mapping for.")
 	sample := flag.String("sample", "", "Glob to directories with databases to sample metadata and audio from.")
+	sampleMinMOS := flag.Float64("sample_min_mos", 0, "Discard evaluations with lower MOS than this when sampling.")
 	sampleDestination := flag.String("sample_destination", "", "Path to directory to put the sampled databases into.")
 	sampleFraction := flag.Float64("sample_fraction", 1.0, "Fraction of references to copy from the source databases.")
 	sampleSeed := flag.Int64("sample_seed", 0, "Seed when sampling a random fraction of references.")
@@ -96,7 +97,7 @@ func main() {
 				defer dest.Close()
 				if *sampleFraction == 1.0 {
 					bar := progress.New(fmt.Sprintf("Copying %q", filepath.Base(bundle.Dir)))
-					if err := dest.Copy(bundle.Dir, bundle.References, bar.Update); err != nil {
+					if err := dest.Copy(bundle.Dir, bundle.References, *sampleMinMOS, bar.Update); err != nil {
 						log.Fatal(err)
 					}
 					bar.Finish()
@@ -105,10 +106,16 @@ func main() {
 					numWanted := int(*sampleFraction * float64(numRefs))
 					toCopy := []*data.Reference{}
 					bar := progress.New(fmt.Sprintf("Copying %v of %q", *sampleFraction, filepath.Base(bundle.Dir)))
-					for _, index := range rng.Perm(numRefs)[:numWanted] {
-						toCopy = append(toCopy, bundle.References[index])
+					for _, index := range rng.Perm(numRefs) {
+						ref := bundle.References[index]
+						if ref.HasMOSAbove(*sampleMinMOS) {
+							toCopy = append(toCopy, bundle.References[index])
+						}
+						if len(toCopy) >= numWanted {
+							break
+						}
 					}
-					if err := dest.Copy(bundle.Dir, toCopy, bar.Update); err != nil {
+					if err := dest.Copy(bundle.Dir, toCopy, *sampleMinMOS, bar.Update); err != nil {
 						log.Fatal(err)
 					}
 					bar.Finish()

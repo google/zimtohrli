@@ -1075,7 +1075,7 @@ func (s *Study) ViewEachReference(f func(*Reference) error) error {
 }
 
 // Copy inserts some reference into a study, and copies the audio files of the references and their distortions, assuming they are relative to the provided directory.
-func (s *Study) Copy(dir string, refs []*Reference, progress func(int, int, int)) error {
+func (s *Study) Copy(dir string, refs []*Reference, minMOS float64, progress func(int, int, int)) error {
 	for index, ref := range refs {
 		refCopy := &Reference{}
 		*refCopy = *ref
@@ -1086,16 +1086,20 @@ func (s *Study) Copy(dir string, refs []*Reference, progress func(int, int, int)
 		}
 		for index, dist := range ref.Distortions {
 			distCopy := &Distortion{}
-			*distCopy = *dist
-			newDistPath := fmt.Sprintf("%v_%v", filepath.Base(dir), filepath.Base(dist.Path))
-			distCopy.Path = newDistPath
-			if err := os.Symlink(filepath.Join(dir, dist.Path), filepath.Join(s.dir, newDistPath)); err != nil {
+			if distCopy.Scores[MOS] >= minMOS {
+				*distCopy = *dist
+				newDistPath := fmt.Sprintf("%v_%v", filepath.Base(dir), filepath.Base(dist.Path))
+				distCopy.Path = newDistPath
+				if err := os.Symlink(filepath.Join(dir, dist.Path), filepath.Join(s.dir, newDistPath)); err != nil {
+					return err
+				}
+				refCopy.Distortions[index] = distCopy
+			}
+		}
+		if len(refCopy.Distortions) > 0 {
+			if err := s.Put([]*Reference{refCopy}); err != nil {
 				return err
 			}
-			refCopy.Distortions[index] = distCopy
-		}
-		if err := s.Put([]*Reference{refCopy}); err != nil {
-			return err
 		}
 		progress(len(refs), index, 0)
 	}
@@ -1145,6 +1149,15 @@ type Reference struct {
 	Name        string
 	Path        string
 	Distortions []*Distortion
+}
+
+func (r *Reference) HasMOSAbove(min float64) bool {
+	for _, dist := range r.Distortions {
+		if dist.Scores[MOS] >= min {
+			return true
+		}
+	}
+	return false
 }
 
 // Load returns the audio for this reference.
