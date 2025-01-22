@@ -1084,7 +1084,11 @@ func (s *Study) ViewEachReference(f func(*Reference) error) error {
 }
 
 // Copy inserts some reference into a study, and copies the audio files of the references and their distortions, assuming they are relative to the provided directory.
+<<<<<<< HEAD
 func (s *Study) Copy(dir string, refs []*Reference, minMOS float64, mosScaler func(float64) float64, progress func(int, int, int)) error {
+=======
+func (s *Study) Copy(dir string, refs []*Reference, minMOS float64, progress func(int, int, int)) error {
+>>>>>>> 51d41ed (Added option to filter out low quality distortions when sampling one dataset to another.)
 	for index, ref := range refs {
 		refCopy := &Reference{}
 		*refCopy = *ref
@@ -1095,7 +1099,11 @@ func (s *Study) Copy(dir string, refs []*Reference, minMOS float64, mosScaler fu
 		}
 		for index, dist := range ref.Distortions {
 			distCopy := &Distortion{}
+<<<<<<< HEAD
 			if mosScaler == nil || mosScaler(distCopy.Scores[MOS]) >= minMOS {
+=======
+			if distCopy.Scores[MOS] >= minMOS {
+>>>>>>> 51d41ed (Added option to filter out low quality distortions when sampling one dataset to another.)
 				*distCopy = *dist
 				newDistPath := fmt.Sprintf("%v_%v", filepath.Base(dir), filepath.Base(dist.Path))
 				distCopy.Path = newDistPath
