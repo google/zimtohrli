@@ -117,8 +117,13 @@ func (r *ReferenceBundle) IsJND() bool {
 	return res
 }
 
+var ErrNoMOSAvailable = fmt.Errorf("no MOS scores available")
+
 // MOSScaler returns a function that scales MOS scores of this bundle to the range 1-5.
 func (r *ReferenceBundle) MOSScaler() (func(float64) float64, error) {
+	if _, found := r.ScoreTypes[MOS]; !found {
+		return nil, ErrNoMOSAvailable
+	}
 	if r.mosScaler == nil {
 		if math.Abs(*r.ScoreTypeLimits[MOS][0]-1) < 0.2 && math.Abs(*r.ScoreTypeLimits[MOS][1]-5) < 0.2 {
 			r.mosScaler = func(mos float64) float64 {
@@ -1093,16 +1098,17 @@ func (s *Study) Copy(dir string, refs []*Reference, minMOS float64, mosScaler fu
 		if err := os.Symlink(filepath.Join(dir, ref.Path), filepath.Join(s.dir, newRefPath)); err != nil {
 			return err
 		}
-		for index, dist := range ref.Distortions {
-			distCopy := &Distortion{}
-			if mosScaler == nil || mosScaler(distCopy.Scores[MOS]) >= minMOS {
+		refCopy.Distortions = nil
+		for _, dist := range ref.Distortions {
+			if mosScaler == nil || mosScaler(dist.Scores[MOS]) >= minMOS {
+				distCopy := &Distortion{}
 				*distCopy = *dist
 				newDistPath := fmt.Sprintf("%v_%v", filepath.Base(dir), filepath.Base(dist.Path))
 				distCopy.Path = newDistPath
 				if err := os.Symlink(filepath.Join(dir, dist.Path), filepath.Join(s.dir, newDistPath)); err != nil {
 					return err
 				}
-				refCopy.Distortions[index] = distCopy
+				refCopy.Distortions = append(refCopy.Distortions, distCopy)
 			}
 		}
 		if len(refCopy.Distortions) > 0 {

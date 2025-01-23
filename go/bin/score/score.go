@@ -94,7 +94,9 @@ func main() {
 				log.Fatal(err)
 			}
 			scaler, err := bundle.MOSScaler()
-			if err != nil {
+			if err == data.ErrNoMOSAvailable {
+				scaler = nil
+			} else if err != nil {
 				log.Fatal(err)
 			}
 			func() {
@@ -112,7 +114,7 @@ func main() {
 					bar := progress.New(fmt.Sprintf("Copying %v of %q", *sampleFraction, filepath.Base(bundle.Dir)))
 					for _, index := range rng.Perm(numRefs) {
 						ref := bundle.References[index]
-						if ref.HasMOSAbove(*sampleMinMOS, scaler) {
+						if scaler == nil || ref.HasMOSAbove(*sampleMinMOS, scaler) {
 							toCopy = append(toCopy, bundle.References[index])
 						}
 						if len(toCopy) >= numWanted {
