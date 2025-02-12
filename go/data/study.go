@@ -125,16 +125,16 @@ func (r *ReferenceBundle) MOSScaler() (func(float64) float64, error) {
 		return nil, ErrNoMOSAvailable
 	}
 	if r.mosScaler == nil {
-		if math.Abs(*r.ScoreTypeLimits[MOS][0]-1) < 0.2 && math.Abs(*r.ScoreTypeLimits[MOS][1]-5) < 0.2 {
+		if math.Abs(*r.ScoreTypeLimits[MOS][1]-5) < 0.2 {
 			r.mosScaler = func(mos float64) float64 {
 				return mos
 			}
-		} else if math.Abs(*r.ScoreTypeLimits[MOS][0]) < 0.2 && math.Abs(*r.ScoreTypeLimits[MOS][1]-100) < 0.2 {
+		} else if math.Abs(*r.ScoreTypeLimits[MOS][1]-100) < 10 {
 			r.mosScaler = func(mos float64) float64 {
 				return 1 + 0.04*mos
 			}
 		} else {
-			return nil, fmt.Errorf("minimum MOS %v and maximum MOS %v are confusing", *r.ScoreTypeLimits[MOS][0], *r.ScoreTypeLimits[MOS][1])
+			return nil, fmt.Errorf("%q: maximum MOS %v are confusing", r.Dir, *r.ScoreTypeLimits[MOS][1])
 		}
 	}
 	return r.mosScaler, nil

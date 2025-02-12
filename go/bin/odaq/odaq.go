@@ -253,7 +253,7 @@ func populate(dest string, workers int) error {
 			Path: recodePath,
 		}
 		for distPath, scores := range distToScores {
-			recodePath, found = recodedPaths[refPath]
+			recodePath, found = recodedPaths[distPath]
 			if !found {
 				return fmt.Errorf("recoded path for %q not found", refPath)
 			}
