@@ -54,26 +54,23 @@ func withZipFiles(u string, f func(count int, each func(yield func(root string, 
 		bar := progress.New(u)
 		bar.Update(int(res.ContentLength), 0, 0)
 		defer bar.Finish()
-		return func() error {
-			defer tmpFile.Close()
-			buf := make([]byte, 1024*1024)
-			read := 0
-			sum := 0
-			for read, err = res.Body.Read(buf); err == nil || err == io.EOF; read, err = res.Body.Read(buf) {
-				sum += read
-				bar.Update(int(res.ContentLength), sum, 0)
-				if _, err := tmpFile.Write(buf[:read]); err != nil {
-					return fmt.Errorf("writing to %q: %v", tmpFile.Name(), err)
-				}
-				if err == io.EOF {
-					break
-				}
+		buf := make([]byte, 1024*1024)
+		read := 0
+		sum := 0
+		for read, err = res.Body.Read(buf); err == nil || err == io.EOF; read, err = res.Body.Read(buf) {
+			sum += read
+			bar.Update(int(res.ContentLength), sum, 0)
+			if _, err := tmpFile.Write(buf[:read]); err != nil {
+				return fmt.Errorf("writing to %q: %v", tmpFile.Name(), err)
 			}
 			if err == io.EOF {
-				return nil
+				break
 			}
+		}
+		if err != io.EOF {
 			return fmt.Errorf("reading %q: %v", u, err)
-		}()
+		}
+		return nil
 	}(); err != nil {
 		return err
 	}
@@ -162,10 +159,10 @@ func populate(dest string, workers int) error {
 
 	refToDistToScores := map[string]map[string][]float64{}
 
-	appendTrials := func(zipPath string) error {
-		m, err := readMushraXML(zipPath)
+	appendTrials := func(xmlPath string) error {
+		m, err := readMushraXML(xmlPath)
 		if err != nil {
-			return fmt.Errorf("reading MUSHRA XML from %q: %v", zipPath, err)
+			return fmt.Errorf("reading MUSHRA XML from %q: %v", xmlPath, err)
 		}
 		for _, trial := range m.Trials {
 			refPath := filepath.Join("ODAQ", "ODAQ_listening_test", trial.Name, "reference.wav")
@@ -280,7 +277,7 @@ func populate(dest string, workers int) error {
 
 func main() {
 	destination := flag.String("dest", "", "Destination directory.")
-	workers := flag.Int("workers", runtime.NumCPU(), "Number of converting downloading sounds.")
+	workers := flag.Int("workers", runtime.NumCPU(), "Number of sounds converted in parallel.")
 	flag.Parse()
 	if *destination == "" {
 		flag.Usage()
