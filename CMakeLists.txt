@@ -48,16 +48,16 @@ target_include_directories(zimtohrli_visqol_adapter PUBLIC cpp)
 target_link_libraries(zimtohrli_visqol_adapter PRIVATE visqol samplerate hwy)
 target_link_libraries(zimtohrli_visqol_adapter PUBLIC absl::span)
 
-find_package(Python3 COMPONENTS Interpreter Development)
-add_library(zimtohrli_pyohrli SHARED
-    cpp/zimt/pyohrli.cc
-)
-set_target_properties(zimtohrli_pyohrli PROPERTIES
-    PREFIX ""
-    OUTPUT_NAME _pyohrli.so
-    SUFFIX ""
-)
-target_link_libraries(zimtohrli_pyohrli zimtohrli_base Python3::Python absl::check)
+#find_package(Python3 COMPONENTS Interpreter Development)
+#add_library(zimtohrli_pyohrli SHARED
+#    cpp/zimt/pyohrli.cc
+#)
+#set_target_properties(zimtohrli_pyohrli PROPERTIES
+#    PREFIX ""
+#    OUTPUT_NAME _pyohrli.so
+#    SUFFIX ""
+#)
+#target_link_libraries(zimtohrli_pyohrli zimtohrli_base Python3::Python absl::check)
 
 add_library(zimtohrli_goohrli_glue STATIC
     cpp/zimt/goohrli.cc
