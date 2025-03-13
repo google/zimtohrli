@@ -1,6 +1,7 @@
 module github.com/google/zimtohrli
 
 go 1.21
+toolchain go1.23.7
 
 require (
 	github.com/PuerkitoBio/goquery v1.9.1
@@ -13,6 +14,6 @@ require (
 	github.com/aclements/go-moremath v0.0.0-20210112150236-f10218a38794 // indirect
 	github.com/andybalholm/cascadia v1.3.2 // indirect
 	golang.org/x/exp v0.0.0-20231110203233-9a3e6036ecaa // indirect
-	golang.org/x/net v0.33.0 // indirect
+	golang.org/x/net v0.36.0 // indirect
 	golang.org/x/tools v0.15.0 // indirect
 )
