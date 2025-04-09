@@ -394,8 +394,8 @@ Rotators::Rotators(int num_channels, std::vector<float> frequency,
 		   int downsample) {
   const float scaling_for_downsampling = 1.0f / downsample;
   channel.resize(num_channels);
-  static const double kWindow = 0.99971274067289151;
-  static const double kBandwidthMagic = 0.73283668663046908;
+  static const double kWindow = 0.9996028710680265;
+  static const double kBandwidthMagic = 0.7328516996032982;
   for (int i = 0; i < kNumRotators; ++i) {
     // The bw parameter relates to the frequency shape overlap and window length
     // of the triple leaking integrator (3rd-order complex gammatone filter).
