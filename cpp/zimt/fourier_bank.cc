@@ -149,7 +149,7 @@ float Loudness(int k, float val) {
     0.58639078360761954,
     0.37335527143387232,
   };
-  static const float off = exp(80) * 1e-10;
+  static const float off = 1e16 * 1e-10;
   return log(val + off) * kMul[k];
 }
 
@@ -537,7 +537,7 @@ Rotators::Rotators(int downsample) {
     window[i] = std::pow(kWindow, bw * kBandwidthMagic);
     float windowM1 = 1.0f - window[i];
     float f = Frequency(i) * 2.0f * M_PI / kSampleRate;
-    static const float full_scale_sine_db = exp(80);
+    static const float full_scale_sine_db = 1e16;
     static const float scale_normalizer = 0.00019;
     const float gainer = sqrt(scaling_for_downsampling * full_scale_sine_db * scale_normalizer * Frequency(i));
     gain[i] = gainer * pow(windowM1, 3.0);
