@@ -279,21 +279,23 @@ struct Zimtohrli {
 
   // Sample rate corresponding to the human hearing sensitivity to timing
   // differences.
-  float perceptual_sample_rate = 97.965544663900474;
+  float high_gamma_band = 85.0;  // The clock frequency of the brain?!
+  int samples_per_perceptual_block = int(48000 / high_gamma_band);
+  float perceptual_sample_rate = 48000. / samples_per_perceptual_block;
 
-  // The filterbank used to separate the signal in frequency channels.
+  // The filterbank used to separate the signal in frequency channels. 
   std::optional<CamFilterbank> cam_filterbank;
 
   // The window in perceptual_sample_rate time steps when compting the NSIM.
   size_t nsim_step_window = 6;
 
   // The window in channels when computing the NSIM.
-  size_t nsim_channel_window = 6; // TODO(jyrki): reduce further
+  size_t nsim_channel_window = 5;
 
   // The window of the dynamic time warp that matches audio signals.
   //
   // If zero no dynamic time warp will be performed.
-  float unwarp_window_seconds = 2;
+  float unwarp_window_seconds = 2.0;
 
   // The reference dB SPL of a sine signal of amplitude 1.
   float full_scale_sine_db = 78.3;

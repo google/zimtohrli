@@ -198,10 +198,24 @@ float HwyNSIM(const hwy::AlignedNDArray<float, 2>& a,
             Load(d, mean_b[{step_index}].data() + channel_index));
         return Mul(delta_a, delta_b);
       });
+
+  // nsim-inspired ad hoc aggregation
+  // main changes:
+  // The aggregation tries to be more L1 than L2
+  // Clamping of structure value
+  // Adding a small amount of a-b L1 diff
+  //
+  // These changes were measured to be small improvements on a multi-corpus
+  // test.
   const Vec two = Set(d, 2.0);
-  const Vec C1 = Set(d, 130.53981769200561);
-  const Vec C3 = Set(d, 68.621068848124807);
-  const Vec C4 = Set(d, 1.9205364350341391e-05);
+  const Vec C1 = Set(d, 15.878634932449478);
+  const Vec C3 = Set(d, 6.3980236302513598);
+  const Vec C4 = Set(d, 3.7086108079266867e-05);
+  const Vec C5 = Set(d, 4.4905585493762743e-07);
+  const Vec C6 = Set(d, 1.4665325627092804e-06);
+  const Vec C7 = Set(d, 0.00017893002430989676);
+  const Vec C8 = Set(d, 0.70256003297186653);
+
   float nsim_sum = 0.0;
   const Vec num_channels_vec = Set(d, num_channels);
   const Vec zero = Zero(d);
@@ -218,15 +232,21 @@ float HwyNSIM(const hwy::AlignedNDArray<float, 2>& a,
           Sqrt(Load(d, var_b[{step_index}].data() + channel_index));
       const Vec cov_vec = Load(d, cov[{step_index}].data() + channel_index);
       const Vec intensity = Div(
-          MulAdd(two, Mul(mean_a_vec, mean_b_vec), C1),
-          MulAdd(mean_a_vec, mean_a_vec, MulAdd(mean_b_vec, mean_b_vec, C1)));
+				MulAdd(two, Sqrt(Mul(mean_a_vec, mean_b_vec)), C1),
+				Add(Add(Abs(mean_a_vec), Abs(mean_b_vec)), C1));
       const Vec structure_base = Div(Add(cov_vec, C3), MulAdd(std_a_vec, std_b_vec, C3));
-      const Vec structure_clamped = IfThenElse(Lt(structure_base, zero), zero, structure_base);
-      const Vec structure = Sqrt(Sqrt(Add(structure_clamped, C4)));
+      const Vec structure_clamped = IfThenElse(Lt(structure_base, C8), C8, structure_base);
+      const Vec structure = Add(Sqrt(Add(Sqrt(Add(structure_clamped, C4)), C5)), C6);
       const Vec channel_index_vec = Iota(d, channel_index);
       const Vec nsim = IfThenElse(Lt(channel_index_vec, num_channels_vec),
                                   Mul(intensity, structure), zero);
-      nsim_sum += ReduceSum(d, nsim);
+      const Vec aval = Load(d, a[{time_pairs[step_index].first}].data() + channel_index);
+      const Vec bval = Load(d, b[{time_pairs[step_index].second}].data() + channel_index);
+      const Vec diff = IfThenElse(Lt(channel_index_vec, num_channels_vec),
+				  Sub(aval, bval), zero);
+      const Vec sqrdiff = Mul(C7, Abs(diff));
+      const Vec nsim2 = Add(nsim, sqrdiff);
+      nsim_sum += ReduceSum(d, nsim2);
     }
   }
   return nsim_sum / static_cast<float>(num_steps * num_channels);
