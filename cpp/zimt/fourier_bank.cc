@@ -355,8 +355,8 @@ void Rotators::FilterAndDownsample(hwy::Span<const float> signal,
       }
       if (zz == 0) {
         for (int k = 0; k < kNumRotators; ++k) {
-          float energy = (channel[0].accu[4][k] * channel[0].accu[4][k] +
-			  channel[0].accu[5][k] * channel[0].accu[5][k]);
+          float energy = (channel.accu[4][k] * channel.accu[4][k] +
+			  channel.accu[5][k] * channel.accu[5][k]);
 	  // + 1 should be enough ?!
           if (out_ix + 2 < channels.shape()[0]) {
             channels[{out_ix + 1}][k] += one_minus_weight * energy;
@@ -366,8 +366,8 @@ void Rotators::FilterAndDownsample(hwy::Span<const float> signal,
       } else {
         for (int k = 0; k < kNumRotators; ++k) {
           float energy =
-              channel[0].accu[4][k] * channel[0].accu[4][k] +
-              channel[0].accu[5][k] * channel[0].accu[5][k];
+              channel.accu[4][k] * channel.accu[4][k] +
+              channel.accu[5][k] * channel.accu[5][k];
 	  // + 1 should be enough ?!
           if (out_ix + 2 < channels.shape()[0]) {
             channels[{out_ix + 1}][k] += one_minus_weight * energy;
@@ -389,26 +389,157 @@ double CalculateBandwidth(double low, double mid, double high) {
 	  std::abs(std::sqrt(high * mid) - mid));
 }
 
-Rotators::Rotators(int num_channels, std::vector<float> frequency,
-                   std::vector<float> filter_gains, const float sample_rate,
-		   int downsample) {
+float Frequency(int i) {
+  static const float kFreq[128] = {
+    24.3492317199707,
+    33.1997528076172,
+    42.3596649169922,
+    51.8397789001465,
+    61.651294708252,
+    71.805793762207,
+    82.3152618408203,
+    93.1921081542969,
+    104.449180603027,
+    116.099769592285,
+    128.157623291016,
+    140.636993408203,
+    153.552581787109,
+    166.919677734375,
+    180.754058837891,
+    195.072021484375,
+    209.890518188477,
+    225.227020263672,
+    241.099639892578,
+    257.527130126953,
+    274.528869628906,
+    292.124938964844,
+    310.336120605469,
+    329.183898925781,
+    348.690612792969,
+    368.879211425781,
+    389.773559570312,
+    411.398254394531,
+    433.778900146484,
+    456.941955566406,
+    480.914703369141,
+    505.725463867188,
+    531.403564453125,
+    557.979248046875,
+    585.484008789062,
+    613.9501953125,
+    643.411499023438,
+    673.902709960938,
+    705.459716796875,
+    738.119873046875,
+    771.921875,
+    806.905395507812,
+    843.111938476562,
+    880.584045410156,
+    919.366088867188,
+    959.50390625,
+    1001.04486083984,
+    1044.03784179688,
+    1088.53369140625,
+    1134.5849609375,
+    1182.24609375,
+    1231.5732421875,
+    1282.62463378906,
+    1335.46069335938,
+    1390.14392089844,
+    1446.73864746094,
+    1505.31176757812,
+    1565.93225097656,
+    1628.671875,
+    1693.60473632812,
+    1760.80749511719,
+    1830.35961914062,
+    1902.34301757812,
+    1976.84252929688,
+    2053.9462890625,
+    2133.74560546875,
+    2216.33447265625,
+    2301.81030273438,
+    2390.27416992188,
+    2481.83056640625,
+    2576.58715820312,
+    2674.65625,
+    2776.15380859375,
+    2881.19970703125,
+    2989.9169921875,
+    3102.43505859375,
+    3218.88623046875,
+    3339.408203125,
+    3464.14331054688,
+    3593.23876953125,
+    3726.84765625,
+    3865.12646484375,
+    4008.2392578125,
+    4156.35498046875,
+    4309.64794921875,
+    4468.30029296875,
+    4632.498046875,
+    4802.43603515625,
+    4978.314453125,
+    5160.3408203125,
+    5348.72998046875,
+    5543.705078125,
+    5745.4970703125,
+    5954.341796875,
+    6170.4873046875,
+    6394.1884765625,
+    6625.70947265625,
+    6865.3251953125,
+    7113.31689453125,
+    7369.978515625,
+    7635.61279296875,
+    7910.53125,
+    8195.0615234375,
+    8489.5390625,
+    8794.30859375,
+    9109.732421875,
+    9436.18359375,
+    9774.0458984375,
+    10123.7197265625,
+    10485.6171875,
+    10860.1640625,
+    11247.806640625,
+    11648.998046875,
+    12064.2138671875,
+    12493.9453125,
+    12938.7001953125,
+    13399.0,
+    13875.392578125,
+    14368.4384765625,
+    14878.7177734375,
+    15406.8349609375,
+    15953.416015625,
+    16519.10546875,
+    17104.56640625,
+    17710.494140625,
+    18337.60546875,
+    18986.634765625,
+    19658.35546875,
+  };
+  return kFreq[i];
+}
+  
+Rotators::Rotators(const float sample_rate, int downsample) {
   const float scaling_for_downsampling = 1.0f / downsample;
-  channel.resize(num_channels);
   static const double kWindow = 0.9996028710680265;
   static const double kBandwidthMagic = 0.7328516996032982;
   for (int i = 0; i < kNumRotators; ++i) {
     // The bw parameter relates to the frequency shape overlap and window length
     // of the triple leaking integrator (3rd-order complex gammatone filter).
     float bw = CalculateBandwidth(
-        i == 0 ? frequency[1] : frequency[i - 1], frequency[i],
-        i + 1 == kNumRotators ? frequency[i - 1] : frequency[i + 1]);
+       i == 0 ? Frequency(1) : Frequency(i - 1), Frequency(i),
+       i + 1 == kNumRotators ? Frequency(i - 1) : Frequency(i + 1));
     window[i] = std::pow(kWindow, bw * kBandwidthMagic);
     float windowM1 = 1.0f - window[i];
-    float f = frequency[i] * 2.0f * M_PI / sample_rate;
+     float f = Frequency(i) * 2.0f * M_PI / sample_rate;
     static const float full_scale_sine_db = exp(80);
     static const float scale_normalizer = 0.00019;
-    const float gainer = sqrt(scaling_for_downsampling * full_scale_sine_db * scale_normalizer * frequency[i]);
-    gain[i] = gainer * filter_gains[i] * pow(windowM1, 3.0);
+    const float gainer = sqrt(scaling_for_downsampling * full_scale_sine_db * scale_normalizer * Frequency(i));
+    gain[i] = gainer * pow(windowM1, 3.0);
     rot[0][i] = float(std::cos(f));
     rot[1][i] = float(-std::sin(f));
     rot[2][i] = gain[i];
@@ -425,25 +556,24 @@ void Rotators::OccasionallyRenormalize() {
 }
 
 void Rotators::IncrementAll(float signal) {
-  const int c = 0;
   for (int i = 0; i < kNumRotators; i++) {
     const float w = window[i];
-    channel[c].accu[0][i] *= w;
-    channel[c].accu[1][i] *= w;
-    channel[c].accu[2][i] *= w;
-    channel[c].accu[3][i] *= w;
-    channel[c].accu[4][i] *= w;
-    channel[c].accu[5][i] *= w;
+    channel.accu[0][i] *= w;
+    channel.accu[1][i] *= w;
+    channel.accu[2][i] *= w;
+    channel.accu[3][i] *= w;
+    channel.accu[4][i] *= w;
+    channel.accu[5][i] *= w;
     const float tr = rot[0][i] * rot[2][i] - rot[1][i] * rot[3][i];
     const float tc = rot[0][i] * rot[3][i] + rot[1][i] * rot[2][i];
     rot[2][i] = tr;
     rot[3][i] = tc;
-    channel[c].accu[2][i] += channel[c].accu[0][i];
-    channel[c].accu[3][i] += channel[c].accu[1][i];
-    channel[c].accu[4][i] += channel[c].accu[2][i];
-    channel[c].accu[5][i] += channel[c].accu[3][i];
-    channel[c].accu[0][i] += rot[2][i] * signal;
-    channel[c].accu[1][i] += rot[3][i] * signal;
+    channel.accu[2][i] += channel.accu[0][i];
+    channel.accu[3][i] += channel.accu[1][i];
+    channel.accu[4][i] += channel.accu[2][i];
+    channel.accu[5][i] += channel.accu[3][i];
+    channel.accu[0][i] += rot[2][i] * signal;
+    channel.accu[1][i] += rot[3][i] * signal;
   }
 }
 
