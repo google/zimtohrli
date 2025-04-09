@@ -285,13 +285,13 @@ void Zimtohrli::Spectrogram(
   std::vector<float> gains;
   for (size_t i = 0; i < cam_filterbank->filter.Size(); ++i) {
     freqs.push_back(cam_filterbank->thresholds_hz[{1}][i]);
-    //freqs.push_back(20.0 * pow(1000.0, 1.0 * i / (cam_filterbank->filter.Size() - 1)));
     gains.push_back(1.0);
   }
 
   int downsample = signal.size() / energy_channels_db.shape()[0];
 
-  tabuli::Rotators rots(1, freqs, gains, cam_filterbank->sample_rate);
+  tabuli::Rotators rots(1, freqs, gains, cam_filterbank->sample_rate,
+			downsample);
   rots.FilterAndDownsample(signal, energy_channels_db, downsample);
 
   hwy::CopyBytes(energy_channels_db.data(), spectrogram.data(),

@@ -42,10 +42,12 @@ struct Rotators {
   // channels.
   float window[kNumRotators];
   float gain[kNumRotators];
+  int downsample_;
 
   Rotators() = default;
   Rotators(int num_channels, std::vector<float> frequency,
-           std::vector<float> filter_gains, const float sample_rate);
+           std::vector<float> filter_gains, const float sample_rate,
+	   int downsample);
 
   void FilterAndDownsample(hwy::Span<const float> signal,
                            hwy::AlignedNDArray<float, 2>& channels,
@@ -53,7 +55,6 @@ struct Rotators {
 
   void OccasionallyRenormalize();
   void IncrementAll(float signal);
-  std::vector<float> rotator_frequency;
 };
 
 }  // namespace tabuli

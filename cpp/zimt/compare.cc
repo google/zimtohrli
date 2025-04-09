@@ -58,6 +58,8 @@
 #include "zimt/mos.h"
 #include "zimt/ux.h"
 #include "zimt/zimtohrli.h"
+#include "zimt/fourier_bank.h"
+
 
 ABSL_FLAG(std::string, path_a, "", "file A to compare");
 ABSL_FLAG(std::vector<std::string>, path_b, {}, "files B to compare to file A");
@@ -266,7 +268,17 @@ int Main(int argc, char* argv[]) {
     file_b_vector.push_back(*std::move(file_b));
   }
 
-  Cam cam{.minimum_bandwidth_hz = frequency_resolution};
+  float hz_resolution = 0;
+  {
+    const zimtohrli::Cam def_cam;
+    const float min_cam = def_cam.CamFromHz(def_cam.low_threshold_hz);
+    const float max_cam = def_cam.CamFromHz(def_cam.high_threshold_hz);
+    const float cam_step = (max_cam - min_cam) / tabuli::kNumRotators;
+    hz_resolution =
+        def_cam.HzFromCam(min_cam + cam_step) - def_cam.low_threshold_hz;
+  }
+
+  Cam cam{.minimum_bandwidth_hz = hz_resolution};
   cam.high_threshold_hz =
       std::min(cam.high_threshold_hz, file_a->Info().samplerate / 2.0f);
   Zimtohrli z = {

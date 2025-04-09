@@ -18,357 +18,403 @@
 
 namespace tabuli {
 
-float Loudness(float freq, float val) {
-  static const float pars[30][4] = {
-    // ~[20*1.2589254117941673**i for i in range(31)]
-    { 0.635, -31.5, 78.1, 20 },
-    { 0.602, -27.2, 68.7, 25 },
-    { 0.569, -23.1, 59.5, 31.5 },
-    { 0.537, -19.3, 51.1, 40 },
-    { 0.509, -16.1, 44.0, 50 },
-    { 0.482, -13.1, 37.5, 63 },
-    { 0.456, -10.4, 31.5, 80 },
-    { 0.433, -8.2, 26.5, 100 },
-    { 0.412, -6.3, 22.1, 125 },
-    { 0.391, -4.6, 17.9, 160 },
-    { 0.373, -3.2, 14.4, 200 },
-    { 0.357, -2.1, 11.4, 250 },
-    { 0.343, -1.2, 8.6, 315 },
-    { 0.330, -0.5, 6.2, 400 },
-    { 0.320, 0.0, 4.4, 500 },
-    { 0.311, 0.4, 3.0, 630 },
-    { 0.303, 0.5, 2.2, 800 },
-    { 0.300, 0.0, 2.4, 1000 },
-    { 0.295, -2.7, 3.5, 1250 },
-    { 0.292, -4.2, 1.7, 1600 },
-    { 0.290, -1.2, -1.3, 2000 },
-    { 0.290, 1.4, -4.2, 2500 },
-    { 0.289, 2.3, -6.0, 3150 },
-    { 0.289, 1.0, -5.4, 4000 },
-    { 0.289, -2.3, -1.5, 5000 },
-    { 0.293, -7.2, 6.0, 6300 },
-    { 0.303, -11.2, 12.6, 8000 },
-    { 0.323, -10.9, 13.9, 10000 },
-    { 0.354, -3.5, 12.3, 12500 },
+float Loudness(int k, float val) {
+  static const float kMul[128] = {
+    0.7,
+    0.7,
+    0.7,
+    0.7,
+    0.7,
+    0.7,
+    0.7,
+    0.7,
+    0.7,
+    0.7,
+    0.7,
+    0.70125,
+    0.7025,
+    0.705,
+    0.7075,
+    0.70875,
+    0.71,
+    0.714,
+    0.72,
+    0.756663739681244,
+    0.791388213634491,
+    0.81355094909668,
+    0.818272769451141,
+    0.808820724487305,
+    0.771756112575531,
+    0.729331910610199,
+    0.663712620735168,
+    0.609019339084625,
+    0.549431920051575,
+    0.514768540859222,
+    0.496495336294174,
+    0.510636150836945,
+    0.555289745330811,
+    0.623472094535828,
+    0.709445178508759,
+    0.792715966701508,
+    0.857817113399506,
+    0.899907052516937,
+    0.89266049861908,
+    0.875683665275574,
+    0.82198703289032,
+    0.814553201198578,
+    0.807841420173645,
+    0.86853551864624,
+    0.93546199798584,
+    1.03893947601318,
+    1.11974322795868,
+    1.17388248443604,
+    1.18063831329346,
+    1.15319585800171,
+    1.10063767433167,
+    1.0428718328476,
+    0.98123037815094,
+    0.939120948314667,
+    0.894395768642426,
+    0.86841893196106,
+    0.830133378505707,
+    0.811527013778687,
+    0.783333718776703,
+    0.777321338653564,
+    0.769735217094421,
+    0.782284200191498,
+    0.796532392501831,
+    0.813268423080444,
+    0.834646463394165,
+    0.853498220443726,
+    0.883629024028778,
+    0.905125141143799,
+    0.931883990764618,
+    0.953404128551483,
+    0.975725889205933,
+    0.994348764419556,
+    1.00550627708435,
+    1.0169050693512,
+    1.02076697349548,
+    1.02557492256165,
+    1.01951146125793,
+    1.0156672000885,
+    1.00421977043152,
+    1.00312781333923,
+    1.00125312805176,
+    1.0194239616394,
+    1.04725480079651,
+    1.10146355628967,
+    1.17016696929932,
+    1.25128841400146,
+    1.34012925624847,
+    1.41931223869324,
+    1.49751472473145,
+    1.54519271850586,
+    1.58564329147339,
+    1.59752893447876,
+    1.60576319694519,
+    1.59497201442719,
+    1.57665812969208,
+    1.54442059993744,
+    1.49997091293335,
+    1.44369578361511,
+    1.38219106197357,
+    1.32069706916809,
+    1.27119278907776,
+    1.23539400100708,
+    1.22008681297302,
+    1.22006702423096,
+    1.22810864448547,
+    1.2362095064078784,
+    1.2336821856137856,
+    1.2461572298376118,
+    1.2448330037511317,
+    1.2453048403306188,
+    1.2468711853321419,
+    1.251268707924988,
+    1.250212337550022,
+    1.2485596587470982,
+    1.2121939107320447,
+    1.2180838400115952,
+    1.2122080073657358,
+    1.113969563990006,
+    1.0124972841155206,
+    0.92572659767737442,
+    0.76750135753716764,
+    0.72675610034310689,
+    0.67197913320699598,
+    0.70243807444958895,
+    0.76734425846626975,
+    0.73426009148905913,
+    0.58639078360761954,
+    0.37335527143387232,
   };
-  int low_ix = 0;
-  int high_ix = 0;
-  float interp = 0;
-  int start_kk = 0;
-  if (freq > 200) start_kk = 10;
-  if (freq > 2000) start_kk = 20;
-  for (int kk = start_kk; kk < 30; ++kk) {
-    if (freq >= pars[kk][3] && (kk == 29 || freq < pars[kk + 1][3])) {
-      low_ix = kk;
-      high_ix = std::min(kk + 1, 29);
-      if (low_ix == high_ix) {
-        interp = 0;
-      } else {
-        interp = (freq - pars[low_ix][3]) / (pars[high_ix][3] - pars[low_ix][3]);
-      }
-      break;
-    }
-  }
-  const float *vals = &pars[low_ix][0];
-  const float *valsNext = &pars[high_ix][0];
-  float vals1 = (1.0 - interp) * vals[1] + interp * valsNext[1];
-  float vals2 = (1.0 - interp) * vals[2] + interp * valsNext[2];
-  static const float constant1 = 46.37287;
-  static const float constant2 = 80.892916;
-  static const float kMul = 3.41562;
-  val *= (constant1 + vals1) * (1.0 / constant2);
-  val += kMul * vals2;
-  return val;
+  static const float off = exp(80) * 1e-10;
+  return log(val + off) * kMul[k];
 }
 
-float SimpleDb(float energy) {
-  // ideally 78.3 db, but somehow this works better
-  static const float full_scale_sine_db = 75.8495;
-  static const float exp_full_scale_sine_db = exp(full_scale_sine_db);
-  // epsilon, but the biggest one you saw (~4.95e23)
-  static const float epsilon = 1.0033294789821357e-09 * exp_full_scale_sine_db;
-  // kMul allows faster log instead of log10 below, incorporating multiplying by 10 for decibel.
-  static const float kMul0 = 7.7888;
-  static const float kMul = kMul0 / log(10);
-  return kMul * log(energy + epsilon);
-}
 
-void PrepareMasker(hwy::AlignedNDArray<float, 2>& freq,
-                   float *masker,
-                   size_t out_ix) {
-  static const double kMul = 0.925585;
-  // convolve in time and freq, 5 freq bins, 3 time bins
-  static const double c[12] = {
-    0.011792864242897921,
-    0.02141444616229312,
-    0.27204462940133883,
-    0.04081130408323199,
-    0.32503380520713393,
-    0.63960360145409523,
-    0.36547565427708706,
-    0.64646959791651382,
-    1.5271657112757793,
-    0.10296035397317034,
-    1.3755662770950172,
-    7.4439086735915927,
-  };
-  static const float div = 1.0 / (2*(c[0]+c[1]+c[2]+c[3]+c[4]+c[5]+c[6]+c[7]+c[8])+c[9]+c[10]+c[11]);
-  const size_t oi2 = std::max<size_t>(2, out_ix) - 2;
-  const size_t oi1 = std::max<size_t>(1, out_ix) - 1;
-  const size_t oi0 = out_ix;
+void FinalizeDb(hwy::AlignedNDArray<float, 2>& channels, size_t out_ix) {
   for (int k = 0; k < kNumRotators; ++k) {
-    int prev3 = std::max(0, k - 3);
-    int prev2 = std::max(0, k - 2);
-    int prev1 = std::max(0, k - 1);
-    int currk = k;
-    int next1 = std::min<int>(kNumRotators - 1, k + 1);
-    int next2 = std::min<int>(kNumRotators - 1, k + 2);
-    int next3 = std::min<int>(kNumRotators - 1, k + 3);
-    float v =
-        freq[{oi2}][prev3] * c[0] + freq[{oi1}][prev3] * c[1] + freq[{oi0}][prev3] * c[2] +
-        freq[{oi2}][prev2] * c[3] + freq[{oi1}][prev2] * c[4] + freq[{oi0}][prev2] * c[5] +
-        freq[{oi2}][prev1] * c[6] + freq[{oi1}][prev1] * c[7] + freq[{oi0}][prev1] * c[8] +
-        freq[{oi2}][currk] * c[9] + freq[{oi1}][currk] * c[10] + freq[{oi0}][currk] * c[11] +
-        freq[{oi2}][next1] * c[6] + freq[{oi1}][next1] * c[7] + freq[{oi0}][next1] * c[8] +
-        freq[{oi2}][next2] * c[3] + freq[{oi1}][next2] * c[4] + freq[{oi0}][next2] * c[5] +
-        freq[{oi2}][next3] * c[0] + freq[{oi1}][next3] * c[1] + freq[{oi0}][next3] * c[2];
-    masker[k] = v * div * kMul;
-  }
-  static const double octaves_in_20_to_20000 = log(20000/20.)/log(2);
-  static const double octaves_per_rot =
-      octaves_in_20_to_20000 / float(kNumRotators - 1);
-  static const double masker_step_per_octave_upZ[30] = {
-    20.98103630850407,
-    20.98103630850407,
-    20.98103630850407,
-    20.98103630850407,
-    20.98103630850407,
-    20.971036308504068,
-    20.98103630850407,
-    20.98103630850407,
-    20.98103630850407,
-    20.98103630850407,
-    27.164728846693212,
-    27.164728846693212,
-    27.164728846693212,
-    27.164728846693212,
-    27.164728846693212,
-    27.164728846693212,
-    27.164728846693212,
-    27.234728846693212,
-    27.164728846693212,
-    27.164728846693212,
-    -23.182165772713049,
-    -23.66616577271305,
-    -23.182165772713049,
-    -22.936865772713052,
-    -23.112165772713048,
-    -23.19216577271305,
-    -23.182165772713049,
-    -23.182165772713049,
-    -23.182165772713049,
-    -23.182165772713049,
-  };
-
-  // Strange masking (flip from usual positive to negative mask damping per
-  // octave in the higher freqs) -- this could be related to middle ear
-  // mechanisms having sprung mass, distributing lower and mid frequencies
-  // into higher frequencies more directly and causing masking.
-  // Could be a fluke.
-  static const double masker_step_per_octave_up[30] = {
-    20.98103630850407,
-    17.593036308504068,
-    23.781036308504071,
-    20.98103630850407,
-    20.98103630850407,
-    20.971036308504068,
-    20.98103630850407,
-    21.98103630850407,
-    22.98103630850407,
-    23.98103630850407,
-    24.164728846693212,
-    25.164728846693212,
-    26.164728846693212,
-    27.164728846693212,
-    27.164728846693212,
-    27.164728846693212,
-    27.164728846693212,
-    20.234728846693212,
-    17.432728846693212,
-    5.1647288466932118,
-    -5.1821657727130486,
-    -10.66616577271305,
-    -15.182165772713049,
-    -15.33686577271305,
-    -23.112165772713048,
-    -23.19216577271305,
-    -23.182165772713049,
-    -23.182165772713049,
-    -17.022165772713048,
-    -23.182165772713049,
-  };
-
-  static const double masker_step_per_octave_down = 22.2;
-  static const double masker_step_per_rot_down = octaves_per_rot * masker_step_per_octave_down;
-  // propagate masker up
-  float mask = 0;
-  for (int k = 0; k < kNumRotators; ++k) {
-    float v = masker[k];
-    if (mask < v) {
-      mask = v;
+    channels[{out_ix}][k] = Loudness(k, channels[{out_ix}][k]);
+    if (channels[{out_ix}][k] < 0) {
+      // Nsim gets confused from negative numbers. This doesn't seem
+      // to change anything with usual normalization, but guarantees
+      // non-negative values.
+      channels[{out_ix}][k] = 0;
     }
-    masker[k] = std::max<float>(masker[k], mask);
-    mask -= octaves_per_rot * masker_step_per_octave_up[30 * k / kNumRotators];
-  }
-  // propagate masker down
-  mask = 0;
-  for (int k = kNumRotators - 1; k >= 0; --k) {
-    float v = masker[k];
-    if (mask < v) {
-      mask = v;
-    }
-    masker[k] = std::max<float>(masker[k], mask);
-    mask -= masker_step_per_rot_down;
   }
 }
 
-void FinalizeDb(std::vector<float> rotator_frequency,
-                hwy::AlignedNDArray<float, 2>& channels, float mul,
-                size_t out_ix) {
-  float masker[kNumRotators];
-  for (int k = 0; k < kNumRotators; ++k) {
-    float v = SimpleDb(mul * channels[{out_ix}][k]);
-    channels[{out_ix}][k] = Loudness(rotator_frequency[k], v);
+// Ear drum and other receiving mass-spring objects are
+// modeled through the Resonator. Resonator is a non-linear process
+// and does complex spectral shifting of energy.
+struct Resonator {
+  float acc0 = 0;
+  float acc1 = 0;
+  float attenuator_ = 0;
+  float resonator_ = 0;
+  Resonator(float attenuator, float resonator) {
+    attenuator_ = attenuator;
+    resonator_ = resonator;
   }
-  PrepareMasker(channels, &masker[0], out_ix);
-
-
-  static const double masker_gap = 20.832650866565942;
-  static const double maskingStrengthLut[8] = {
-    0.40243735146213372,
-    0.53929582802463372,
-    0.2330768290011962,
-    0.45162153347411349,
-    0.40441574013400872,
-    0.3624992033380407,
-    0.40282874306369626,
-    0.58086335243869625,
-  };
-  static const double mulLut[8] = {
-    1.0676829999999999,
-    0.89912999999999998,
-    0.90283000000000002,
-    1.0,
-    0.92053000000000007,
-    1.0,
-    1.0008999999999999,
-    0.93271699999999991,
-  };
-  static const double addLut[8] = {
-    0,
-    0.079470000000000013,
-    0.14000000000000001,
-    0,
-    0.0070000000000000001,
-    0.009470000000000001,
-    0,
-    0,
-  };
-  static const float min_limit = 0;
-
-  // Scan frequencies from bottom to top, let lower frequencies to mask higher frequencies.
-  // 'masker' maintains the masking envelope from one bin to next.
-  for (int k = 0; k < kNumRotators; ++k) {
-    int ix = 8 * k / kNumRotators;
-    float maskingStrength = maskingStrengthLut[ix];
-    float v = channels[{out_ix}][k];
-    double mask = masker[k] - masker_gap;
-    if (v < min_limit) {
-      v = min_limit;
-    }
-    if (v < mask) {
-      v = maskingStrength * mask + (1.0 - maskingStrength) * v;
-    }
-    channels[{out_ix}][k] = v;
-    channels[{out_ix}][k] *= mulLut[ix];
-    channels[{out_ix}][k] += addLut[ix];
+  float Update(float signal) {
+    acc0 *= attenuator_;
+    acc0 += signal + resonator_ * acc1;
+    acc1 += acc0;
+    return acc0;
   }
+};
+
+std::vector<float> CreateWeightedWindow(int downsampling) {
+  std::vector<float> retval(downsampling);
+  const float two_per_downsampling = 2.0 / downsampling;
+  static const float scale = 7.944646094630226;
+  for (int i = 0; i < downsampling; ++i) {
+    float t = two_per_downsampling * (i + 0.5) - 1.0;
+    retval[i] = 1.0 / (1.0 + exp(t * scale));
+  }
+  return retval;
 }
-
+  
 void Rotators::FilterAndDownsample(hwy::Span<const float> signal,
                                    hwy::AlignedNDArray<float, 2>& channels,
                                    int downsampling) {
-  float scaling_for_downsampling = 1.0f / downsampling;
+  for (size_t zz = 0; zz < channels.shape()[0]; zz++) {
+    for (int k = 0; k < kNumRotators; ++k) {
+      channels[{zz}][k] = 0;
+    }
+  }
+  const std::vector<float> weights = CreateWeightedWindow(downsampling);
+
+  static const float attenuator = 0.90462356593345827;
+  static const float reso_val = -0.040121175888269377;
+  Resonator r(attenuator, reso_val);
+
   size_t out_ix = 0;
-  for (int64_t ii = 0; ii < signal.size(); ii += downsampling) {
+
+  for (int64_t ii = 0; ii + downsampling < signal.size(); ii += downsampling) {
     OccasionallyRenormalize();
     for (int64_t zz = 0; zz < downsampling; ++zz) {
+      float weight = weights[zz];
+      float one_minus_weight = 1.0 - weight;
       int64_t input_ix = ii + zz;
       if (input_ix >= signal.size()) {
-        if (out_ix < channels.shape()[0]) {
-          FinalizeDb(rotator_frequency, channels, scaling_for_downsampling, out_ix);
+        if (out_ix + 1 < channels.shape()[0]) {
+          FinalizeDb(channels, out_ix);
+          FinalizeDb(channels, out_ix + 1);
+        } else if (out_ix < channels.shape()[0]) {
+          FinalizeDb(channels, out_ix);
         }
-        if (out_ix != channels.shape()[0] - 1) {
+        if (out_ix + 1 != channels.shape()[0] - 1) {
           fprintf(stderr,
                   "strange thing #9831021 happened in FilterAndDownsample\n");
-          abort();
         }
         return;
       }
-      IncrementAll(signal[input_ix]);
+      // Outer ear modeling.
+      static const double kernel[32] = {
+	-0.20263428271281644,
+	0.10915979165019389,
+	-0.00028745702813933729,
+	0.16665601143299927,
+	-0.077109948817528556,
+	0.0016939747823971956,
+	-0.17495689013925,
+	-0.18799101662281015,
+	0.093828927128163625,
+	0.088899024830657578,
+	-0.082421273478358703,
+	0.093285522408723967,
+	0.046727776543880793,
+	-0.043231990170718486,
+	0.1136826325065256,
+	0.035026890053262601,
+	-0.31547592207063974,
+	-7.5305276952516596e-05,
+	-0.040734411011513975,
+	-0.22343618655817049,
+	-0.17419325091414362,
+	-0.020102223073211582,
+	-0.19373987309196436,
+	0.093639112957862342,
+	-0.077525642076473389,
+	0.01956287056199759,
+	0.018068454697104462,
+	0.051125555893398733,
+	0.17058381995819644,
+	-0.063329032174762032,
+	-0.1819749094019717,
+	0.29087441598238489,
+      };
+      static const double kernel2[32] = {
+	-0.049593652768953063,
+	-0.05543739572245706,
+	-0.030516284665381813,
+	0.037169622842466908,
+	0.016405461972259276,
+	-0.0097079565031696208,
+	0.054780287391335468,
+	0.078588909984566094,
+	0.029026209252923485,
+	0.039066004968758054,
+	-0.0031947923160080402,
+	0.091634324720553398,
+	-0.065567402400926733,
+	0.06035949759044297,
+	0.015075884900543632,
+	0.0061988983137513205,
+	-2.9835073485631671e-05,
+	-0.18757765498411677,
+	0.1213122548935063,
+	0.13773137126042886,
+	-0.16744444532289016,
+	0.0624457210913111,
+	0.51808806761265092,
+	-0.46433206319969683,
+	-0.46213071656390931,
+	0.14568103575648977,
+	0.25089814997851162,
+	0.64414906304956598,
+	0.1680294597208388,
+	-0.084688545530498469,
+	0.17692762138780532,
+	-0.19290207811783072,
+      };
+      if (input_ix >= 32) {
+	float signalval = 0;
+	for (int ii = 0; ii < 32; ii += 16) {
+	  int k = input_ix - 32 + ii;
+	  float a = 
+	    signal[k + 0] * kernel[ii + 0] +
+	    signal[k + 1] * kernel[ii + 1] +
+	    signal[k + 2] * kernel[ii + 2] +
+	    signal[k + 3] * kernel[ii + 3] +
+	    signal[k + 4] * kernel[ii + 4] +
+	    signal[k + 5] * kernel[ii + 5] +
+	    signal[k + 6] * kernel[ii + 6] +
+	    signal[k + 7] * kernel[ii + 7] +
+	    signal[k + 8] * kernel[ii + 8] +
+	    signal[k + 9] * kernel[ii + 9] +
+	    signal[k + 10] * kernel[ii + 10] +
+	    signal[k + 11] * kernel[ii + 11] +
+	    signal[k + 12] * kernel[ii + 12] +
+	    signal[k + 13] * kernel[ii + 13] +
+	    signal[k + 14] * kernel[ii + 14] +
+	    signal[k + 15] * kernel[ii + 15];
+	  signalval += a;
+	}
+	float sum_acc1 = r.Update(signalval);
+	float signalval_linear = 0;
+	for (int ii = 0; ii < 32; ii += 16) {
+	  int k = input_ix - 32 + ii;
+	  float a = 
+	    signal[k + 0] * kernel2[ii + 0] +
+	    signal[k + 1] * kernel2[ii + 1] +
+	    signal[k + 2] * kernel2[ii + 2] +
+	    signal[k + 3] * kernel2[ii + 3] +
+	    signal[k + 4] * kernel2[ii + 4] +
+	    signal[k + 5] * kernel2[ii + 5] +
+	    signal[k + 6] * kernel2[ii + 6] +
+	    signal[k + 7] * kernel2[ii + 7] +
+	    signal[k + 8] * kernel2[ii + 8] +
+	    signal[k + 9] * kernel2[ii + 9] +
+	    signal[k + 10] * kernel2[ii + 10] +
+	    signal[k + 11] * kernel2[ii + 11] +
+	    signal[k + 12] * kernel2[ii + 12] +
+	    signal[k + 13] * kernel2[ii + 13] +
+	    signal[k + 14] * kernel2[ii + 14] +
+	    signal[k + 15] * kernel2[ii + 15];
+	  signalval_linear += a;
+	}
+	static const float mul0 = 0.039194445043162718;
+	static const float mul1 = 1.9985255274046856;
+	sum_acc1 *= mul0;
+	sum_acc1 += mul1 * signalval_linear;
+	IncrementAll(sum_acc1);
+      }
       if (zz == 0) {
         for (int k = 0; k < kNumRotators; ++k) {
-          float energy =
-              channel[0].accu[4][k] * channel[0].accu[4][k] +
-              channel[0].accu[5][k] * channel[0].accu[5][k];
-          channels[{out_ix}][k] = energy;
+          float energy = (channel[0].accu[4][k] * channel[0].accu[4][k] +
+			  channel[0].accu[5][k] * channel[0].accu[5][k]);
+	  // + 1 should be enough ?!
+          if (out_ix + 2 < channels.shape()[0]) {
+            channels[{out_ix + 1}][k] += one_minus_weight * energy;
+          }
+          channels[{out_ix}][k] += weight * energy;
         }
       } else {
         for (int k = 0; k < kNumRotators; ++k) {
           float energy =
               channel[0].accu[4][k] * channel[0].accu[4][k] +
               channel[0].accu[5][k] * channel[0].accu[5][k];
-          channels[{out_ix}][k] += energy;
+	  // + 1 should be enough ?!
+          if (out_ix + 2 < channels.shape()[0]) {
+            channels[{out_ix + 1}][k] += one_minus_weight * energy;
+          }
+          channels[{out_ix}][k] += weight * energy;
         }
       }
     }
-    FinalizeDb(rotator_frequency, channels, scaling_for_downsampling, out_ix);
+    FinalizeDb(channels, out_ix);
     ++out_ix;
-    if (out_ix >= channels.shape()[0]) {
+    if (out_ix + 1 >= channels.shape()[0]) {
       return;
     }
   }
 }
 
 double CalculateBandwidth(double low, double mid, double high) {
-  const double geo_mean_low = std::sqrt(low * mid);
-  const double geo_mean_high = std::sqrt(mid * high);
-  return std::abs(geo_mean_high - mid) + std::abs(mid - geo_mean_low);
+  return (std::abs(std::sqrt(low * mid) - mid) + 
+	  std::abs(std::sqrt(high * mid) - mid));
 }
 
 Rotators::Rotators(int num_channels, std::vector<float> frequency,
-                   std::vector<float> filter_gains, const float sample_rate) {
+                   std::vector<float> filter_gains, const float sample_rate,
+		   int downsample) {
+  downsample_ = downsample;
+  const float scaling_for_downsampling = 1.0f / downsample;
   channel.resize(num_channels);
-  static const float kWindow = 0.9996028710680265;
-  static const double kBandwidthMagic = 0.7328516996032982;
+  static const double kWindow = 0.99971274067289151;
+  static const double kBandwidthMagic = 0.73283668663046908;
   for (int i = 0; i < kNumRotators; ++i) {
-    // The parameter relates to the frequency shape overlap and window length
-    // of triple leaking integrator.
+    // The bw parameter relates to the frequency shape overlap and window length
+    // of the triple leaking integrator (3rd-order complex gammatone filter).
     float bw = CalculateBandwidth(
         i == 0 ? frequency[1] : frequency[i - 1], frequency[i],
         i + 1 == kNumRotators ? frequency[i - 1] : frequency[i + 1]);
     window[i] = std::pow(kWindow, bw * kBandwidthMagic);
     float windowM1 = 1.0f - window[i];
     float f = frequency[i] * 2.0f * M_PI / sample_rate;
-    static const float full_scale_sine_db = exp(76.639635259053421);
-    const float gainer = sqrt(full_scale_sine_db);
+    static const float full_scale_sine_db = exp(80);
+    static const float scale_normalizer = 0.00019;
+    const float gainer = sqrt(scaling_for_downsampling * full_scale_sine_db * scale_normalizer * frequency[i]);
     gain[i] = gainer * filter_gains[i] * pow(windowM1, 3.0);
     rot[0][i] = float(std::cos(f));
     rot[1][i] = float(-std::sin(f));
     rot[2][i] = gain[i];
     rot[3][i] = 0.0f;
   }
-  rotator_frequency = frequency;
 }
 
 void Rotators::OccasionallyRenormalize() {
@@ -380,26 +426,25 @@ void Rotators::OccasionallyRenormalize() {
 }
 
 void Rotators::IncrementAll(float signal) {
+  const int c = 0;
   for (int i = 0; i < kNumRotators; i++) {
+    const float w = window[i];
+    channel[c].accu[0][i] *= w;
+    channel[c].accu[1][i] *= w;
+    channel[c].accu[2][i] *= w;
+    channel[c].accu[3][i] *= w;
+    channel[c].accu[4][i] *= w;
+    channel[c].accu[5][i] *= w;
     const float tr = rot[0][i] * rot[2][i] - rot[1][i] * rot[3][i];
     const float tc = rot[0][i] * rot[3][i] + rot[1][i] * rot[2][i];
     rot[2][i] = tr;
     rot[3][i] = tc;
-    const float w = window[i];
-    for (int c = 0; c < 1; ++c) {
-      channel[c].accu[0][i] *= w;
-      channel[c].accu[1][i] *= w;
-      channel[c].accu[2][i] *= w;
-      channel[c].accu[3][i] *= w;
-      channel[c].accu[4][i] *= w;
-      channel[c].accu[5][i] *= w;
-      channel[c].accu[2][i] += channel[c].accu[0][i];
-      channel[c].accu[3][i] += channel[c].accu[1][i];
-      channel[c].accu[4][i] += channel[c].accu[2][i];
-      channel[c].accu[5][i] += channel[c].accu[3][i];
-      channel[c].accu[0][i] += rot[2][i] * signal;
-      channel[c].accu[1][i] += rot[3][i] * signal;
-    }
+    channel[c].accu[2][i] += channel[c].accu[0][i];
+    channel[c].accu[3][i] += channel[c].accu[1][i];
+    channel[c].accu[4][i] += channel[c].accu[2][i];
+    channel[c].accu[5][i] += channel[c].accu[3][i];
+    channel[c].accu[0][i] += rot[2][i] * signal;
+    channel[c].accu[1][i] += rot[3][i] * signal;
   }
 }
 
