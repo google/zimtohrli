@@ -42,7 +42,6 @@ struct Rotators {
   // channels.
   float window[kNumRotators];
   float gain[kNumRotators];
-  int downsample_;
 
   Rotators() = default;
   Rotators(int num_channels, std::vector<float> frequency,

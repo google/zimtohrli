@@ -392,7 +392,6 @@ double CalculateBandwidth(double low, double mid, double high) {
 Rotators::Rotators(int num_channels, std::vector<float> frequency,
                    std::vector<float> filter_gains, const float sample_rate,
 		   int downsample) {
-  downsample_ = downsample;
   const float scaling_for_downsampling = 1.0f / downsample;
   channel.resize(num_channels);
   static const double kWindow = 0.99971274067289151;
