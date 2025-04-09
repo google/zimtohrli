@@ -44,7 +44,7 @@ struct Rotators {
   float gain[kNumRotators];
 
   Rotators() = default;
-  Rotators(const float sample_rate, int downsample);
+  explicit Rotators(int downsample);
 
   void FilterAndDownsample(hwy::Span<const float> signal,
                            hwy::AlignedNDArray<float, 2>& channels,

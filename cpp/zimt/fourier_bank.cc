@@ -523,7 +523,8 @@ float Frequency(int i) {
   return kFreq[i];
 }
   
-Rotators::Rotators(const float sample_rate, int downsample) {
+Rotators::Rotators(int downsample) {
+  const float kSampleRate = 48000.0;
   const float scaling_for_downsampling = 1.0f / downsample;
   static const double kWindow = 0.9996028710680265;
   static const double kBandwidthMagic = 0.7328516996032982;
@@ -535,7 +536,7 @@ Rotators::Rotators(const float sample_rate, int downsample) {
        i + 1 == kNumRotators ? Frequency(i - 1) : Frequency(i + 1));
     window[i] = std::pow(kWindow, bw * kBandwidthMagic);
     float windowM1 = 1.0f - window[i];
-     float f = Frequency(i) * 2.0f * M_PI / sample_rate;
+    float f = Frequency(i) * 2.0f * M_PI / kSampleRate;
     static const float full_scale_sine_db = exp(80);
     static const float scale_normalizer = 0.00019;
     const float gainer = sqrt(scaling_for_downsampling * full_scale_sine_db * scale_normalizer * Frequency(i));
