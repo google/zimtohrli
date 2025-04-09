@@ -37,16 +37,14 @@ struct Rotators {
   // input and output, leading to a total gain multiplication if the length is
   // at sqrt(gain).
   float rot[4][kNumRotators] = {0};
-  std::vector<PerChannel> channel;
+  PerChannel channel;
   // Accu has the channel related data, everything else the same between
   // channels.
   float window[kNumRotators];
   float gain[kNumRotators];
 
   Rotators() = default;
-  Rotators(int num_channels, std::vector<float> frequency,
-           std::vector<float> filter_gains, const float sample_rate,
-	   int downsample);
+  Rotators(const float sample_rate, int downsample);
 
   void FilterAndDownsample(hwy::Span<const float> signal,
                            hwy::AlignedNDArray<float, 2>& channels,
