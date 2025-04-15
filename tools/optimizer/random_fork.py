@@ -65,8 +65,8 @@ def EvalCacheForget():
   eval_hash = {}
   global g_sample
   # g_sample = "zimtohrli_scores_sample" + str(random.randint(0, 10))
-  # g_sample = "zimtohrli_scores2"
-  g_sample = "zimtohrli_scores_2p9"
+  # g_sample = "odaqi"
+  g_sample = "zimtohrli_scores2"
   global g_best_val
   g_best_val = None
   global g_perceptual_sample_rate
@@ -96,8 +96,8 @@ def Eval(vec, binary_name, cached=True):
     vec[0] = eval_hash[key]
     return
 
-  #corpus = 'coresvnet'
   corpus = '*'
+  #corpus = 'coresvnet'
   #corpus = 'odaq'
   print("popen")
   process = subprocess.Popen(
