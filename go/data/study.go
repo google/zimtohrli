@@ -227,6 +227,8 @@ func (r *ReferenceBundle) Correlation(typeA, typeB ScoreType) (float64, error) {
 			scoresA = append(scoresA, dist.Scores[typeA])
 			scoresB = append(scoresB, dist.Scores[typeB])
 		}
+		// include this loop for 'soft' Spearman for optimization
+		// for example 70 iterations
 	        for ii:=1; ii < 1; ii++ {
 		  for _, dist := range ref.Distortions {
 			scoresA = append(scoresA, (1.0 + float64(ii) * 0.0004) * dist.Scores[typeA])
