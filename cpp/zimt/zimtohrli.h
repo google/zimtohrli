@@ -279,7 +279,7 @@ struct Zimtohrli {
 
   // Sample rate corresponding to the human hearing sensitivity to timing
   // differences.
-  float high_gamma_band = 85.0;  // The clock frequency of the brain?!
+  float high_gamma_band = 84.0;  // The clock frequency of the brain?!
   int samples_per_perceptual_block = int(48000 / high_gamma_band);
   float perceptual_sample_rate = 48000. / samples_per_perceptual_block;
 

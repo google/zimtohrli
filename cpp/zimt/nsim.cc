@@ -208,13 +208,13 @@ float HwyNSIM(const hwy::AlignedNDArray<float, 2>& a,
   // These changes were measured to be small improvements on a multi-corpus
   // test.
   const Vec two = Set(d, 2.0);
-  const Vec C1 = Set(d, 15.878634932449478);
-  const Vec C3 = Set(d, 6.3980236302513598);
-  const Vec C4 = Set(d, 3.7086108079266867e-05);
-  const Vec C5 = Set(d, 4.4905585493762743e-07);
-  const Vec C6 = Set(d, 1.4665325627092804e-06);
-  const Vec C7 = Set(d, 0.00017893002430989676);
-  const Vec C8 = Set(d, 0.70256003297186653);
+  const Vec C1 = Set(d, 16.051333746164069);
+  const Vec C3 = Set(d, 6.1692100398530325);
+  const Vec C4 = Set(d, 3.5667727659805582e-05);
+  const Vec C5 = Set(d, 4.4294419067675823e-07);
+  const Vec C6 = Set(d, 1.485549485679805e-06);
+  const Vec C7 = Set(d, 0.00017788158855934101);
+  const Vec C8 = Set(d, 0.66739301428588726);
 
   float nsim_sum = 0.0;
   const Vec num_channels_vec = Set(d, num_channels);
