@@ -218,7 +218,9 @@ void Rotators::FilterAndDownsample(hwy::Span<const float> signal,
 
   size_t out_ix = 0;
 
-  for (int64_t ii = 0; ii + downsampling < signal.size(); ii += downsampling) {
+  for (int64_t ii = 0;
+       ii < signal.size() && out_ix < channels.shape()[0];
+       ii += downsampling, ++out_ix) {
     OccasionallyRenormalize();
     for (int64_t zz = 0; zz < downsampling; ++zz) {
       float weight = weights[zz];
@@ -230,7 +232,11 @@ void Rotators::FilterAndDownsample(hwy::Span<const float> signal,
           FinalizeDb(channels, out_ix + 1);
         } else if (out_ix < channels.shape()[0]) {
           FinalizeDb(channels, out_ix);
-        }
+        } else {
+          fprintf(stderr,
+                  "strange thing #17 happened in FilterAndDownsample\n");
+	  return;
+	}
         if (out_ix + 1 != channels.shape()[0] - 1) {
           fprintf(stderr,
                   "strange thing #9831021 happened in FilterAndDownsample\n");
@@ -308,6 +314,7 @@ void Rotators::FilterAndDownsample(hwy::Span<const float> signal,
       };
       if (input_ix >= 32) {
 	float signalval = 0;
+	float signalval_linear = 0;
 	for (int ii = 0; ii < 32; ii += 16) {
 	  int k = input_ix - 32 + ii;
 	  float a = 
@@ -328,12 +335,7 @@ void Rotators::FilterAndDownsample(hwy::Span<const float> signal,
 	    signal[k + 14] * kernel[ii + 14] +
 	    signal[k + 15] * kernel[ii + 15];
 	  signalval += a;
-	}
-	float sum_acc1 = r.Update(signalval);
-	float signalval_linear = 0;
-	for (int ii = 0; ii < 32; ii += 16) {
-	  int k = input_ix - 32 + ii;
-	  float a = 
+	  float b = 
 	    signal[k + 0] * kernel2[ii + 0] +
 	    signal[k + 1] * kernel2[ii + 1] +
 	    signal[k + 2] * kernel2[ii + 2] +
@@ -350,39 +352,29 @@ void Rotators::FilterAndDownsample(hwy::Span<const float> signal,
 	    signal[k + 13] * kernel2[ii + 13] +
 	    signal[k + 14] * kernel2[ii + 14] +
 	    signal[k + 15] * kernel2[ii + 15];
-	  signalval_linear += a;
+	  signalval_linear += b;
 	}
-	sum_acc1 += signalval_linear;
-	IncrementAll(sum_acc1);
+	float signalval_massful_spring = r.Update(signalval);
+	IncrementAll(signalval_massful_spring + signalval_linear);
       }
-      if (zz == 0) {
-        for (int k = 0; k < kNumRotators; ++k) {
-          float energy = (channel.accu[4][k] * channel.accu[4][k] +
-			  channel.accu[5][k] * channel.accu[5][k]);
-	  // + 1 should be enough ?!
-          if (out_ix + 2 < channels.shape()[0]) {
-            channels[{out_ix + 1}][k] += one_minus_weight * energy;
-          }
-          channels[{out_ix}][k] += weight * energy;
-        }
+      if (out_ix + 1 < channels.shape()[0]) {
+	for (int k = 0; k < kNumRotators; ++k) {
+	  float energy =
+	    channel.accu[4][k] * channel.accu[4][k] +
+	    channel.accu[5][k] * channel.accu[5][k];
+	  channels[{out_ix + 1}][k] += one_minus_weight * energy;
+	  channels[{out_ix}][k] += weight * energy;
+	}
       } else {
-        for (int k = 0; k < kNumRotators; ++k) {
-          float energy =
-              channel.accu[4][k] * channel.accu[4][k] +
-              channel.accu[5][k] * channel.accu[5][k];
-	  // + 1 should be enough ?!
-          if (out_ix + 2 < channels.shape()[0]) {
-            channels[{out_ix + 1}][k] += one_minus_weight * energy;
-          }
-          channels[{out_ix}][k] += weight * energy;
-        }
+	for (int k = 0; k < kNumRotators; ++k) {
+	  float energy =
+	    channel.accu[4][k] * channel.accu[4][k] +
+	    channel.accu[5][k] * channel.accu[5][k];
+	  channels[{out_ix}][k] += energy;
+	}
       }
     }
     FinalizeDb(channels, out_ix);
-    ++out_ix;
-    if (out_ix + 1 >= channels.shape()[0]) {
-      return;
-    }
   }
 }
 
