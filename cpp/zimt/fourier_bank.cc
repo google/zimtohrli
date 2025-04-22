@@ -177,15 +177,11 @@ void FinalizeDb(hwy::AlignedNDArray<float, 2>& channels, size_t out_ix) {
 struct Resonator {
   float acc0 = 0;
   float acc1 = 0;
-  float attenuator_ = 0;
-  float resonator_ = 0;
-  Resonator(float attenuator, float resonator) {
-    attenuator_ = attenuator;
-    resonator_ = resonator;
-  }
   float Update(float signal) {
-    acc0 *= attenuator_;
-    acc0 += signal + resonator_ * acc1;
+    static const float attenuator = 0.92532302944402367;
+    static const float resonator = -0.040025628124382151;
+    acc0 *= attenuator;
+    acc0 += signal + resonator * acc1;
     acc1 += acc0;
     return acc0;
   }
@@ -193,11 +189,11 @@ struct Resonator {
 
 std::vector<float> CreateWeightedWindow(int downsampling) {
   std::vector<float> retval(downsampling);
-  const float two_per_downsampling = 2.0 / downsampling;
   static const float scale = 7.944646094630226;
+  const float two_per_downsampling = 2.0 * scale / downsampling;
   for (int i = 0; i < downsampling; ++i) {
-    float t = two_per_downsampling * (i + 0.5) - 1.0;
-    retval[i] = 1.0 / (1.0 + exp(t * scale));
+    float t = two_per_downsampling * (i + 0.5) - scale;
+    retval[i] = 1.0 / (1.0 + exp(t));
   }
   return retval;
 }
@@ -212,12 +208,8 @@ void Rotators::FilterAndDownsample(hwy::Span<const float> signal,
   }
   const std::vector<float> weights = CreateWeightedWindow(downsampling);
 
-  static const float attenuator = 0.92532302944402367;
-  static const float reso_val = -0.040025628124382151;
-  Resonator r(attenuator, reso_val);
-
+  Resonator resonator;
   size_t out_ix = 0;
-
   for (int64_t ii = 0;
        ii < signal.size() && out_ix < channels.shape()[0];
        ii += downsampling, ++out_ix) {
@@ -354,7 +346,7 @@ void Rotators::FilterAndDownsample(hwy::Span<const float> signal,
 	    signal[k + 15] * kernel2[ii + 15];
 	  signalval_linear += b;
 	}
-	float signalval_massful_spring = r.Update(signalval);
+	float signalval_massful_spring = resonator.Update(signalval);
 	IncrementAll(signalval_massful_spring + signalval_linear);
       }
       if (out_ix + 1 < channels.shape()[0]) {
@@ -378,13 +370,9 @@ void Rotators::FilterAndDownsample(hwy::Span<const float> signal,
   }
 }
 
-double CalculateBandwidth(double low, double mid, double high) {
-  return (std::abs(std::sqrt(low * mid) - mid) + 
-	  std::abs(std::sqrt(high * mid) - mid));
-}
-
-float Frequency(int i) {
-  static const float kFreq[128] = {
+float Freq(int i) {
+  static const float kFreq[130] = {
+    17.858117462151657,
     24.3492317199707,
     33.1997528076172,
     42.3596649169922,
@@ -513,30 +501,34 @@ float Frequency(int i) {
     18337.60546875,
     18986.634765625,
     19658.35546875,
+    20352.767578125,
   };
-  return kFreq[i];
+  return kFreq[i + 1];
+}
+
+double CalculateBandwidthInHz(int i) {
+  return std::sqrt(Freq(i + 1) * Freq(i)) - std::sqrt(Freq(i - 1) * Freq(i));
 }
 
 Rotators::Rotators(int downsample) {
-  const float kSampleRate = 48000.0;
+  static const float kSampleRate = 48000.0;
+  static const float kHzToRad = 2.0f * M_PI / kSampleRate;
   static const double kWindow = 0.9996028710680265;
   static const double kBandwidthMagic = 0.7328516996032982;
+  // A big number normalizes better for unknown reasons.
+  // Should be 1.0, but this works slightly better.
+  const float gainer = sqrt(905697397139.4474 / downsample);
   for (int i = 0; i < kNumRotators; ++i) {
-    // The bandwidth variable relates to the frequency shape overlap (and 
-    // window length) of the triple leaking complex-number integrator
-    // (3rd-order complex gammatone filter).
-    float bandwidth = CalculateBandwidth(
-       i == 0 ? Frequency(1) : Frequency(i - 1), Frequency(i),
-       i + 1 == kNumRotators ? Frequency(i - 1) : Frequency(i + 1));
+    // The bandwidth variable relates to the frequency shape overlap, which
+    // changes with window length.
+    // Other ad hoc psychoacoustic experiments with similar filter bank
+    // suggest that the lowest bass gets slightly less temporal integration,
+    // here the bandwidth is cut to be flat below the 7th filter, ~93 Hz
+    float bandwidth = CalculateBandwidthInHz(i);
     window[i] = std::pow(kWindow, bandwidth * kBandwidthMagic);
     float windowM1 = 1.0f - window[i];
-    float f = Frequency(i) * 2.0f * M_PI / kSampleRate;
-    // A big number normalizes better for unknown reasons.
-    static const float norm = 905697397139.4474 / downsample;
-    // Should be 1.0, but this works slightly better.
-    const float gain_full = norm;
-    const float gainer = sqrt(gain_full);
-    gain[i] = gainer * pow(windowM1, 3.0) * Frequency(i) / bandwidth;
+    const float f = Freq(i) * kHzToRad;
+    gain[i] = gainer * pow(windowM1, 3.0) * Freq(i) / bandwidth;
     rot[0][i] = float(std::cos(f));
     rot[1][i] = float(-std::sin(f));
     rot[2][i] = gain[i];
@@ -561,16 +553,15 @@ void Rotators::IncrementAll(float signal) {
     channel.accu[3][i] *= w;
     channel.accu[4][i] *= w;
     channel.accu[5][i] *= w;
-    const float tr = rot[0][i] * rot[2][i] - rot[1][i] * rot[3][i];
-    const float tc = rot[0][i] * rot[3][i] + rot[1][i] * rot[2][i];
-    rot[2][i] = tr;
-    rot[3][i] = tc;
     channel.accu[2][i] += channel.accu[0][i];
     channel.accu[3][i] += channel.accu[1][i];
     channel.accu[4][i] += channel.accu[2][i];
     channel.accu[5][i] += channel.accu[3][i];
     channel.accu[0][i] += rot[2][i] * signal;
     channel.accu[1][i] += rot[3][i] * signal;
+    const float a = rot[2][i], b = rot[3][i];
+    rot[2][i] = rot[0][i] * a - rot[1][i] * b;
+    rot[3][i] = rot[0][i] * b + rot[1][i] * a;
   }
 }
 
