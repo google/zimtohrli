@@ -290,7 +290,7 @@ void Zimtohrli::Spectrogram(
 
   int downsample = signal.size() / energy_channels_db.shape()[0];
 
-  tabuli::Rotators rots(downsample);
+  tabuli::Rotators rots;
   rots.FilterAndDownsample(signal, energy_channels_db, downsample);
 
   hwy::CopyBytes(energy_channels_db.data(), spectrogram.data(),
