@@ -86,10 +86,10 @@ std::vector<float> CreateWeightedWindow(int downsampling) {
   return retval;
 }
 
-inline float Dot16(const float *a, const float *b) {
+inline float Dot32(const float *a, const float *b) {
   // -ffast-math is helpful here, and clang can simdify this.
   float sum = 0;
-  for (int i = 0; i < 16; ++i) {
+  for (int i = 0; i < 32; ++i) {
     sum += a[i] * b[i];
   }
   return sum;
@@ -133,7 +133,7 @@ void Rotators::FilterAndDownsample(hwy::Span<const float> signal,
         }
         return;
       }
-      // Outer ear modeling.
+      // Outer ear modeling, with signal to be fed to a 'ear drum' resonator.
       static const float kernel[32] = {
 	-0.00756885973,	0.00413482141, -0.00000236200, 0.00619875373,
 	-0.00283612301,	-0.00000418032,	-0.00653942799,	-0.00697059266,
@@ -144,6 +144,7 @@ void Rotators::FilterAndDownsample(hwy::Span<const float> signal,
 	-0.00294620320,	0.00079453551, 0.00067657883, 0.00185866424,
 	0.00615985137,	-0.00236233239,	-0.00680980952,	0.01082403830,
       };
+      // Another kernel without ear drum modeling.
       static const float kernel2[32] = {
 	-0.10104347418, -0.11826972031, -0.06180710258, 0.07855591921,
 	0.03670823911, -0.01840452136, 0.10859856308, 0.16449286025,
@@ -155,15 +156,9 @@ void Rotators::FilterAndDownsample(hwy::Span<const float> signal,
 	0.35339301883, -0.17657465769, 0.36698233014, -0.39494225991,
       };
       if (input_ix >= 32) {
-	float signalval = 0;
-	float signalval_linear = 0;
-	for (int ii = 0; ii < 32; ii += 16) {
-	  int k = input_ix - 32 + ii;
-	  signalval += Dot16(&signal[k], &kernel[ii]);
-	  signalval_linear += Dot16(&signal[k], &kernel2[ii]);
-	}
-	float signalval_massful_spring = resonator.Update(signalval);
-	IncrementAll(signalval_massful_spring + signalval_linear);
+	int k = input_ix - 32;
+	IncrementAll(resonator.Update(Dot32(&signal[k], &kernel[0])) +
+		     Dot32(&signal[k], &kernel2[0]));
       }
       if (out_ix + 1 < channels.shape()[0]) {
 	for (int k = 0; k < kNumRotators; ++k) {
