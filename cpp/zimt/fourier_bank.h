@@ -22,21 +22,15 @@ namespace tabuli {
 
 constexpr int64_t kNumRotators = 128;
 
-struct PerChannel {
-  // [0..1] is for real and imag of 1st leaking accumulation
-  // [2..3] is for real and imag of 2nd leaking accumulation
-  // [4..5] is for real and imag of 3rd leaking accumulation
-  float accu[6][kNumRotators] = {0};
-};
-
 struct Rotators {
   // Four arrays of rotators.
   // [0..1] is real and imag for rotation speed
   // [2..3] is real and image for a frequency rotator of length sqrt(gain[i])
   float rot[4][kNumRotators];
-  PerChannel ch;
-  // Accu has the channel related data, everything else the same between
-  // channels.
+  // [0..1] is for real and imag of 1st leaking accumulation
+  // [2..3] is for real and imag of 2nd leaking accumulation
+  // [4..5] is for real and imag of 3rd leaking accumulation
+  float accu[6][kNumRotators] = {0};
   float window[kNumRotators];
   float gain[kNumRotators];
 
