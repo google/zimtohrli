@@ -37,7 +37,7 @@ struct Rotators {
   // input and output, leading to a total gain multiplication if the length is
   // at sqrt(gain).
   float rot[4][kNumRotators] = {0};
-  PerChannel channel;
+  PerChannel ch;
   // Accu has the channel related data, everything else the same between
   // channels.
   float window[kNumRotators];
