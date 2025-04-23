@@ -33,18 +33,12 @@ struct Rotators {
   // Four arrays of rotators.
   // [0..1] is real and imag for rotation speed
   // [2..3] is real and image for a frequency rotator of length sqrt(gain[i])
-  // Values inserted into the rotators are multiplied with this rotator in both
-  // input and output, leading to a total gain multiplication if the length is
-  // at sqrt(gain).
-  float rot[4][kNumRotators] = {0};
+  float rot[4][kNumRotators];
   PerChannel ch;
   // Accu has the channel related data, everything else the same between
   // channels.
   float window[kNumRotators];
   float gain[kNumRotators];
-
-  Rotators() = default;
-  explicit Rotators(int downsample);
 
   void FilterAndDownsample(hwy::Span<const float> signal,
                            hwy::AlignedNDArray<float, 2>& channels,
