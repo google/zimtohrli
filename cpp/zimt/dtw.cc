@@ -66,7 +66,7 @@ float HwyMin(hwy::Span<const float> span) {
   return min;
 }
 
-float HwyDeltaNorm(hwy::Span<const float> span_a,
+double HwyDeltaNorm(hwy::Span<const float> span_a,
                    hwy::Span<const float> span_b) {
   CHECK_EQ(span_a.size(), span_b.size());
   Vec sumvec = Set(d, 0.0f);
@@ -75,7 +75,7 @@ float HwyDeltaNorm(hwy::Span<const float> span_a,
         Sub(Load(d, span_a.data() + index), Load(d, span_b.data() + index));
     sumvec = MulAdd(delta, delta, sumvec);
   }
-  return std::sqrt(std::sqrt(ReduceSum(d, sumvec)));
+  return std::pow(ReduceSum(d, sumvec), 0.23);
 }
 
 }  // namespace HWY_NAMESPACE
@@ -107,19 +107,19 @@ struct ArraySlice {
 
 std::vector<std::pair<size_t, size_t>> DTWSlice(
     const ArraySlice& spec_a, const ArraySlice& spec_b,
-    hwy::AlignedNDArray<float, 2>& cost_matrix) {
+    hwy::AlignedNDArray<double, 2>& cost_matrix) {
   CHECK_EQ(cost_matrix.shape()[0], spec_a.shape()[0]);
   CHECK_EQ(cost_matrix.shape()[1], spec_b.shape()[0]);
   for (size_t spec_b_index = 0; spec_b_index < spec_b.shape()[0];
        ++spec_b_index) {
-    cost_matrix[{0}][spec_b_index] = std::numeric_limits<float>::infinity();
+    cost_matrix[{0}][spec_b_index] = std::numeric_limits<double>::infinity();
   }
   for (size_t spec_a_index = 1; spec_a_index < spec_a.shape()[0];
        ++spec_a_index) {
     for (size_t spec_b_index = 0; spec_b_index < spec_b.shape()[0];
          ++spec_b_index) {
       cost_matrix[{spec_a_index}][spec_b_index] =
-          std::numeric_limits<float>::infinity();
+          std::numeric_limits<double>::infinity();
     }
   }
   cost_matrix[{0}][0] = 0;
@@ -127,13 +127,14 @@ std::vector<std::pair<size_t, size_t>> DTWSlice(
        ++spec_a_index) {
     for (size_t spec_b_index = 1; spec_b_index < spec_b.shape()[0];
          ++spec_b_index) {
-      const float cost = HWY_DYNAMIC_DISPATCH(HwyDeltaNorm)(
+      const double cost = HWY_DYNAMIC_DISPATCH(HwyDeltaNorm)(
           spec_a[{spec_a_index}], spec_b[{spec_b_index}]);
-      cost_matrix[{spec_a_index}][spec_b_index] =
-          cost +
-          std::min(cost_matrix[{spec_a_index - 1}][spec_b_index - 1],
-                   std::min(cost_matrix[{spec_a_index - 1}][spec_b_index],
-                            cost_matrix[{spec_a_index}][spec_b_index - 1]));
+      const double cost11 = cost_matrix[{spec_a_index - 1}][spec_b_index - 1];
+      const double cost01 = 
+	std::min(cost_matrix[{spec_a_index - 1}][spec_b_index],
+		 cost_matrix[{spec_a_index}][spec_b_index - 1]);
+      const double costmin = std::min(cost11 + 0.99 * cost, cost01 + cost);
+      cost_matrix[{spec_a_index}][spec_b_index] = costmin;
     }
   }
 
@@ -146,7 +147,7 @@ std::vector<std::pair<size_t, size_t>> DTWSlice(
         {pos.first + 1, pos.second + 1},
         {pos.first + 1, pos.second},
         {pos.first, pos.second + 1}};
-    std::vector<float> direction_costs(possible_next_positions.size());
+    std::vector<double> direction_costs(possible_next_positions.size());
     std::transform(
         possible_next_positions.begin(), possible_next_positions.end(),
         direction_costs.begin(),
@@ -165,7 +166,7 @@ std::vector<std::pair<size_t, size_t>> DTWSlice(
 std::vector<std::pair<size_t, size_t>> DTW(
     const hwy::AlignedNDArray<float, 2>& spec_a,
     const hwy::AlignedNDArray<float, 2>& spec_b) {
-  hwy::AlignedNDArray<float, 2> cost_matrix(
+  hwy::AlignedNDArray<double, 2> cost_matrix(
       {spec_a.shape()[0], spec_b.shape()[0]});
   return DTWSlice({spec_a, 0, spec_b.shape()[0]},
                   {spec_b, 0, spec_a.shape()[0]}, cost_matrix);
@@ -176,7 +177,7 @@ std::vector<std::pair<size_t, size_t>> ChainDTW(
     const hwy::AlignedNDArray<float, 2>& spec_b, size_t window_size) {
   std::pair<size_t, size_t> offset = {0, 0};
   std::vector<std::pair<size_t, size_t>> result = {offset};
-  hwy::AlignedNDArray<float, 2> cost_matrix(
+  hwy::AlignedNDArray<double, 2> cost_matrix(
       {std::min(window_size, spec_a.shape()[0]),
        std::min(window_size, spec_b.shape()[0])});
   // Do DTW on one window at a time, moving our offset forward to the end of
@@ -191,7 +192,7 @@ std::vector<std::pair<size_t, size_t>> ChainDTW(
         std::min(window_size, spec_b.shape()[0] - offset.second)};
     if (cost_matrix.shape()[0] != slice_a.shape()[0] ||
         cost_matrix.shape()[1] != slice_b.shape()[0]) {
-      cost_matrix = hwy::AlignedNDArray<float, 2>(
+      cost_matrix = hwy::AlignedNDArray<double, 2>(
           {slice_a.shape()[0], slice_b.shape()[0]});
     }
     std::vector<std::pair<size_t, size_t>> dtw =
