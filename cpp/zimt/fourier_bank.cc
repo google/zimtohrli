@@ -36,7 +36,7 @@ void LoudnessDb(hwy::AlignedNDArray<float, 2>& channels, size_t out_ix) {
     1.27864, 1.28723, 1.28455, 1.29777, 1.29637, 1.29687, 1.29853, 1.30319,
     1.30207, 1.26835, 1.25100, 1.24664, 1.24041, 1.17874, 1.07116, 0.97917,
   };
-  static const float kBaseNoise = 912654.0;
+  static const float kBaseNoise = 886753.16118050041;
   for (int k = 0; k < kNumRotators; ++k) {
     channels[{out_ix}][k] = log(channels[{out_ix}][k] + kBaseNoise) * kMul[k];
   }
@@ -49,7 +49,9 @@ struct Resonator {
   float acc0 = 0;
   float acc1 = 0;
   float Update(float signal) {  // Resonate and attenuate.
-    acc0 = 0.925323029 * acc0 - 0.040025628 * acc1 + signal;
+    static const float kMul0 = 0.93913835617233998;
+    static const float kMul1 = -0.040539506065308289;
+    acc0 = kMul0 * acc0 + kMul1 * acc1 + signal;
     acc1 += acc0;
     return acc0;
   }
@@ -122,7 +124,8 @@ void Rotators::FilterAndDownsample(hwy::Span<const float> in,
   static const double kWindow = 0.9996028710680265;
   static const double kBandwidthMagic = 0.7328516996032982;
   // A big value for normalization. Ideally 1.0, but this works slightly better.
-  const float gainer = sqrt(905697397139.4474 / downsample);
+  static const double kScale = 928170036864.07068;
+  const float gainer = sqrt(kScale / downsample);
   for (int i = 0; i < kNumRotators; ++i) {
     float bandwidth = CalculateBandwidthInHz(i);  // bandwidth of each filter.
     window[i] = std::pow(kWindow, bandwidth * kBandwidthMagic);
