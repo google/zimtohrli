@@ -75,7 +75,8 @@ double HwyDeltaNorm(hwy::Span<const float> span_a,
         Sub(Load(d, span_a.data() + index), Load(d, span_b.data() + index));
     sumvec = MulAdd(delta, delta, sumvec);
   }
-  return std::pow(ReduceSum(d, sumvec), 0.23);
+  static const float powi = 0.23289303544689094;
+  return std::pow(ReduceSum(d, sumvec), powi);
 }
 
 }  // namespace HWY_NAMESPACE
@@ -123,17 +124,18 @@ std::vector<std::pair<size_t, size_t>> DTWSlice(
     }
   }
   cost_matrix[{0}][0] = 0;
+  static const double kMul00 = 0.98585952515276176;
   for (size_t spec_a_index = 1; spec_a_index < spec_a.shape()[0];
        ++spec_a_index) {
     for (size_t spec_b_index = 1; spec_b_index < spec_b.shape()[0];
          ++spec_b_index) {
-      const double cost = HWY_DYNAMIC_DISPATCH(HwyDeltaNorm)(
+      const double cost00 = HWY_DYNAMIC_DISPATCH(HwyDeltaNorm)(
           spec_a[{spec_a_index}], spec_b[{spec_b_index}]);
       const double cost11 = cost_matrix[{spec_a_index - 1}][spec_b_index - 1];
       const double cost01 = 
 	std::min(cost_matrix[{spec_a_index - 1}][spec_b_index],
 		 cost_matrix[{spec_a_index}][spec_b_index - 1]);
-      const double costmin = std::min(cost11 + 0.99 * cost, cost01 + cost);
+      const double costmin = std::min(cost11 + kMul00 * cost00, cost01 + cost00);
       cost_matrix[{spec_a_index}][spec_b_index] = costmin;
     }
   }
