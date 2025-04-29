@@ -178,15 +178,13 @@ class Rotators {
       -0.97386487573, 0.30687938104,  0.52811340907,  1.35094332106,
       0.35339301883,  -0.17657465769, 0.36698233014,  -0.39494225991,
     };
-    for (size_t in_ix = 0; in_ix < in.size() && out_ix < out.shape()[0];
+    for (size_t in_ix = 32; in_ix < in.size() && out_ix < out.shape()[0];
 	 ++out_ix) {
       OccasionallyRenormalize();
       for (int64_t j = 0; j < downsample && in_ix < in.size(); ++j, ++in_ix) {
 	float weight = window[j];
-	if (in_ix >= 32) {
-	  IncrementAll(resonator.Update(Dot32(&in[in_ix - 32], &reso_kernel[0])) +
-		       Dot32(&in[in_ix - 32], &linear_kernel[0]));
-	}
+	IncrementAll(resonator.Update(Dot32(&in[in_ix - 32], &reso_kernel[0])) +
+		     Dot32(&in[in_ix - 32], &linear_kernel[0]));
 	if (out_ix + 1 < out.shape()[0]) {
 	  for (int k = 0; k < kNumRotators; ++k) {
 	    float energy = accu[4][k] * accu[4][k] + accu[5][k] * accu[5][k];
