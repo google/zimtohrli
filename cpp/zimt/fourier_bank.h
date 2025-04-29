@@ -1,18 +1,17 @@
 #ifndef _TABULI_FOURIER_BANK_H
 #define _TABULI_FOURIER_BANK_H
 
-#include <vector>
-#include <stdint.h>
 #include <cmath>
-#include "hwy/aligned_allocator.h"
+#include <stdint.h>
+#include <vector>
 
-namespace tabuli {
+namespace zimtohrli {
 
 constexpr int64_t kNumRotators = 128;
 
 namespace {
  
-void LoudnessDb(hwy::AlignedNDArray<float, 2>& channels, size_t out_ix) {
+inline void LoudnessDb(float *channels) {
   static const float kMul[128] = {
     0.69022, 0.68908, 0.69206, 0.68780, 0.68780, 0.68780, 0.68780, 0.68780,
     0.68780, 0.68780, 0.68780, 0.68913, 0.69045, 0.69310, 0.69575, 0.69565,
@@ -32,7 +31,7 @@ void LoudnessDb(hwy::AlignedNDArray<float, 2>& channels, size_t out_ix) {
   };
   static const float kBaseNoise = 886753.16118050041;
   for (int k = 0; k < kNumRotators; ++k) {
-    channels[{out_ix}][k] = log(channels[{out_ix}][k] + kBaseNoise) * kMul[k];
+    channels[k] = log(channels[k] + kBaseNoise) * kMul[k];
   }
 }
   
@@ -125,8 +124,8 @@ class Rotators {
     }
   }
  public:
-  void FilterAndDownsample(hwy::Span<const float> in,
-			   hwy::AlignedNDArray<float, 2>& out,
+  void FilterAndDownsample(const float *in, size_t in_size,
+			   float *out, size_t out_shape0, size_t out_stride,
 			   int downsample) {
     static const float kSampleRate = 48000.0;
     static const float kHzToRad = 2.0f * M_PI / kSampleRate;
@@ -146,9 +145,9 @@ class Rotators {
       rot[2][i] = gain[i];
       rot[3][i] = 0.0f;
     }
-    for (size_t zz = 0; zz < out.shape()[0]; zz++) {
+    for (size_t zz = 0; zz < out_shape0; zz++) {
       for (int k = 0; k < kNumRotators; ++k) {
-	out[{zz}][k] = 0;
+	out[zz * out_stride + k] = 0;
       }
     }
     std::vector<float> window(downsample);
@@ -179,25 +178,25 @@ class Rotators {
       -0.97386487573, 0.30687938104,  0.52811340907,  1.35094332106,
       0.35339301883,  -0.17657465769, 0.36698233014,  -0.39494225991,
     };
-    for (size_t in_ix = 0, dix = 0; in_ix + kKernelSize < in.size(); ++in_ix) {
+    for (size_t in_ix = 0, dix = 0; in_ix + kKernelSize < in_size; ++in_ix) {
       const float weight = window[dix];
       IncrementAll(resonator.Update(Dot32(&in[in_ix], &reso_kernel[0])) +
 		   Dot32(&in[in_ix], &linear_kernel[0]));
-      if (out_ix + 1 < out.shape()[0]) {
+      if (out_ix + 1 < out_shape0) {
 	for (int k = 0; k < kNumRotators; ++k) {
 	  float energy = accu[4][k] * accu[4][k] + accu[5][k] * accu[5][k];
-	  out[{out_ix + 1}][k] += (1.0 - weight) * energy;
-	  out[{out_ix}][k] += weight * energy;
+	  out[(out_ix + 1) * out_stride + k] += (1.0 - weight) * energy;
+	  out[out_ix * out_stride + k] += weight * energy;
 	}
       } else {
 	for (int k = 0; k < kNumRotators; ++k) {
 	  float energy = accu[4][k] * accu[4][k] + accu[5][k] * accu[5][k];
-	  out[{out_ix}][k] += energy;
+	  out[out_ix * out_stride + k] += energy;
 	}
       }
-      if (++dix == downsample || in_ix + kKernelSize + 1 == in.size()) {
-	LoudnessDb(out, out_ix);
-	if (++out_ix >= out.shape()[0]) {
+      if (++dix == downsample || in_ix + kKernelSize + 1 == in_size) {
+	LoudnessDb(&out[out_stride * out_ix]);
+	if (++out_ix >= out_shape0) {
 	  break;
 	}
 	dix = 0;

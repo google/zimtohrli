@@ -73,12 +73,12 @@ float MOSFromZimtohrli(float zimtohrli_distance) {
 }
 
 Zimtohrli CreateZimtohrli(ZimtohrliParameters params) {
-  // Overriding lots of settings to ensure we have exactly tabuli::kNumRotators
+  // Overriding lots of settings to ensure we have exactly kNumRotators
   // channels.
   const zimtohrli::Cam def_cam;
   const float min_cam = def_cam.CamFromHz(def_cam.low_threshold_hz);
   const float max_cam = def_cam.CamFromHz(def_cam.high_threshold_hz);
-  const float cam_step = (max_cam - min_cam) / tabuli::kNumRotators;
+  const float cam_step = (max_cam - min_cam) / zimtohrli::kNumRotators;
   const float hz_resolution =
       def_cam.HzFromCam(min_cam + cam_step) - def_cam.low_threshold_hz;
   zimtohrli::Cam cam{.minimum_bandwidth_hz = hz_resolution,
@@ -86,7 +86,7 @@ Zimtohrli CreateZimtohrli(ZimtohrliParameters params) {
                      .filter_pass_band_ripple = params.FilterPassBandRipple,
                      .filter_stop_band_ripple = params.FilterStopBandRipple};
   CHECK_EQ(cam.CreateFilterbank(params.SampleRate).filter.Size(),
-           tabuli::kNumRotators);
+           zimtohrli::kNumRotators);
   cam.high_threshold_hz =
       std::min(cam.high_threshold_hz, params.SampleRate * 0.5f);
   zimtohrli::Zimtohrli* result = new zimtohrli::Zimtohrli{

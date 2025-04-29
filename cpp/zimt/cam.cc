@@ -58,6 +58,9 @@ CamFilterbank Cam::CreateFilterbank(float sample_rate) const {
     }
     coeffs.push_back(filter_coeffs);
     thresholds_vector.push_back(std::make_pair(left_hz, right_hz));
+    if (coeffs.size() == 128) {
+      break;
+    }
   }
   CHECK(!coeffs.empty());
 
