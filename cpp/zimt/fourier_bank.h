@@ -206,6 +206,6 @@ class Rotators {
   }
 };
 
-}  // namespace tabuli
+}  // namespace zimtohrli
 
 #endif  // _TABULI_FOURIER_BANK_H
