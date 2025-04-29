@@ -124,7 +124,7 @@ class Rotators {
     }
   }
  public:
-  void FilterAndDownsample(float *in, size_t in_size,
+  void FilterAndDownsample(const float *in, size_t in_size,
 			   float *out, size_t out_shape0, size_t out_stride,
 			   int downsample) {
     static const float kSampleRate = 48000.0;
@@ -178,7 +178,7 @@ class Rotators {
       -0.97386487573, 0.30687938104,  0.52811340907,  1.35094332106,
       0.35339301883,  -0.17657465769, 0.36698233014,  -0.39494225991,
     };
-    for (size_t in_ix = 0, dix = 0; in_ix + kKernelSize < in.size(); ++in_ix) {
+    for (size_t in_ix = 0, dix = 0; in_ix + kKernelSize < in_size; ++in_ix) {
       const float weight = window[dix];
       IncrementAll(resonator.Update(Dot32(&in[in_ix], &reso_kernel[0])) +
 		   Dot32(&in[in_ix], &linear_kernel[0]));
@@ -194,7 +194,7 @@ class Rotators {
 	  out[out_ix * out_stride + k] += energy;
 	}
       }
-      if (++dix == downsample || in_ix + kKernelSize + 1 == in.size()) {
+      if (++dix == downsample || in_ix + kKernelSize + 1 == in_size) {
 	LoudnessDb(&out[out_stride * out_ix]);
 	if (++out_ix >= out_shape0) {
 	  break;
