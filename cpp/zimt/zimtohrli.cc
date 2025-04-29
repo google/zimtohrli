@@ -280,7 +280,7 @@ void Zimtohrli::Spectrogram(
   CHECK_EQ(partial_energy_channels_db.shape()[0], spectrogram.shape()[0]);
   CHECK_EQ(partial_energy_channels_db.shape()[1], spectrogram.shape()[1]);
   //  cam_filterbank->filter.Filter(signal, state, channels);
-  // Using a tabuli::Rotators instead of the cam_filterbank filter.
+  // Using a Rotators instead of the cam_filterbank filter.
   std::vector<float> freqs;
   std::vector<float> gains;
   for (size_t i = 0; i < cam_filterbank->filter.Size(); ++i) {
@@ -290,8 +290,21 @@ void Zimtohrli::Spectrogram(
 
   int downsample = signal.size() / energy_channels_db.shape()[0];
 
-  tabuli::Rotators rots;
-  rots.FilterAndDownsample(signal, energy_channels_db, downsample);
+  Rotators rots;
+  std::vector<float> out(energy_channels_db.shape()[0] * kNumRotators);
+
+  rots.FilterAndDownsample(&signal[0], signal.size(),
+			   out.data(),
+			   energy_channels_db.shape()[0],
+			   kNumRotators,
+			   downsample);
+
+  for (size_t i = 0; i < energy_channels_db.shape()[0]; ++i) {
+    for (size_t k = 0; k < kNumRotators; ++k) {
+      energy_channels_db[{i}][k] = out[i * kNumRotators + k];
+    }
+  }
+
 
   hwy::CopyBytes(energy_channels_db.data(), spectrogram.data(),
                  energy_channels_db.memory_size() * sizeof(float));

@@ -273,7 +273,7 @@ int Main(int argc, char* argv[]) {
     const zimtohrli::Cam def_cam;
     const float min_cam = def_cam.CamFromHz(def_cam.low_threshold_hz);
     const float max_cam = def_cam.CamFromHz(def_cam.high_threshold_hz);
-    const float cam_step = (max_cam - min_cam) / tabuli::kNumRotators;
+    const float cam_step = (max_cam - min_cam) / kNumRotators;
     hz_resolution =
         def_cam.HzFromCam(min_cam + cam_step) - def_cam.low_threshold_hz;
   }
