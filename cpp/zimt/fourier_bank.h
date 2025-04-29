@@ -158,7 +158,8 @@ class Rotators {
     }
     Resonator resonator;
     size_t out_ix = 0;
-    static const float reso_kernel[32] = {
+    constexpr size_t kKernelSize = 32;
+    static const float reso_kernel[kKernelSize] = {
       -0.00756885973, 0.00413482141,  -0.00000236200, 0.00619875373,
       -0.00283612301, -0.00000418032, -0.00653942799, -0.00697059266,
       0.00344293224,  0.00329933933,  -0.00298496041, 0.00350131041,
@@ -168,7 +169,7 @@ class Rotators {
       -0.00294620320, 0.00079453551,  0.00067657883,  0.00185866424,
       0.00615985137,  -0.00236233239, -0.00680980952, 0.01082403830,
     };
-    static const float linear_kernel[32] = {
+    static const float linear_kernel[kKernelSize] = {
       -0.10104347418, -0.11826972031, -0.06180710258, 0.07855591921,
       0.03670823911,  -0.01840452136, 0.10859856308,  0.16449286025,
       0.06054576192,  0.08362268315,  -0.00320242077, 0.17410886426,
@@ -178,27 +179,30 @@ class Rotators {
       -0.97386487573, 0.30687938104,  0.52811340907,  1.35094332106,
       0.35339301883,  -0.17657465769, 0.36698233014,  -0.39494225991,
     };
-    for (size_t in_ix = 32; in_ix < in.size() && out_ix < out.shape()[0];
-	 ++out_ix) {
-      OccasionallyRenormalize();
-      for (int64_t j = 0; j < downsample && in_ix < in.size(); ++j, ++in_ix) {
-	float weight = window[j];
-	IncrementAll(resonator.Update(Dot32(&in[in_ix - 32], &reso_kernel[0])) +
-		     Dot32(&in[in_ix - 32], &linear_kernel[0]));
-	if (out_ix + 1 < out.shape()[0]) {
-	  for (int k = 0; k < kNumRotators; ++k) {
-	    float energy = accu[4][k] * accu[4][k] + accu[5][k] * accu[5][k];
-	    out[{out_ix + 1}][k] += (1.0 - weight) * energy;
-	    out[{out_ix}][k] += weight * energy;
-	  }
-	} else {
-	  for (int k = 0; k < kNumRotators; ++k) {
-	    float energy = accu[4][k] * accu[4][k] + accu[5][k] * accu[5][k];
-	    out[{out_ix}][k] += energy;
-	  }
+    for (size_t in_ix = 0, dix = 0; in_ix + kKernelSize < in.size(); ++in_ix) {
+      const float weight = window[dix];
+      IncrementAll(resonator.Update(Dot32(&in[in_ix], &reso_kernel[0])) +
+		   Dot32(&in[in_ix], &linear_kernel[0]));
+      if (out_ix + 1 < out.shape()[0]) {
+	for (int k = 0; k < kNumRotators; ++k) {
+	  float energy = accu[4][k] * accu[4][k] + accu[5][k] * accu[5][k];
+	  out[{out_ix + 1}][k] += (1.0 - weight) * energy;
+	  out[{out_ix}][k] += weight * energy;
+	}
+      } else {
+	for (int k = 0; k < kNumRotators; ++k) {
+	  float energy = accu[4][k] * accu[4][k] + accu[5][k] * accu[5][k];
+	  out[{out_ix}][k] += energy;
 	}
       }
-      LoudnessDb(out, out_ix);
+      if (++dix == downsample || in_ix + kKernelSize + 1 == in.size()) {
+	LoudnessDb(out, out_ix);
+	if (++out_ix >= out.shape()[0]) {
+	  break;
+	}
+	dix = 0;
+	OccasionallyRenormalize();
+      }
     }
   }
 };
