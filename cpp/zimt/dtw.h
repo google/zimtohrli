@@ -30,6 +30,13 @@ namespace {
 
 // A simple buffer of float samples describing a spectrogram with a given number
 // of steps and feature dimensions.
+// The values buffer is populated like:
+// [
+//   [sample0_dim0, sample0_dim1, ..., sample0_dimn],
+//   [sample1_dim0, sample1_dim1, ..., sample1_dimn],
+//   ...,
+//   [samplem_dim0, samplem_dim1, ..., samplem_dimn],
+// ]
 struct Spectrogram {
   const float* step(size_t n) const { return values + n * num_dims; }
   float* step(size_t n) { return values + n * num_dims; }
@@ -48,8 +55,11 @@ struct CostMatrix {
     values[step_a * steps_b + step_b] = value;
   }
   CostMatrix(size_t steps_a, size_t steps_b)
-      : steps_a(steps_a), steps_b(steps_b) {
-    values = std::vector<double>(steps_a * steps_b);
+      : steps_a(steps_a),
+        steps_b(steps_b),
+        values(std::vector<double>(steps_a * steps_b,
+                                   std::numeric_limits<double>::infinity())) {
+    set(0, 0, 0);
   }
   size_t steps_a;
   size_t steps_b;
@@ -80,13 +90,6 @@ std::vector<std::pair<size_t, size_t>> DTW(const Spectrogram& spec_a,
   // Initialize a cost matrix with 0 at the start point, infinity at [*, 0] and
   // [0, *].
   CostMatrix cost_matrix(spec_a.num_steps, spec_b.num_steps);
-  for (size_t step_a = 0; step_a < spec_a.num_steps; step_a++) {
-    cost_matrix.set(step_a, 0, std::numeric_limits<double>::infinity());
-  }
-  for (size_t step_b = 0; step_b < spec_b.num_steps; step_b++) {
-    cost_matrix.set(0, step_b, std::numeric_limits<double>::infinity());
-  }
-  cost_matrix.set(0, 0, 0);
   // Compute cost as cost as weighted sum of feature dimension norms to each
   // cell.
   static const double kMul00 = 0.98585952515276176;
@@ -96,10 +99,11 @@ std::vector<std::pair<size_t, size_t>> DTW(const Spectrogram& spec_a,
          ++spec_b_index) {
       const double cost_at_index =
           delta_norm(spec_a, spec_b, spec_a_index, spec_b_index);
-      const double sync_cost = cost_matrix.get(spec_a_index, spec_b_index);
-      const double unsync_cost =
-          std::min(cost_matrix.get(spec_a_index - 1, spec_b_index),
-                   cost_matrix.get(spec_a_index, spec_b_index - 1));
+      const double sync_cost =
+          cost_matrix.get(spec_a_index - 1, spec_b_index - 1);
+      const double bwd_cost = cost_matrix.get(spec_a_index - 1, spec_b_index);
+      const double fwd_cost = cost_matrix.get(spec_a_index, spec_b_index - 1);
+      const double unsync_cost = std::min(bwd_cost, fwd_cost);
       const double costmin = std::min(sync_cost + kMul00 * cost_at_index,
                                       unsync_cost + cost_at_index);
       cost_matrix.set(spec_a_index, spec_b_index, costmin);
@@ -112,12 +116,12 @@ std::vector<std::pair<size_t, size_t>> DTW(const Spectrogram& spec_a,
   result.push_back(pos);
   while (pos.first + 1 < spec_a.num_steps &&
          pos.second + 1 < spec_b.num_steps) {
-    double min_cost = std::numeric_limits<double>::max();
+    double min_cost = std::numeric_limits<double>::infinity();
     for (const auto& test_pos :
          {std::pair<size_t, size_t>{pos.first + 1, pos.second + 1},
           std::pair<size_t, size_t>{pos.first + 1, pos.second},
           std::pair<size_t, size_t>{pos.first, pos.second + 1}}) {
-      double cost = cost_matrix.get(pos.first, pos.second);
+      double cost = cost_matrix.get(test_pos.first, test_pos.second);
       if (cost < min_cost) {
         min_cost = cost;
         pos = test_pos;
