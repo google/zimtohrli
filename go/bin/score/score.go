@@ -141,6 +141,7 @@ func main() {
 			pool := &worker.Pool[any]{
 				Workers:  *workers,
 				FailFast: *failFast,
+				OnChange: bar.Update,
 			}
 			if err := bundle.Calculate(measurements, pool, *force); err != nil {
 				log.Printf("%#v", err)

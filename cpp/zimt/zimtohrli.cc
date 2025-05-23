@@ -120,10 +120,11 @@ Distance HwyDistance(const Zimtohrli& z,
   // Since NSIM is a similarity measure, where 1.0 is "perfectly similar", we
   // subtract it from 1.0 to get a distance metric instead.
   Distance result{
-      .value = 1.0f -
-               NSIM(spectrogram_a, spectrogram_b, time_pairs,
-                    std::min(spectrogram_a.shape()[0], z.nsim_step_window),
-                    std::min(spectrogram_a.shape()[1], z.nsim_channel_window))};
+      .value =
+          1.0f -
+          NSIMHwy(spectrogram_a, spectrogram_b, time_pairs,
+                  std::min(spectrogram_a.shape()[0], z.nsim_step_window),
+                  std::min(spectrogram_a.shape()[1], z.nsim_channel_window))};
   if constexpr (verbose) {
     const Vec log_10_div_20 = Set(d, log(10) / 20);
     const Vec twenty_vec = Set(d, 20);
@@ -293,18 +294,15 @@ void Zimtohrli::Spectrogram(
   Rotators rots;
   std::vector<float> out(energy_channels_db.shape()[0] * kNumRotators);
 
-  rots.FilterAndDownsample(&signal[0], signal.size(),
-			   out.data(),
-			   energy_channels_db.shape()[0],
-			   kNumRotators,
-			   downsample);
+  rots.FilterAndDownsample(&signal[0], signal.size(), out.data(),
+                           energy_channels_db.shape()[0], kNumRotators,
+                           downsample);
 
   for (size_t i = 0; i < energy_channels_db.shape()[0]; ++i) {
     for (size_t k = 0; k < kNumRotators; ++k) {
       energy_channels_db[{i}][k] = out[i * kNumRotators + k];
     }
   }
-
 
   hwy::CopyBytes(energy_channels_db.data(), spectrogram.data(),
                  energy_channels_db.memory_size() * sizeof(float));
@@ -316,8 +314,8 @@ void Zimtohrli::Spectrogram(
     hwy::AlignedNDArray<float, 2>& partial_energy_channels_db,
     hwy::AlignedNDArray<float, 2>& spectrogram) const {
   FilterbankState new_state = cam_filterbank->filter.NewState();
-  Spectrogram(signal, new_state, energy_channels_db,
-              partial_energy_channels_db, spectrogram);
+  Spectrogram(signal, new_state, energy_channels_db, partial_energy_channels_db,
+              spectrogram);
 }
 
 Analysis Zimtohrli::Analyze(hwy::Span<const float> signal,
@@ -330,10 +328,9 @@ Analysis Zimtohrli::Analyze(hwy::Span<const float> signal,
       {num_downscaled_samples, filters});
   hwy::AlignedNDArray<float, 2> partial_energy_channels_db(
       {num_downscaled_samples, filters});
-  hwy::AlignedNDArray<float, 2> spectrogram(
-      {num_downscaled_samples, filters});
-  Spectrogram(signal, state, energy_channels_db,
-              partial_energy_channels_db, spectrogram);
+  hwy::AlignedNDArray<float, 2> spectrogram({num_downscaled_samples, filters});
+  Spectrogram(signal, state, energy_channels_db, partial_energy_channels_db,
+              spectrogram);
   return {.energy_channels_db = std::move(energy_channels_db),
           .partial_energy_channels_db = std::move(partial_energy_channels_db),
           .spectrogram = std::move(spectrogram)};
@@ -389,8 +386,7 @@ Comparison Zimtohrli::Compare(
   std::vector<std::vector<AnalysisDTW>> dtw(frames_b_span.size());
   for (size_t audio_channel_index = 0; audio_channel_index < num_audio_channels;
        ++audio_channel_index) {
-    Analysis current_analysis_a =
-        Analyze(frames_a[{audio_channel_index}]);
+    Analysis current_analysis_a = Analyze(frames_a[{audio_channel_index}]);
     for (size_t b_index = 0; b_index < frames_b_span.size(); ++b_index) {
       Analysis current_analysis_b =
           Analyze((*frames_b_span[b_index])[{audio_channel_index}]);

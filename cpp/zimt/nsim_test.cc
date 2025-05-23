@@ -22,6 +22,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "hwy/aligned_allocator.h"
+#include "zimt/nsim.h"
 
 namespace zimtohrli {
 
@@ -38,7 +39,7 @@ TEST(NSIM, WindowMeanTest) {
   ary[{2}] = {10, 11, 12, 13, 14};
   ary[{3}] = {15, 16, 17, 18, 19};
   ary[{4}] = {20, 21, 22, 23, 24};
-  hwy::AlignedNDArray<float, 2> mean_3x3 = WindowMean(ary, 3, 3);
+  hwy::AlignedNDArray<float, 2> mean_3x3 = WindowMeanHwy(ary, 3, 3);
   CheckEqual(mean_3x3[{0}], {0.0, 1.0 / 9.0, 3.0 / 9.0, 6.0 / 9.0, 1.0});
   CheckEqual(mean_3x3[{1}],
              {5.0 / 9.0, 12.0 / 9.0, 21.0 / 9.0, 3.0, 33.0 / 9.0});
@@ -60,7 +61,7 @@ TEST(NSIM, NSIMTest) {
   b[{2}] = {15, 16, 17, 18, 19};
   b[{3}] = {20, 21, 22, 23, 24};
   b[{4}] = {25, 26, 27, 28, 29};
-  EXPECT_THAT(NSIM(a, b, {{0, 0}, {1, 1}, {2, 2}, {3, 3}, {4, 4}}, 3, 3),
+  EXPECT_THAT(NSIMHwy(a, b, {{0, 0}, {1, 1}, {2, 2}, {3, 3}, {4, 4}}, 3, 3),
               0.745816);
   hwy::AlignedNDArray<float, 2> c({5, 5});
   c[{0}] = {0, 1, 2, 3, 4};
@@ -68,7 +69,7 @@ TEST(NSIM, NSIMTest) {
   c[{2}] = {10, 11, 12, 13, 14};
   c[{3}] = {15, 16, 17, 18, 19};
   c[{4}] = {20, 21, 22, 23, 24};
-  EXPECT_THAT(NSIM(a, c, {{0, 0}, {1, 1}, {2, 2}, {3, 3}, {4, 4}}, 3, 3), 1);
+  EXPECT_THAT(NSIMHwy(a, c, {{0, 0}, {1, 1}, {2, 2}, {3, 3}, {4, 4}}, 3, 3), 1);
 }
 
 void BM_NSIM(benchmark::State& state) {
@@ -79,7 +80,7 @@ void BM_NSIM(benchmark::State& state) {
     time_pairs[i] = {i, i};
   }
   for (auto s : state) {
-    NSIM(a, a, time_pairs, 9, 9);
+    NSIMHwy(a, a, time_pairs, 9, 9);
   }
   state.SetItemsProcessed(a.size() * state.iterations());
 }
