@@ -23,27 +23,11 @@
 #include <vector>
 
 #include "hwy/aligned_allocator.h"
+#include "zimt/spectrogram.h"
 
 namespace zimtohrli {
 
 namespace {
-
-// A simple buffer of float samples describing a spectrogram with a given number
-// of steps and feature dimensions.
-// The values buffer is populated like:
-// [
-//   [sample0_dim0, sample0_dim1, ..., sample0_dimn],
-//   [sample1_dim0, sample1_dim1, ..., sample1_dimn],
-//   ...,
-//   [samplem_dim0, samplem_dim1, ..., samplem_dimn],
-// ]
-struct Spectrogram {
-  const float* step(size_t n) const { return values + n * num_dims; }
-  float* step(size_t n) { return values + n * num_dims; }
-  size_t num_steps;
-  size_t num_dims;
-  float* values;
-};
 
 // A simple buffer of double cost values describing the time warp costs between
 // two spectrograms.
@@ -132,33 +116,14 @@ std::vector<std::pair<size_t, size_t>> DTW(const Spectrogram& spec_a,
   return result;
 }
 
+}  // namespace
+
 // ChainDTW used to be a windowed version of DTW, but now it's just a wrapper
 // around DTW using hwy data structures. Replace it with a call to DTW with the
 // Spectrogram structs to get rid of hwy.
 std::vector<std::pair<size_t, size_t>> ChainDTW(
     const hwy::AlignedNDArray<float, 2>& spec_a,
-    const hwy::AlignedNDArray<float, 2>& spec_b, size_t window_size) {
-  assert(spec_a.shape()[1] == spec_b.shape()[1]);
-  std::vector<float> spectrogram_a_data(spec_a.shape()[0] * spec_a.shape()[1]);
-  std::vector<float> spectrogram_b_data(spec_b.shape()[0] * spec_b.shape()[1]);
-  Spectrogram spectrogram_a{.num_steps = spec_a.shape()[0],
-                            .num_dims = spec_a.shape()[1],
-                            .values = spectrogram_a_data.data()};
-  Spectrogram spectrogram_b{.num_steps = spec_b.shape()[0],
-                            .num_dims = spec_b.shape()[1],
-                            .values = spectrogram_b_data.data()};
-  for (size_t step = 0; step < spectrogram_a.num_steps; step++) {
-    std::memcpy(spectrogram_a.step(step), spec_a[{step}].data(),
-                sizeof(float) * spec_a.shape()[1]);
-  }
-  for (size_t step = 0; step < spectrogram_b.num_steps; step++) {
-    std::memcpy(spectrogram_b.step(step), spec_b[{step}].data(),
-                sizeof(float) * spec_b.shape()[1]);
-  }
-  return DTW(spectrogram_a, spectrogram_b);
-}
-
-}  // namespace
+    const hwy::AlignedNDArray<float, 2>& spec_b, size_t window_size);
 
 }  // namespace zimtohrli
 
