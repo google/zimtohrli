@@ -31,41 +31,19 @@ extern "C" {
 #define NUM_LOUDNESS_L_U_PARAMS 16
 #define NUM_LOUDNESS_T_F_PARAMS 13
 
-// Returns the number of LoudnessAFParams in ZimtohrliParameters.
-int NumLoudnessAFParams();
-
-// Returns the number of LoudnessLUParams in ZimtohrliParameters.
-int NumLoudnessLUParams();
-
-// Returns the number of LoudnessTFParams in ZimtohrliParameters.
-int NumLoudnessTFParams();
+float SampleRate();
 
 // Contains the parameters controlling Zimtohrli behavior.
 typedef struct ZimtohrliParameters {
-  float SampleRate;
-  float FrequencyResolution;
   float PerceptualSampleRate;
-  int ApplyMasking;
   float FullScaleSineDB;
-  int ApplyLoudness;
   float UnwarpWindowSeconds;
   int NSIMStepWindow;
   int NSIMChannelWindow;
-  float MaskingLowerZeroAt20;
-  float MaskingLowerZeroAt80;
-  float MaskingUpperZeroAt20;
-  float MaskingUpperZeroAt80;
-  float MaskingMaxMask;
-  int FilterOrder;
-  float FilterStopBandRipple;
-  float FilterPassBandRipple;
-  float LoudnessAFParams[NUM_LOUDNESS_A_F_PARAMS];
-  float LoudnessLUParams[NUM_LOUDNESS_L_U_PARAMS];
-  float LoudnessTFParams[NUM_LOUDNESS_T_F_PARAMS];
 } ZimtohrliParameters;
 
 // Returns the default parameters.
-ZimtohrliParameters DefaultZimtohrliParameters(float sample_rate);
+ZimtohrliParameters DefaultZimtohrliParameters();
 
 // void* representation of zimtohrli::Zimtohrli.
 typedef void* Zimtohrli;
@@ -77,11 +55,11 @@ Zimtohrli CreateZimtohrli(ZimtohrliParameters params);
 void FreeZimtohrli(Zimtohrli z);
 
 // void* representation of zimtohrli::Analysis.
-typedef void* Analysis;
+typedef void* Spec;
 
-// Returns a zimtohrli::Analysis produced by the provided zimtohrli::Zimtohrli
-// and using the provided perceptual_sample_rate and data.
-Analysis Analyze(Zimtohrli zimtohrli, float* data, int size);
+// Returns a spectrogram by the provided zimtohrli::Zimtohrli using the provided
+// data.
+Spec Spectrogram(Zimtohrli zimtohrli, float* data, int size);
 
 // Plain C version of zimtohrli::EnergyAndMaxAbsAmplitude.
 typedef struct {
@@ -106,12 +84,12 @@ EnergyAndMaxAbsAmplitude NormalizeAmplitude(float max_abs_amplitude,
 // (zimtohrli::Distance(..., perceptual_sample_rate, ...) of 100Hz.
 float MOSFromZimtohrli(float zimtohrli_distance);
 
-// Deletes a zimtohrli::Analysis.
-void FreeAnalysis(Analysis a);
+// Deletes a spectrogram.
+void FreeSpec(Spec a);
 
 // Returns the Zimtohrli distance between two analyses using the provided
 // zimtohrli::Zimtohrli.
-float AnalysisDistance(Zimtohrli zimtohrli, Analysis a, Analysis b);
+float Distance(Zimtohrli zimtohrli, Spec a, Spec b);
 
 // Sets the parameters.
 //
