@@ -229,15 +229,15 @@ func (r *ReferenceBundle) Correlation(typeA, typeB ScoreType) (float64, error) {
 		}
 		// include this loop for 'soft' Spearman for optimization
 		// for example 70 iterations
-	        for ii:=1; ii < 1; ii++ {
-		  for _, dist := range ref.Distortions {
-			scoresA = append(scoresA, (1.0 + float64(ii) * 0.0004) * dist.Scores[typeA])
-			scoresB = append(scoresB, dist.Scores[typeB])
-		  }
-		  for _, dist := range ref.Distortions {
-			scoresA = append(scoresA, (1.0 - float64(ii) * 0.0004) * dist.Scores[typeA])
-			scoresB = append(scoresB, dist.Scores[typeB])
-		  }
+		for ii := 1; ii < 1; ii++ {
+			for _, dist := range ref.Distortions {
+				scoresA = append(scoresA, (1.0+float64(ii)*0.0004)*dist.Scores[typeA])
+				scoresB = append(scoresB, dist.Scores[typeB])
+			}
+			for _, dist := range ref.Distortions {
+				scoresA = append(scoresA, (1.0-float64(ii)*0.0004)*dist.Scores[typeA])
+				scoresB = append(scoresB, dist.Scores[typeB])
+			}
 		}
 	}
 	if len(scoresA) != len(scoresB) {
@@ -477,12 +477,9 @@ func mutateInt(i, min, max int, rng *rand.Rand, temp float64) int {
 	return int(mutateFloat(float64(i), float64(min), float64(max), rng, temp))
 }
 
-const sampleRate = 48000
-
 func mutate(z *goohrli.Goohrli, rng *rand.Rand, temp float64) *goohrli.Goohrli {
 	params := z.Parameters()
 	params.PerceptualSampleRate = mutateFloat(params.PerceptualSampleRate, 50, 150, rng, temp)
-	params.FrequencyResolution = mutateFloat(params.FrequencyResolution, 1, 15, rng, temp)
 	params.NSIMChannelWindow = mutateInt(params.NSIMChannelWindow, 3, 64, rng, temp)
 	params.NSIMStepWindow = mutateInt(params.NSIMStepWindow, 3, 64, rng, temp)
 	result := goohrli.New(params)
@@ -538,7 +535,7 @@ type OptimizationEvent struct {
 // Optimize will use simulated annealing to optimize a Zimtohrli metric for predicting
 // these bundles.
 func (r ReferenceBundles) Optimize(startStep, numSteps float64, logger func(OptimizationEvent)) error {
-	z := goohrli.New(goohrli.DefaultParameters(sampleRate))
+	z := goohrli.New(goohrli.DefaultParameters())
 	loss, err := r.CalculateZimtohrliMSE(z)
 	if err != nil {
 		return err

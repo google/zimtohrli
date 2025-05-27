@@ -44,12 +44,12 @@ float NSIMHwy(const hwy::AlignedNDArray<float, 2>& a,
   Spectrogram spec_a(a.shape()[0], a.shape()[1]);
   for (size_t step_index = 0; step_index < spec_a.num_steps; ++step_index) {
     std::memcpy(spec_a.step(step_index), a[{step_index}].data(),
-                spec_a.num_steps * sizeof(float));
+                spec_a.num_dims * sizeof(float));
   }
   Spectrogram spec_b(b.shape()[0], b.shape()[1]);
   for (size_t step_index = 0; step_index < spec_b.num_steps; ++step_index) {
     std::memcpy(spec_b.step(step_index), b[{step_index}].data(),
-                spec_b.num_steps * sizeof(float));
+                spec_b.num_dims * sizeof(float));
   }
   return NSIM(spec_a, spec_b, time_pairs, step_window, channel_window);
 }

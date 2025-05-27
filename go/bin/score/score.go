@@ -32,10 +32,6 @@ import (
 	"github.com/google/zimtohrli/go/worker"
 )
 
-const (
-	sampleRate = 48000
-)
-
 func main() {
 	details := flag.String("details", "", "Glob to directories with databases to show the details of.")
 	calculate := flag.String("calculate", "", "Glob to directories with databases to calculate metrics for.")
@@ -44,7 +40,7 @@ func main() {
 	zimtohrliScoreType := flag.String("zimtohrli_score_type", string(data.Zimtohrli), "Score type name to use when storing Zimtohrli scores in a dataset.")
 	calculateViSQOL := flag.Bool("calculate_visqol", false, "Whether to calculate ViSQOL scores.")
 	calculatePipeMetric := flag.String("calculate_pipe", "", "Path to a binary that serves metrics via stdin/stdout pipe. Install some of the via 'install_python_metrics.py'.")
-	zimtohrliParameters := goohrli.DefaultParameters(48000)
+	zimtohrliParameters := goohrli.DefaultParameters()
 	b, err := json.Marshal(zimtohrliParameters)
 	if err != nil {
 		log.Panic(err)
@@ -104,10 +100,9 @@ func main() {
 		for _, study := range studies {
 			measurements := map[data.ScoreType]data.Measurement{}
 			if *calculateZimtohrli {
-				if !reflect.DeepEqual(zimtohrliParameters, goohrli.DefaultParameters(zimtohrliParameters.SampleRate)) {
+				if !reflect.DeepEqual(zimtohrliParameters, goohrli.DefaultParameters()) {
 					log.Printf("Using %+v", zimtohrliParameters)
 				}
-				zimtohrliParameters.SampleRate = sampleRate
 				z := goohrli.New(zimtohrliParameters)
 				measurements[data.ScoreType(*zimtohrliScoreType)] = z.NormalizedAudioDistance
 			}
@@ -141,6 +136,7 @@ func main() {
 			pool := &worker.Pool[any]{
 				Workers:  *workers,
 				FailFast: *failFast,
+				OnChange: bar.Update,
 			}
 			if err := bundle.Calculate(measurements, pool, *force); err != nil {
 				log.Printf("%#v", err)

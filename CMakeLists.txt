@@ -16,20 +16,10 @@ include(GoogleTest)
 add_library(zimtohrli_base STATIC
     cpp/zimt/audio.cc
     cpp/zimt/audio.h
-    cpp/zimt/cam.cc
-    cpp/zimt/cam.h
     cpp/zimt/dtw.cc
     cpp/zimt/dtw.h
-    cpp/zimt/elliptic.cc
-    cpp/zimt/elliptic.h
-    cpp/zimt/filterbank.cc
-    cpp/zimt/filterbank.h
     cpp/zimt/fourier_bank.h
     cpp/zimt/fourier_bank.cc
-    cpp/zimt/loudness.cc
-    cpp/zimt/loudness.h
-    cpp/zimt/masking.cc
-    cpp/zimt/masking.h
     cpp/zimt/mos.cc
     cpp/zimt/mos.h
     cpp/zimt/nsim.cc
@@ -93,18 +83,10 @@ add_custom_command(
 )
 add_custom_target(zimtohrli_goohrli ALL DEPENDS ${zimtohrli_goohrli_archive})
 
-add_library(zimtohrli_ux STATIC
-    cpp/zimt/ux.cc
-    cpp/zimt/ux.h
-)
-target_include_directories(zimtohrli_ux PRIVATE ${imgui_SOURCE_DIR}/backends ${gles_INCLUDE_DIRS})
-target_include_directories(zimtohrli_ux PUBLIC ${imgui_SOURCE_DIR})
-target_link_libraries(zimtohrli_ux zimtohrli_base glfw OpenGL::GL imgui)
-
 add_executable(zimtohrli_compare
     cpp/zimt/compare.cc
 )
-target_link_libraries(zimtohrli_compare zimtohrli_ux zimtohrli_base absl::flags_parse)
+target_link_libraries(zimtohrli_compare zimtohrli_base absl::flags_parse)
 set_target_properties(zimtohrli_compare PROPERTIES
     PREFIX ""
     OUTPUT_NAME compare
