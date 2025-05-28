@@ -53,23 +53,11 @@ class PyohrliTest(unittest.TestCase):
     )
     def test_distance(self, a_hz: float, b_hz: float, distance: float):
         sample_rate = 48000.0
-        metric = pyohrli.Pyohrli(sample_rate)
+        metric = pyohrli.Pyohrli()
         signal_a = np.sin(np.linspace(0.0, np.pi * 2 * a_hz, int(sample_rate)))
-        analysis_a = metric.analyze(signal_a)
         signal_b = np.sin(np.linspace(0.0, np.pi * 2 * b_hz, int(sample_rate)))
-        analysis_b = metric.analyze(signal_b)
-        analysis_distance = metric.analysis_distance(analysis_a, analysis_b)
-        self.assertLess(abs(analysis_distance - distance), 1e-3)
         distance = metric.distance(signal_a, signal_b)
         self.assertLess(abs(distance - distance), 1e-3)
-
-    def test_nyquist_threshold(self):
-        sample_rate = 12000.0
-        metric = pyohrli.Pyohrli(sample_rate)
-        signal = np.sin(np.linspace(0.0, np.pi * 2 * 440.0, int(sample_rate)))
-        # This would crash the program if pyohrli.cc didn't limit the upper
-        # threshold to half the sample rate.
-        metric.analyze(signal)
 
     @parameterize(
         dict(zimtohrli_distance=0.0, mos=5.0),

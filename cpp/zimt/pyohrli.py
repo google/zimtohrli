@@ -24,10 +24,10 @@ def mos_from_zimtohrli(zimtohrli_distance: float) -> float:
     return _pyohrli.MOSFromZimtohrli(zimtohrli_distance)
 
 
-class Analysis:
-    """Wrapper around C++ zimtohrli::Analysis."""
+class Spectrogram:
+    """Wrapper around C++ zimtohrli::Spectrogram."""
 
-    _cc_analysis: _pyohrli.Analysis
+    _cc_analysis: _pyohrli.Spectrogram
 
 
 class Pyohrli:
@@ -35,53 +35,9 @@ class Pyohrli:
 
     _cc_pyohrli: _pyohrli.Pyohrli
 
-    def __init__(self, sample_rate: float):
-        """Initializes the instance.
-
-        Args:
-          sample_rate: The sample rate this Pyohrli instance expects for signals.
-          frequency_resolution: The smallest bandwidth of the channel filters, i.e.
-            the expected frequency resolution of human hearing at low frequencies.
-        """
-        self._cc_pyohrli = _pyohrli.Pyohrli(sample_rate)
-
-    def analyze(self, signal: npt.ArrayLike) -> Analysis:
-        """Analyzes a signal.
-
-        Args:
-          signal: The signal to analyze. A (num_samples,)-shaped array of floats
-            between -1 and 1. The expected playout intensity in dB SPL of a 1kHz
-            sine wave between -1 and 1 is defined by setting 'full_scale_sine_db' of
-            this Pyohrli instance.
-
-        Returns:
-          An Analysis instance containing a psychoacoustic analysis of the signal.
-        """
-        result = Analysis()
-        # Disabling protected-access to avoid making Analysis._cc_pyohrli public.
-        result._cc_analysis = (
-            self._cc_pyohrli.analyze(  # pylint: disable=protected-access
-                np.asarray(signal).astype(np.float32).ravel().data,
-            )
-        )
-        return result
-
-    def analysis_distance(self, analysis_a: Analysis, analysis_b: Analysis) -> float:
-        """Computes the distance between two psychoacoustic analyses.
-
-        Args:
-          analysis_a: An Analysis instance to compare.
-          analysis_b: Another Analysis instance to compare with.
-
-        Returns:
-          The Zimtohrli distance between the two analyses.
-        """
-        return self._cc_pyohrli.analysis_distance(
-            # Disabling protected-access to avoid making Analysis._cc_pyohrli
-            # public.
-            analysis_a._cc_analysis,  # pylint: disable=protected-access
-            analysis_b._cc_analysis,  # pylint: disable=protected-access
-        )
+    def __init__(self):
+        """Initializes the instance."""
+        self._cc_pyohrli = _pyohrli.Pyohrli()
 
     def distance(self, signal_a: npt.ArrayLike, signal_b: npt.ArrayLike) -> float:
         """Computes the distance between two signals.
@@ -129,12 +85,3 @@ class Pyohrli:
     @nsim_channel_window.setter
     def nsim_channel_window(self, value: float):
         self._cc_pyohrli.set_nsim_channel_window(value)
-
-    @property
-    def unwarp_window(self) -> float:
-        """Length of dynamic time warp unwarp window in seconds."""
-        return self._cc_pyohrli.unwarp_window
-
-    @unwarp_window.setter
-    def unwarp_window(self, value: float):
-        self._cc_pyohrli.unwarp_window = value

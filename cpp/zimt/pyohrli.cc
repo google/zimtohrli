@@ -18,64 +18,51 @@
 
 #include "absl/log/check.h"
 #include "structmember.h"  // NOLINT // For PyMemberDef
-#include "zimt/cam.h"
 #include "zimt/mos.h"
 #include "zimt/zimtohrli.h"
 
 namespace {
 
-struct AnalysisObject {
+struct SpectrogramObject {
   // clang-format off
   PyObject_HEAD
-  zimtohrli::Analysis *analysis;
+  void *spectrogram;
   // clang-format on
 };
 
-void Analysis_dealloc(AnalysisObject* self) {
-  if (self->analysis) {
-    delete self->analysis;
-    self->analysis = nullptr;
+void Spectrogram_dealloc(SpectrogramObject* self) {
+  if (self) {
+    if (self->spectrogram) {
+      delete static_cast<zimtohrli::Spectrogram*>(self->spectrogram);
+      self->spectrogram = nullptr;
+    }
+    Py_TYPE(self)->tp_free((PyObject*)self);
   }
-  Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
-PyTypeObject AnalysisType = {
+PyTypeObject SpectrogramType = {
     // clang-format off
     .ob_base = PyVarObject_HEAD_INIT(nullptr, 0)
-    .tp_name = "pyohrli.Analysis",
+    .tp_name = "pyohrli.Spectrogram",
     // clang-format on
-    .tp_basicsize = sizeof(AnalysisObject),
+    .tp_basicsize = sizeof(SpectrogramObject),
     .tp_itemsize = 0,
-    .tp_dealloc = (destructor)Analysis_dealloc,
+    .tp_dealloc = (destructor)Spectrogram_dealloc,
     .tp_flags = Py_TPFLAGS_DEFAULT,
-    .tp_doc = PyDoc_STR("Python wrapper around C++ zimtohrli::Analysis."),
+    .tp_doc = PyDoc_STR("Python wrapper around C++ zimtohrli::Spectrogram."),
     .tp_new = PyType_GenericNew,
 };
 
 struct PyohrliObject {
   // clang-format off
   PyObject_HEAD
-  zimtohrli::Zimtohrli *zimtohrli;
+  void *zimtohrli;
   // clang-format on
 };
 
 int Pyohrli_init(PyohrliObject* self, PyObject* args, PyObject* kwds) {
-  float sample_rate;
-  const char* keywords[] = {"sample_rate", nullptr};
-  if (!PyArg_ParseTupleAndKeywords(
-          args, kwds, "f", const_cast<char**>(keywords), &sample_rate)) {
-    PyErr_SetString(PyExc_TypeError, "unable to parse sample_rate as float");
-    return -1;
-  }
   try {
-    const zimtohrli::Cam default_cam;
-    self->zimtohrli = new zimtohrli::Zimtohrli{
-        .cam_filterbank =
-            zimtohrli::Cam{
-                .high_threshold_hz =
-                    std::min(sample_rate * 0.5f, default_cam.high_threshold_hz),
-            }
-                .CreateFilterbank(sample_rate)};
+    self->zimtohrli = new zimtohrli::Zimtohrli{};
   } catch (const std::bad_alloc&) {
     PyErr_SetNone(PyExc_MemoryError);
     return -1;
@@ -86,7 +73,7 @@ int Pyohrli_init(PyohrliObject* self, PyObject* args, PyObject* kwds) {
 void Pyohrli_dealloc(PyohrliObject* self) {
   if (self) {
     if (self->zimtohrli) {
-      delete self->zimtohrli;
+      delete static_cast<zimtohrli::Zimtohrli*>(self->zimtohrli);
       self->zimtohrli = nullptr;
     }
     Py_TYPE(self)->tp_free((PyObject*)self);
@@ -104,7 +91,7 @@ struct BufferDeleter {
 //
 // If the return value is std::nullopt that means a Python error is set and the
 // current operation should be terminated ASAP.
-std::optional<zimtohrli::Analysis> Analyze(
+std::optional<zimtohrli::Spectrogram> Analyze(
     const zimtohrli::Zimtohrli& zimtohrli, PyObject* buffer_object) {
   Py_buffer buffer_view;
   if (PyObject_GetBuffer(buffer_object, &buffer_view, PyBUF_C_CONTIGUOUS)) {
@@ -120,10 +107,9 @@ std::optional<zimtohrli::Analysis> Analyze(
     PyErr_SetString(PyExc_TypeError, "buffer has more than 1 axis");
     return std::nullopt;
   }
-  hwy::AlignedNDArray<float, 1> signal_array({buffer_view.len / sizeof(float)});
-  hwy::CopyBytes(buffer_view.buf, signal_array.data(), buffer_view.len);
-  return std::optional<zimtohrli::Analysis>{
-      zimtohrli.Analyze(signal_array[{}])};
+  return std::optional<zimtohrli::Spectrogram>(zimtohrli.Analyze(
+      zimtohrli::Span<const float>(buffer_view.len / sizeof(float),
+                                   static_cast<float*>(buffer_view.buf))));
 }
 
 PyObject* BadArgument(const std::string& message) {
@@ -131,85 +117,28 @@ PyObject* BadArgument(const std::string& message) {
   return nullptr;
 }
 
-PyObject* Pyohrli_analyze(PyohrliObject* self, PyObject* const* args,
-                          Py_ssize_t nargs) {
-  if (nargs != 1) {
-    return BadArgument("not exactly 1 argument provided");
-  }
-  std::optional<zimtohrli::Analysis> analysis =
-      Analyze(*self->zimtohrli, args[0]);
-  if (!analysis.has_value()) {
-    return nullptr;
-  }
-  AnalysisObject* result = PyObject_New(AnalysisObject, &AnalysisType);
-  if (result == nullptr) {
-    return nullptr;
-  }
-  try {
-    result->analysis = new zimtohrli::Analysis{
-        .energy_channels_db = std::move(analysis->energy_channels_db),
-        .partial_energy_channels_db =
-            std::move(analysis->partial_energy_channels_db),
-        .spectrogram = std::move(analysis->spectrogram)};
-    return (PyObject*)result;
-  } catch (const std::bad_alloc&) {
-    // Technically, this object should be deleted with PyObject_Del, but
-    // XDECREF includes a null check which we want anyway.
-    Py_XDECREF((PyObject*)result);
-    return PyErr_NoMemory();
-  }
-}
-
-// Plain C++ function to compute distance between two zimtohrli::Analysis.
-//
-// Calls to Distance never need to be cleaned up (with e.g. delete or DECREF)
-// afterwards.
-PyObject* Distance(const zimtohrli::Zimtohrli& zimtohrli,
-                   const zimtohrli::Analysis& analysis_a,
-                   const zimtohrli::Analysis& analysis_b) {
-  const zimtohrli::Distance distance =
-      zimtohrli.Distance(false, analysis_a.spectrogram, analysis_b.spectrogram);
-  return PyFloat_FromDouble(distance.value);
-}
-
-PyObject* Pyohrli_analysis_distance(PyohrliObject* self, PyObject* const* args,
-                                    Py_ssize_t nargs) {
-  if (nargs != 2) {
-    return BadArgument("not exactly 2 arguments provided");
-  }
-  if (!Py_IS_TYPE(args[0], &AnalysisType)) {
-    return BadArgument("argument 0 is not an Analysis instance");
-  }
-  if (!Py_IS_TYPE(args[1], &AnalysisType)) {
-    return BadArgument("argument 1 is not an Analysis instance");
-  }
-  return Distance(*self->zimtohrli, *((AnalysisObject*)args[0])->analysis,
-                  *((AnalysisObject*)args[1])->analysis);
-}
-
 PyObject* Pyohrli_distance(PyohrliObject* self, PyObject* const* args,
                            Py_ssize_t nargs) {
   if (nargs != 2) {
     return BadArgument("not exactly 2 arguments provided");
   }
-  const std::optional<zimtohrli::Analysis> analysis_a =
-      Analyze(*self->zimtohrli, args[0]);
-  if (!analysis_a.has_value()) {
+  const zimtohrli::Zimtohrli zimtohrli =
+      *static_cast<zimtohrli::Zimtohrli*>(self->zimtohrli);
+  const std::optional<zimtohrli::Spectrogram> spectrogram_a =
+      Analyze(zimtohrli, args[0]);
+  if (!spectrogram_a.has_value()) {
     return nullptr;
   }
-  const std::optional<zimtohrli::Analysis> analysis_b =
-      Analyze(*self->zimtohrli, args[1]);
-  if (!analysis_b.has_value()) {
+  const std::optional<zimtohrli::Spectrogram> spectrogram_b =
+      Analyze(zimtohrli, args[1]);
+  if (!spectrogram_b.has_value()) {
     return nullptr;
   }
-  return Distance(*self->zimtohrli, analysis_a.value(), analysis_b.value());
+  return PyFloat_FromDouble(
+      zimtohrli.Distance(spectrogram_a.value(), spectrogram_b.value()));
 }
 
 PyMethodDef Pyohrli_methods[] = {
-    {"analyze", (PyCFunction)Pyohrli_analyze, METH_FASTCALL,
-     "Returns an analysis of the provided signal."},
-    {"analysis_distance", (PyCFunction)Pyohrli_analysis_distance, METH_FASTCALL,
-     "Returns the distance between the two provided analyses."},
     {"distance", (PyCFunction)Pyohrli_distance, METH_FASTCALL,
      "Returns the distance between the two provided signals."},
     {nullptr} /* Sentinel */
@@ -259,11 +188,12 @@ PyMODINIT_FUNC PyInit__pyohrli(void) {
   PyObject* m = PyModule_Create(&PyohrliModule);
   if (m == nullptr) return nullptr;
 
-  if (PyType_Ready(&AnalysisType) < 0) {
+  if (PyType_Ready(&SpectrogramType) < 0) {
     Py_DECREF(m);
     return nullptr;
   }
-  if (PyModule_AddObjectRef(m, "Analysis", (PyObject*)&AnalysisType) < 0) {
+  if (PyModule_AddObjectRef(m, "Spectrogram", (PyObject*)&SpectrogramType) <
+      0) {
     Py_DECREF(m);
     return nullptr;
   }

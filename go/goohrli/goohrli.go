@@ -118,6 +118,10 @@ type Parameters struct {
 
 var durationType = reflect.TypeOf(time.Second)
 
+func SampleRate() float64 {
+	return float64(C.SampleRate())
+}
+
 // Update assumes the argument is JSON and updates the parameters with the fields present in the provided JSON object.
 func (p *Parameters) Update(b []byte) error {
 	updateMap := map[string]any{}

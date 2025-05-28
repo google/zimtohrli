@@ -226,6 +226,7 @@ class Rotators {
 
 template <typename T>
 struct Span {
+  Span(const Span& other) = default;
   Span(std::vector<T>& vec) : size(vec.size()), data(vec.data()) {}
   explicit Span(size_t size, T* data) : size(size), data(data) {}
   template <typename U>
@@ -239,6 +240,7 @@ struct Span {
     static_assert(std::is_convertible_v<U(*)[], T(*)[]>,
                   "Cannot construct Span from Span of incompatible type.");
   }
+  Span& operator=(const Span& other) = default;
   const T& operator[](size_t index) const { return data[index]; }
   T& operator[](size_t index) { return data[index]; }
   size_t size;
@@ -258,6 +260,7 @@ struct Span {
 //   [samplem_dim0, samplem_dim1, ..., samplem_dimn],
 // ]
 struct Spectrogram {
+  Spectrogram(Spectrogram&& other) = default;
   Spectrogram(size_t num_steps, size_t num_dims)
       : num_steps(num_steps),
         num_dims(num_dims),
@@ -266,6 +269,7 @@ struct Spectrogram {
       : num_steps(num_steps), num_dims(num_dims), values(values) {
     assert(num_steps * num_dims == values.size());
   }
+  Spectrogram& operator=(Spectrogram&& other) = default;
   Span<const float> operator[](size_t n) const {
     return Span<const float>(num_dims, values.data() + n * num_dims);
   }
@@ -290,18 +294,14 @@ struct Spectrogram {
 //   [sample0_channel_m, sample1_channelm, ... samplen_channelm],
 // ]
 struct AudioBuffer {
-  AudioBuffer(const AudioBuffer& other)
-      : sample_rate(other.sample_rate),
-        num_frames(other.num_frames),
-        num_channels(other.num_channels) {
-    frames = other.frames;
-  }
+  AudioBuffer(AudioBuffer&& other) = default;
   AudioBuffer(float sample_rate, size_t num_frames, size_t num_channels)
       : sample_rate(sample_rate),
         num_frames(num_frames),
         num_channels(num_channels) {
     frames = std::vector<float>(num_frames * num_channels);
   }
+  AudioBuffer& operator=(AudioBuffer&& other) = default;
   Span<const float> operator[](size_t n) const {
     return Span<const float>(num_frames, frames.data() + num_frames * n);
   }
@@ -647,6 +647,15 @@ struct Zimtohrli {
                              signal.size / spectrogram.num_steps);
   }
 
+  Spectrogram Analyze(Span<const float> signal) const {
+    size_t num_steps =
+        static_cast<size_t>(std::ceil(static_cast<float>(signal.size) *
+                                      perceptual_sample_rate / kSampleRate));
+    Spectrogram spec(num_steps, kNumRotators);
+    Analyze(signal, spec);
+    return spec;
+  }
+
   float Distance(const Spectrogram& spectrogram_a,
                  const Spectrogram& spectrogram_b) const {
     assert(spectrogram_a.num_dims == spectrogram_b.num_dims);
@@ -654,35 +663,6 @@ struct Zimtohrli {
     time_pairs = DTW(spectrogram_a, spectrogram_b);
     return NSIM(spectrogram_a, spectrogram_b, time_pairs, nsim_step_window,
                 nsim_channel_window);
-  }
-
-  std::vector<std::vector<float>> Compare(
-      const AudioBuffer& frames_a,
-      Span<const AudioBuffer* const> frames_b_span) const {
-    assert(frames_a.sample_rate == kSampleRate);
-    for (size_t b_index = 0; b_index < frames_b_span.size; ++b_index) {
-      assert(frames_a.num_channels == frames_b_span[b_index]->num_channels);
-    }
-    std::vector<std::vector<float>> distance_b_vector(frames_b_span.size);
-    for (size_t audio_channel_index = 0;
-         audio_channel_index < frames_a.num_channels; ++audio_channel_index) {
-      size_t num_steps_a = static_cast<size_t>(
-          std::ceil(static_cast<float>(frames_a.num_frames) *
-                    perceptual_sample_rate / kSampleRate));
-      Spectrogram current_spec_a(num_steps_a, kNumRotators);
-      Analyze(frames_a[audio_channel_index], current_spec_a);
-      for (size_t b_index = 0; b_index < frames_b_span.size; ++b_index) {
-        assert(frames_b_span[b_index]->sample_rate == kSampleRate);
-        size_t num_steps_b = static_cast<size_t>(
-            std::ceil(static_cast<float>(frames_b_span[b_index]->num_frames) *
-                      perceptual_sample_rate / kSampleRate));
-        Spectrogram spec_b(num_steps_b, kNumRotators);
-        Analyze((*frames_b_span[b_index])[audio_channel_index], spec_b);
-        const float distance = Distance(current_spec_a, spec_b);
-        distance_b_vector[b_index].push_back(distance);
-      }
-    }
-    return distance_b_vector;
   }
 
   // The window in perceptual_sample_rate time steps when compting the NSIM.
