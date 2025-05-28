@@ -15,9 +15,11 @@
 #ifndef CPP_ZIMT_ZIMTOHRLI_H_
 #define CPP_ZIMT_ZIMTOHRLI_H_
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <cstddef>
+#include <cstdio>
 #include <cstring>
 #include <optional>
 #include <utility>
@@ -501,7 +503,8 @@ float NSIM(const Spectrogram& a, const Spectrogram& b,
       nsim_sum += nsim2;
     }
   }
-  return nsim_sum / static_cast<float>(num_steps * num_channels);
+  return std::clamp<float>(
+      nsim_sum / static_cast<float>(num_steps * num_channels), 0.0, 1.0);
 }
 
 // A simple buffer of double cost values describing the time warp costs between
@@ -661,8 +664,8 @@ struct Zimtohrli {
     assert(spectrogram_a.num_dims == spectrogram_b.num_dims);
     std::vector<std::pair<size_t, size_t>> time_pairs;
     time_pairs = DTW(spectrogram_a, spectrogram_b);
-    return NSIM(spectrogram_a, spectrogram_b, time_pairs, nsim_step_window,
-                nsim_channel_window);
+    return 1 - NSIM(spectrogram_a, spectrogram_b, time_pairs, nsim_step_window,
+                    nsim_channel_window);
   }
 
   // The window in perceptual_sample_rate time steps when compting the NSIM.

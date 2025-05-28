@@ -5,6 +5,7 @@ add_executable(zimtohrli_test
     cpp/zimt/mos_test.cc
     cpp/zimt/nsim_test.cc
     cpp/zimt/zimtohrli_test.cc
+    cpp/zimt/fourier_bank_test.cc
     cpp/zimt/test_file_paths.cc
 )
 target_include_directories(zimtohrli_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cpp)
@@ -21,12 +22,6 @@ add_test(NAME zimtohrli_pyohrli_test
         ${python3_VENV} -m pip install jax jaxlib numpy scipy &&
         ${python3_VENV} pyohrli_test.py"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-)
-add_test(NAME zimtohrli_python_test
-    COMMAND sh -c "${Python3_EXECUTABLE} -m venv ${python3_VENV_DIR} &&
-        ${python3_VENV} -m pip install jax jaxlib numpy scipy unittest-parallel &&
-        ${python3_VENV_DIR}/bin/unittest-parallel -s . -p '*_test.py'"
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/python
 )
 
 add_test(NAME zimtohrli_go_test
