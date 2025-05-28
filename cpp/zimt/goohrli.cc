@@ -22,7 +22,6 @@
 #include "absl/log/check.h"
 #include "absl/status/statusor.h"
 #include "absl/types/span.h"
-#include "zimt/fourier_bank.h"
 #include "zimt/mos.h"
 #include "zimt/visqol.h"
 #include "zimt/zimtohrli.h"

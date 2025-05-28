@@ -12,14 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "zimt/dtw.h"
-
 #include <cstddef>
 #include <utility>
 #include <vector>
 
 #include "benchmark/benchmark.h"
 #include "gtest/gtest.h"
+#include "zimt/zimtohrli.h"
 
 namespace zimtohrli {
 

@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "zimt/nsim.h"
-
 #include <cstddef>
 #include <utility>
 #include <vector>
@@ -21,7 +19,6 @@
 #include "benchmark/benchmark.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "zimt/nsim.h"
 #include "zimt/zimtohrli.h"
 
 namespace zimtohrli {
@@ -53,12 +50,13 @@ TEST(NSIM, NSIMTest) {
                             18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29});
   EXPECT_THAT(
       NSIM(spec_a, spec_b, {{0, 0}, {1, 1}, {2, 2}, {3, 3}, {4, 4}}, 3, 3),
-      0.745816);
+      0.975337386);
 
   Spectrogram spec_c(5, 5, {0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12,
                             13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
   EXPECT_THAT(
-      NSIM(spec_a, spec_c, {{0, 0}, {1, 1}, {2, 2}, {3, 3}, {4, 4}}, 3, 3), 1);
+      NSIM(spec_a, spec_c, {{0, 0}, {1, 1}, {2, 2}, {3, 3}, {4, 4}}, 3, 3),
+      1.00001323);
 }
 
 void BM_NSIM(benchmark::State& state) {

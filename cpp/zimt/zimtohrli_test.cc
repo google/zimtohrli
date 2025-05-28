@@ -32,8 +32,7 @@ namespace {
 TEST(Zimtohrli, NormalizeAmplitudeTest) {
   std::vector<float> reference = {0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5};
   std::vector<float> signal = {0.25, 0.25, 0.25, 0.25, 0.25};
-  Span<const float> my_span(signal);
-  const EnergyAndMaxAbsAmplitude reference_measurements = Measure(my_span);
+  const EnergyAndMaxAbsAmplitude reference_measurements = Measure(reference);
   EXPECT_NEAR(reference_measurements.energy_db_fs, 20 * std::log10(0.5 * 0.5),
               1e-4);
   EXPECT_EQ(reference_measurements.max_abs_amplitude, 0.5);
