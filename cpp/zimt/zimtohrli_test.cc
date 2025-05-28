@@ -24,27 +24,24 @@
 
 #include "benchmark/benchmark.h"
 #include "gtest/gtest.h"
-#include "hwy/aligned_allocator.h"
-#include "hwy/base.h"
+#include "zimt/spectrogram.h"
 
 namespace zimtohrli {
 
 namespace {
 
 TEST(Zimtohrli, NormalizeAmplitudeTest) {
-  hwy::AlignedNDArray<float, 1> reference({8});
-  reference[{}] = {0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5};
-  hwy::AlignedNDArray<float, 1> signal({5});
-  signal[{}] = {0.25, 0.25, 0.25, 0.25, 0.25};
-  const EnergyAndMaxAbsAmplitude reference_measurements =
-      Measure(reference[{}]);
+  std::vector<float> reference = {0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5};
+  std::vector<float> signal = {0.25, 0.25, 0.25, 0.25, 0.25};
+  Span<const float> my_span(signal);
+  const EnergyAndMaxAbsAmplitude reference_measurements = Measure(my_span);
   EXPECT_NEAR(reference_measurements.energy_db_fs, 20 * std::log10(0.5 * 0.5),
               1e-4);
   EXPECT_EQ(reference_measurements.max_abs_amplitude, 0.5);
   const EnergyAndMaxAbsAmplitude signal_measurements =
-      NormalizeAmplitude(reference_measurements.max_abs_amplitude, signal[{}]);
-  for (size_t index = 0; index < signal.shape()[0]; ++index) {
-    EXPECT_EQ(signal[{}][index], 0.5);
+      NormalizeAmplitude(reference_measurements.max_abs_amplitude, signal);
+  for (size_t index = 0; index < signal.size(); ++index) {
+    EXPECT_EQ(signal[index], 0.5);
   }
   EXPECT_NEAR(signal_measurements.energy_db_fs, 20 * std::log10(0.5 * 0.5),
               1e-4);

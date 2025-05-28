@@ -112,7 +112,6 @@ const (
 type Parameters struct {
 	PerceptualSampleRate float64
 	FullScaleSineDB      float64
-	UnwarpWindow         Duration
 	NSIMStepWindow       int
 	NSIMChannelWindow    int
 }
@@ -165,7 +164,6 @@ func cFromGoParameters(params Parameters) C.ZimtohrliParameters {
 	var cParams C.ZimtohrliParameters
 	cParams.PerceptualSampleRate = C.float(params.PerceptualSampleRate)
 	cParams.FullScaleSineDB = C.float(params.FullScaleSineDB)
-	cParams.UnwarpWindowSeconds = C.float(float64(params.UnwarpWindow.Duration) / float64(time.Second))
 	cParams.NSIMStepWindow = C.int(params.NSIMStepWindow)
 	cParams.NSIMChannelWindow = C.int(params.NSIMChannelWindow)
 	return cParams
@@ -175,7 +173,6 @@ func goFromCParameters(cParams C.ZimtohrliParameters) Parameters {
 	result := Parameters{
 		PerceptualSampleRate: float64(cParams.PerceptualSampleRate),
 		FullScaleSineDB:      float64(cParams.FullScaleSineDB),
-		UnwarpWindow:         Duration{time.Duration(float64(time.Second) * float64(cParams.UnwarpWindowSeconds))},
 		NSIMStepWindow:       int(cParams.NSIMStepWindow),
 		NSIMChannelWindow:    int(cParams.NSIMChannelWindow),
 	}
@@ -233,13 +230,13 @@ func (g *Goohrli) NormalizedAudioDistance(audioA, audioB *audio.Audio) (float64,
 
 // Spec is a Go wrapper around zimthrli::Analysis.
 type Spec struct {
-	spec C.Spec
+	spec C.GoSpectrogram
 }
 
 // Spectrogram returns a spectrogram of the signal.
-func (g *Goohrli) Spectrogram(signal []float32) *Spec {
+func (g *Goohrli) Analyze(signal []float32) *Spec {
 	result := &Spec{
-		spec: C.Spectrogram(g.zimtohrli, (*C.float)(&signal[0]), C.int(len(signal))),
+		spec: C.Analyze(g.zimtohrli, (*C.float)(&signal[0]), C.int(len(signal))),
 	}
 	runtime.SetFinalizer(result, func(a *Spec) {
 		C.FreeSpec(a.spec)
@@ -254,9 +251,9 @@ func (g *Goohrli) SpecDistance(specA *Spec, specB *Spec) float32 {
 
 // Distance returns the Zimtohrli distance between two signals.
 func (g *Goohrli) Distance(signalA []float32, signalB []float32) float64 {
-	specA := C.Spectrogram(g.zimtohrli, (*C.float)(&signalA[0]), C.int(len(signalA)))
+	specA := C.Analyze(g.zimtohrli, (*C.float)(&signalA[0]), C.int(len(signalA)))
 	defer C.FreeSpec(specA)
-	specB := C.Spectrogram(g.zimtohrli, (*C.float)(&signalB[0]), C.int(len(signalB)))
+	specB := C.Analyze(g.zimtohrli, (*C.float)(&signalB[0]), C.int(len(signalB)))
 	defer C.FreeSpec(specB)
 	return float64(C.Distance(g.zimtohrli, specA, specB))
 }
