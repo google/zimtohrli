@@ -35,7 +35,7 @@ func main() {
 	pipeMetric := flag.String("pipe_metric", "", "Path to a binary that serves metrics via stdin/stdout pipe. Install some of the via 'install_python_metrics.py'.")
 	zimtohrli := flag.Bool("zimtohrli", true, "Whether to measure using Zimtohrli.")
 	outputZimtohrliDistance := flag.Bool("output_zimtohrli_distance", false, "Whether to output the raw Zimtohrli distance instead of a mapped mean opinion score.")
-	zimtohrliParameters := goohrli.DefaultParameters(48000)
+	zimtohrliParameters := goohrli.DefaultParameters()
 	b, err := json.Marshal(zimtohrliParameters)
 	if err != nil {
 		log.Panic(err)
@@ -49,11 +49,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	signalA, err := aio.LoadAtRate(*pathA, int(zimtohrliParameters.SampleRate))
+	signalA, err := aio.LoadAtRate(*pathA, int(goohrli.SampleRate()))
 	if err != nil {
 		log.Panic(err)
 	}
-	signalB, err := aio.LoadAtRate(*pathB, int(zimtohrliParameters.SampleRate))
+	signalB, err := aio.LoadAtRate(*pathB, int(goohrli.SampleRate()))
 	if err != nil {
 		log.Panic(err)
 	}
@@ -113,10 +113,9 @@ func main() {
 		if err := zimtohrliParameters.Update([]byte(*zimtohrliParametersJSON)); err != nil {
 			log.Panic(err)
 		}
-		if !reflect.DeepEqual(zimtohrliParameters, goohrli.DefaultParameters(zimtohrliParameters.SampleRate)) {
+		if !reflect.DeepEqual(zimtohrliParameters, goohrli.DefaultParameters()) {
 			log.Printf("Using %+v", zimtohrliParameters)
 		}
-		zimtohrliParameters.SampleRate = signalA.Rate
 		g := goohrli.New(zimtohrliParameters)
 		if *perChannel {
 			for channelIndex := range signalA.Samples {
