@@ -15,7 +15,22 @@
 #ifndef CPP_ZIMT_MOS_H_
 #define CPP_ZIMT_MOS_H_
 
+#include <array>
+#include <cmath>
+
 namespace zimtohrli {
+
+namespace {
+
+const std::array<float, 3> mos_params = {1.000e+00, -7.449e-09, 3.344e+00};
+
+float sigmoid(float x) {
+  return mos_params[0] / (mos_params[1] + std::exp(mos_params[2] * x));
+}
+
+const float zero_crossing_reciprocal = 1.0 / sigmoid(0);
+
+}  // namespace
 
 // Returns a _very_approximate_ mean opinion score based on the
 // provided Zimtohrli distance.
@@ -23,7 +38,9 @@ namespace zimtohrli {
 // minimum channel bandwidth (zimtohrli::Cam.minimum_bandwidth_hz)
 // of 5Hz and perceptual sample rate
 // (zimtohrli::Distance(..., perceptual_sample_rate, ...) of 100Hz.
-float MOSFromZimtohrli(float zimtohrli_distance);
+float MOSFromZimtohrli(float zimtohrli_distance) {
+  return 1.0 + 4.0 * sigmoid(zimtohrli_distance) * zero_crossing_reciprocal;
+}
 
 }  // namespace zimtohrli
 

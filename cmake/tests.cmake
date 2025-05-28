@@ -1,4 +1,5 @@
 add_executable(zimtohrli_test
+    cpp/zimt/audio.cc
     cpp/zimt/audio_test.cc
     cpp/zimt/dtw_test.cc
     cpp/zimt/mos_test.cc
@@ -6,7 +7,8 @@ add_executable(zimtohrli_test
     cpp/zimt/zimtohrli_test.cc
     cpp/zimt/test_file_paths.cc
 )
-target_link_libraries(zimtohrli_test zimtohrli_base gtest gmock_main benchmark)
+target_include_directories(zimtohrli_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cpp)
+target_link_libraries(zimtohrli_test gtest sndfile gmock_main benchmark absl::statusor absl::check)
 target_compile_definitions(zimtohrli_test PRIVATE CMAKE_CURRENT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR})
 gtest_discover_tests(zimtohrli_test)
 
@@ -37,4 +39,5 @@ add_executable(zimtohrli_benchmark
     cpp/zimt/nsim_test.cc
     cpp/zimt/zimtohrli_test.cc
 )
-target_link_libraries(zimtohrli_benchmark zimtohrli_base gtest gmock benchmark_main)
+target_include_directories(zimtohrli_benchmark PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cpp)
+target_link_libraries(zimtohrli_benchmark gtest gmock benchmark_main)

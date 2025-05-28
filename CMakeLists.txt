@@ -13,22 +13,6 @@ include(cmake/deps.cmake)
 enable_testing()
 include(GoogleTest)
 
-add_library(zimtohrli_base STATIC
-    cpp/zimt/audio.cc
-    cpp/zimt/audio.h
-    cpp/zimt/dtw.h
-    cpp/zimt/fourier_bank.h
-    cpp/zimt/fourier_bank.cc
-    cpp/zimt/mos.cc
-    cpp/zimt/mos.h
-    cpp/zimt/nsim.h
-    cpp/zimt/zimtohrli.cc
-    cpp/zimt/zimtohrli.h
-)
-target_include_directories(zimtohrli_base PUBLIC cpp)
-target_link_libraries(zimtohrli_base PRIVATE absl::check)
-target_link_libraries(zimtohrli_base PUBLIC absl::statusor absl::span sndfile)
-
 add_library(zimtohrli_visqol_adapter STATIC
     cpp/zimt/visqol_model.h
     cpp/zimt/visqol_model.cc
@@ -42,6 +26,7 @@ target_link_libraries(zimtohrli_visqol_adapter PUBLIC absl::span)
 
 #find_package(Python3 COMPONENTS Interpreter Development)
 #add_library(zimtohrli_pyohrli SHARED
+#    cpp/zimt/zimtohrli.h
 #    cpp/zimt/pyohrli.cc
 #)
 #set_target_properties(zimtohrli_pyohrli PROPERTIES
@@ -49,14 +34,15 @@ target_link_libraries(zimtohrli_visqol_adapter PUBLIC absl::span)
 #    OUTPUT_NAME _pyohrli.so
 #    SUFFIX ""
 #)
-#target_link_libraries(zimtohrli_pyohrli zimtohrli_base Python3::Python absl::check)
+#target_link_libraries(zimtohrli_pyohrli Python3::Python absl::check)
 
 add_library(zimtohrli_goohrli_glue STATIC
     cpp/zimt/goohrli.cc
+    cpp/zimt/zimtohrli.h
     go/goohrli/goohrli.h
 )
-target_include_directories(zimtohrli_goohrli_glue PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/go/goohrli ${CMAKE_CURRENT_SOURCE_DIR}/go/gosqol)
-target_link_libraries(zimtohrli_goohrli_glue zimtohrli_base zimtohrli_visqol_adapter)
+target_include_directories(zimtohrli_goohrli_glue PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cpp ${CMAKE_CURRENT_SOURCE_DIR}/go/goohrli ${CMAKE_CURRENT_SOURCE_DIR}/go/gosqol)
+target_link_libraries(zimtohrli_goohrli_glue zimtohrli_visqol_adapter)
 
 set(zimtohrli_goohrli_object ${CMAKE_CURRENT_BINARY_DIR}/goohrli.o)
 set(zimtohrli_goohrli_archive ${CMAKE_CURRENT_SOURCE_DIR}/go/goohrli/goohrli.a)
@@ -64,7 +50,6 @@ add_custom_command(
     OUTPUT ${zimtohrli_goohrli_archive}
     COMMAND ${CMAKE_LINKER} -r
         $$\(find ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/zimtohrli_goohrli_glue.dir/ -name \"*.o\"\)
-        $$\(find ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/zimtohrli_base.dir/ -name \"*.o\"\)
         $$\(find ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/zimtohrli_visqol_adapter.dir/ -name \"*.o\"\)
         $$\(find ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/visqol.dir/ -name \"*.o\"\)
         $$\(find ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/visqol_proto.dir/ -name \"*.o\"\)
@@ -75,14 +60,16 @@ add_custom_command(
         $$\(find ${protobuf_BINARY_DIR} -name \"*.o\" ! -ipath \"*/google/protobuf/compiler/main.cc.o\"\)
         -o ${zimtohrli_goohrli_object}
     COMMAND ${CMAKE_AR} rcs ${zimtohrli_goohrli_archive} ${zimtohrli_goohrli_object}
-    DEPENDS zimtohrli_goohrli_glue zimtohrli_base zimtohrli_visqol_adapter
+    DEPENDS zimtohrli_goohrli_glue zimtohrli_visqol_adapter
 )
 add_custom_target(zimtohrli_goohrli ALL DEPENDS ${zimtohrli_goohrli_archive})
 
 add_executable(zimtohrli_compare
+    cpp/zimt/audio.cc
     cpp/zimt/compare.cc
 )
-target_link_libraries(zimtohrli_compare zimtohrli_base absl::flags_parse)
+target_include_directories(zimtohrli_compare PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cpp)
+target_link_libraries(zimtohrli_compare sndfile absl::statusor absl::check absl::flags_parse)
 set_target_properties(zimtohrli_compare PROPERTIES
     PREFIX ""
     OUTPUT_NAME compare

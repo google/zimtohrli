@@ -36,30 +36,29 @@ class AudioFile {
   // Reads from the path and returns an audio file.
   static absl::StatusOr<AudioFile> Load(const std::string& path);
 
-  // Returns the sample rate of this audio file.
-  float SampleRate() const { return buffer_.sample_rate; }
-
   // Returns the path this audio file was loaded from.
   const std::string& Path() const { return path_; }
 
   // Returns the metadata about this audio file.
   const SF_INFO& Info() const { return info_; }
 
-  // Returns the metadata about this audio file.
-  SF_INFO& Info() { return info_; }
+  // Returns a channel of this audio file.
+  Span<const float> operator[](size_t n) const {
+    return Span<const float>(info_.frames, buffer_.data() + info_.frames * n);
+  }
 
-  // Returns the frames in this audio file.
-  const AudioBuffer& Buffer() const { return buffer_; }
-
-  // Returns the frames in this audio file.
-  AudioBuffer& Buffer() { return buffer_; }
+  // Returns a channel of this audio file.
+  Span<float> operator[](size_t n) {
+    return Span<float>(info_.frames, buffer_.data() + info_.frames * n);
+  }
 
  private:
-  AudioFile(const std::string& path, const SF_INFO& info, AudioBuffer buffer)
-      : path_(path), info_(info), buffer_(std::move(buffer)) {}
+  AudioFile(const std::string& path, const SF_INFO& info,
+            std::vector<float> buffer)
+      : path_(path), info_(info), buffer_(buffer) {}
   std::string path_;
   SF_INFO info_;
-  AudioBuffer buffer_;
+  std::vector<float> buffer_;
 };
 
 }  // namespace zimtohrli

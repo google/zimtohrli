@@ -93,11 +93,11 @@ absl::StatusOr<AudioFile> AudioFile::Load(const std::string& path) {
   }
   std::vector<float> samples(info.channels * info.frames);
   CHECK_EQ(sf_readf_float(file, samples.data(), info.frames), info.frames);
-  AudioBuffer buffer(info.samplerate, info.frames, info.channels);
+  std::vector<float> buffer(info.frames * info.channels);
   for (size_t frame_index = 0; frame_index < info.frames; ++frame_index) {
     for (size_t channel_index = 0; channel_index < info.channels;
          ++channel_index) {
-      buffer[channel_index][frame_index] =
+      buffer[channel_index * info.frames + frame_index] =
           samples[frame_index * info.channels + channel_index];
     }
   }
