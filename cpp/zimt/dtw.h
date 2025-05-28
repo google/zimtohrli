@@ -22,7 +22,7 @@
 #include <utility>
 #include <vector>
 
-#include "zimt/spectrogram.h"
+#include "zimt/zimtohrli.h"
 
 namespace zimtohrli {
 

@@ -22,7 +22,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "zimt/nsim.h"
-#include "zimt/spectrogram.h"
+#include "zimt/zimtohrli.h"
 
 namespace zimtohrli {
 

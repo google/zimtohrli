@@ -24,7 +24,7 @@
 #include "absl/log/check.h"
 #include "absl/status/status.h"
 #include "sndfile.h"
-#include "zimt/spectrogram.h"
+#include "zimt/zimtohrli.h"
 
 namespace zimtohrli {
 

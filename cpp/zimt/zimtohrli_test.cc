@@ -24,7 +24,6 @@
 
 #include "benchmark/benchmark.h"
 #include "gtest/gtest.h"
-#include "zimt/spectrogram.h"
 
 namespace zimtohrli {
 

@@ -28,7 +28,6 @@
 #include "zimt/dtw.h"
 #include "zimt/fourier_bank.h"
 #include "zimt/nsim.h"
-#include "zimt/spectrogram.h"
 
 namespace zimtohrli {
 
