@@ -24,7 +24,6 @@
 #include "absl/types/span.h"
 #include "zimt/fourier_bank.h"
 #include "zimt/mos.h"
-#include "zimt/spectrogram.h"
 #include "zimt/visqol.h"
 #include "zimt/zimtohrli.h"
 

@@ -22,7 +22,6 @@ add_library(zimtohrli_base STATIC
     cpp/zimt/mos.cc
     cpp/zimt/mos.h
     cpp/zimt/nsim.h
-    cpp/zimt/spectrogram.h
     cpp/zimt/zimtohrli.cc
     cpp/zimt/zimtohrli.h
 )
