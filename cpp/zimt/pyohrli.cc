@@ -17,8 +17,6 @@
 #include <Python.h>
 
 #include "absl/log/check.h"
-#include "hwy/aligned_allocator.h"
-#include "hwy/base.h"
 #include "structmember.h"  // NOLINT // For PyMemberDef
 #include "zimt/cam.h"
 #include "zimt/mos.h"

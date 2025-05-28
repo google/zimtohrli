@@ -22,7 +22,6 @@
 #include <utility>
 #include <vector>
 
-#include "hwy/aligned_allocator.h"
 #include "zimt/spectrogram.h"
 
 namespace zimtohrli {
@@ -53,11 +52,11 @@ struct CostMatrix {
 // Computes the norm of the delta between two spectrograms at two given steps.
 double delta_norm(const Spectrogram& a, const Spectrogram& b, size_t step_a,
                   size_t step_b) {
-  assert(a.num_dims == b.num_dims);
-  const float* dims_a = a.step(step_a);
-  const float* dims_b = b.step(step_b);
+  Span<const float> dims_a = a[step_a];
+  Span<const float> dims_b = b[step_b];
+  assert(dims_a.size == dims_b.size);
   double result = 0;
-  for (size_t index = 0; index < a.num_dims; index++) {
+  for (size_t index = 0; index < dims_a.size; index++) {
     float delta = dims_a[index] - dims_b[index];
     result += delta * delta;
   }
@@ -117,13 +116,6 @@ std::vector<std::pair<size_t, size_t>> DTW(const Spectrogram& spec_a,
 }
 
 }  // namespace
-
-// ChainDTW used to be a windowed version of DTW, but now it's just a wrapper
-// around DTW using hwy data structures. Replace it with a call to DTW with the
-// Spectrogram structs to get rid of hwy.
-std::vector<std::pair<size_t, size_t>> ChainDTW(
-    const hwy::AlignedNDArray<float, 2>& spec_a,
-    const hwy::AlignedNDArray<float, 2>& spec_b, size_t window_size);
 
 }  // namespace zimtohrli
 

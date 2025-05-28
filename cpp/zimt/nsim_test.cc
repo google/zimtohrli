@@ -21,68 +21,56 @@
 #include "benchmark/benchmark.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "hwy/aligned_allocator.h"
 #include "zimt/nsim.h"
+#include "zimt/spectrogram.h"
 
 namespace zimtohrli {
 
 namespace {
 
-void CheckEqual(hwy::Span<float> span, std::vector<float> expected) {
-  EXPECT_THAT(std::vector<float>(span.begin(), span.end()), expected);
+void CheckEqual(Span<float> span, std::vector<float> expected) {
+  for (size_t i = 0; i < span.size; i++) {
+    EXPECT_EQ(span[i], expected[i]);
+  }
 }
 
 TEST(NSIM, WindowMeanTest) {
-  hwy::AlignedNDArray<float, 2> ary({5, 5});
-  ary[{0}] = {0, 1, 2, 3, 4};
-  ary[{1}] = {5, 6, 7, 8, 9};
-  ary[{2}] = {10, 11, 12, 13, 14};
-  ary[{3}] = {15, 16, 17, 18, 19};
-  ary[{4}] = {20, 21, 22, 23, 24};
-  hwy::AlignedNDArray<float, 2> mean_3x3 = WindowMeanHwy(ary, 3, 3);
-  CheckEqual(mean_3x3[{0}], {0.0, 1.0 / 9.0, 3.0 / 9.0, 6.0 / 9.0, 1.0});
-  CheckEqual(mean_3x3[{1}],
-             {5.0 / 9.0, 12.0 / 9.0, 21.0 / 9.0, 3.0, 33.0 / 9.0});
-  CheckEqual(mean_3x3[{2}], {15.0 / 9.0, 33.0 / 9.0, 6.0, 7.0, 8.0});
-  CheckEqual(mean_3x3[{3}], {30.0 / 9.0, 7.0, 11.0, 12.0, 13.0});
-  CheckEqual(mean_3x3[{4}], {5.0, 93.0 / 9.0, 16.0, 17.0, 18.0});
+  Spectrogram spec(5, 5, {0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12,
+                          13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
+  Spectrogram mean_3x3 = WindowMean(
+      5, 5, 3, 3, [&](size_t step, size_t dim) { return spec[step][dim]; });
+  CheckEqual(mean_3x3[0], {0.0, 1.0 / 9.0, 3.0 / 9.0, 6.0 / 9.0, 1.0});
+  CheckEqual(mean_3x3[1], {5.0 / 9.0, 12.0 / 9.0, 21.0 / 9.0, 3.0, 33.0 / 9.0});
+  CheckEqual(mean_3x3[2], {15.0 / 9.0, 33.0 / 9.0, 6.0, 7.0, 8.0});
+  CheckEqual(mean_3x3[3], {30.0 / 9.0, 7.0, 11.0, 12.0, 13.0});
+  CheckEqual(mean_3x3[4], {5.0, 93.0 / 9.0, 16.0, 17.0, 18.0});
 }
 
 TEST(NSIM, NSIMTest) {
-  hwy::AlignedNDArray<float, 2> a({5, 5});
-  a[{0}] = {0, 1, 2, 3, 4};
-  a[{1}] = {5, 6, 7, 8, 9};
-  a[{2}] = {10, 11, 12, 13, 14};
-  a[{3}] = {15, 16, 17, 18, 19};
-  a[{4}] = {20, 21, 22, 23, 24};
-  hwy::AlignedNDArray<float, 2> b({5, 5});
-  b[{0}] = {5, 6, 7, 8, 9};
-  b[{1}] = {10, 11, 12, 13, 14};
-  b[{2}] = {15, 16, 17, 18, 19};
-  b[{3}] = {20, 21, 22, 23, 24};
-  b[{4}] = {25, 26, 27, 28, 29};
-  EXPECT_THAT(NSIMHwy(a, b, {{0, 0}, {1, 1}, {2, 2}, {3, 3}, {4, 4}}, 3, 3),
-              0.745816);
-  hwy::AlignedNDArray<float, 2> c({5, 5});
-  c[{0}] = {0, 1, 2, 3, 4};
-  c[{1}] = {5, 6, 7, 8, 9};
-  c[{2}] = {10, 11, 12, 13, 14};
-  c[{3}] = {15, 16, 17, 18, 19};
-  c[{4}] = {20, 21, 22, 23, 24};
-  EXPECT_THAT(NSIMHwy(a, c, {{0, 0}, {1, 1}, {2, 2}, {3, 3}, {4, 4}}, 3, 3), 1);
+  Spectrogram spec_a(5, 5, {0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12,
+                            13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
+  Spectrogram spec_b(5, 5, {5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17,
+                            18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29});
+  EXPECT_THAT(
+      NSIM(spec_a, spec_b, {{0, 0}, {1, 1}, {2, 2}, {3, 3}, {4, 4}}, 3, 3),
+      0.745816);
+
+  Spectrogram spec_c(5, 5, {0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12,
+                            13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
+  EXPECT_THAT(
+      NSIM(spec_a, spec_c, {{0, 0}, {1, 1}, {2, 2}, {3, 3}, {4, 4}}, 3, 3), 1);
 }
 
 void BM_NSIM(benchmark::State& state) {
-  hwy::AlignedNDArray<float, 2> a(
-      {static_cast<size_t>(state.range(0)) * 100, 1000});
-  std::vector<std::pair<size_t, size_t>> time_pairs(a.shape()[0]);
+  Spectrogram spec_a(state.range(0) * 100, 1000);
+  std::vector<std::pair<size_t, size_t>> time_pairs(spec_a.num_steps);
   for (size_t i = 0; i < time_pairs.size(); i++) {
     time_pairs[i] = {i, i};
   }
   for (auto s : state) {
-    NSIMHwy(a, a, time_pairs, 9, 9);
+    NSIM(spec_a, spec_a, time_pairs, 9, 9);
   }
-  state.SetItemsProcessed(a.size() * state.iterations());
+  state.SetItemsProcessed(spec_a.values.size() * state.iterations());
 }
 BENCHMARK_RANGE(BM_NSIM, 1, 60);
 

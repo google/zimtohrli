@@ -22,20 +22,17 @@
 #include "absl/log/check.h"
 #include "absl/status/statusor.h"
 #include "absl/types/span.h"
-#include "hwy/aligned_allocator.h"
-#include "hwy/base.h"
 #include "zimt/fourier_bank.h"
 #include "zimt/mos.h"
+#include "zimt/spectrogram.h"
 #include "zimt/visqol.h"
 #include "zimt/zimtohrli.h"
 
 float SampleRate() { return zimtohrli::kSampleRate; }
 
 EnergyAndMaxAbsAmplitude Measure(const float* signal, int size) {
-  hwy::AlignedNDArray<float, 1> signal_array({static_cast<size_t>(size)});
-  hwy::CopyBytes(signal, signal_array.data(), size * sizeof(float));
   const zimtohrli::EnergyAndMaxAbsAmplitude measurements =
-      zimtohrli::Measure(signal_array[{}]);
+      zimtohrli::Measure(zimtohrli::Span(size, signal));
   return EnergyAndMaxAbsAmplitude{
       .EnergyDBFS = measurements.energy_db_fs,
       .MaxAbsAmplitude = measurements.max_abs_amplitude};
@@ -43,11 +40,9 @@ EnergyAndMaxAbsAmplitude Measure(const float* signal, int size) {
 
 EnergyAndMaxAbsAmplitude NormalizeAmplitude(float max_abs_amplitude,
                                             float* signal, int size) {
-  hwy::AlignedNDArray<float, 1> signal_array({static_cast<size_t>(size)});
-  hwy::CopyBytes(signal, signal_array.data(), size * sizeof(float));
   const zimtohrli::EnergyAndMaxAbsAmplitude measurements =
-      zimtohrli::NormalizeAmplitude(max_abs_amplitude, signal_array[{}]);
-  hwy::CopyBytes(signal_array.data(), signal, size * sizeof(float));
+      zimtohrli::NormalizeAmplitude(max_abs_amplitude,
+                                    zimtohrli::Span(size, signal));
   return EnergyAndMaxAbsAmplitude{
       .EnergyDBFS = measurements.energy_db_fs,
       .MaxAbsAmplitude = measurements.max_abs_amplitude};
@@ -67,28 +62,26 @@ void FreeZimtohrli(Zimtohrli zimtohrli) {
   delete static_cast<zimtohrli::Zimtohrli*>(zimtohrli);
 }
 
-Spec Spectrogram(Zimtohrli zimtohrli, float* data, int size) {
+GoSpectrogram Analyze(Zimtohrli zimtohrli, float* data, int size) {
   zimtohrli::Zimtohrli* z = static_cast<zimtohrli::Zimtohrli*>(zimtohrli);
-  hwy::AlignedNDArray<float, 1> signal({static_cast<size_t>(size)});
-  hwy::CopyBytes(data, signal.data(), size * sizeof(float));
   const size_t num_downscaled_samples = static_cast<size_t>(std::max(
-      1.0f, std::ceil(static_cast<float>(signal.size()) *
-                      z->perceptual_sample_rate / zimtohrli::kSampleRate)));
-  hwy::AlignedNDArray<float, 2>* spec = new hwy::AlignedNDArray<float, 2>(
-      {num_downscaled_samples, zimtohrli::kNumRotators});
-  z->Spectrogram(signal[{}], *spec);
+      1.0f, std::ceil(static_cast<float>(size) * z->perceptual_sample_rate /
+                      zimtohrli::kSampleRate)));
+  zimtohrli::Spectrogram* spec = new zimtohrli::Spectrogram(
+      num_downscaled_samples, zimtohrli::kNumRotators);
+  z->Analyze(zimtohrli::Span(size, data), *spec);
   return spec;
 }
 
-void FreeSpec(Spec a) { delete static_cast<hwy::AlignedNDArray<float, 2>*>(a); }
+void FreeSpec(GoSpectrogram a) {
+  delete static_cast<zimtohrli::Spectrogram*>(a);
+}
 
-float Distance(Zimtohrli zimtohrli, Spec a, Spec b) {
+float Distance(Zimtohrli zimtohrli, GoSpectrogram a, GoSpectrogram b) {
   zimtohrli::Zimtohrli* z = static_cast<zimtohrli::Zimtohrli*>(zimtohrli);
-  hwy::AlignedNDArray<float, 2>* spec_a =
-      static_cast<hwy::AlignedNDArray<float, 2>*>(a);
-  hwy::AlignedNDArray<float, 2>* spec_b =
-      static_cast<hwy::AlignedNDArray<float, 2>*>(b);
-  return z->Distance(false, *spec_a, *spec_b);
+  zimtohrli::Spectrogram* spec_a = static_cast<zimtohrli::Spectrogram*>(a);
+  zimtohrli::Spectrogram* spec_b = static_cast<zimtohrli::Spectrogram*>(b);
+  return z->Distance(*spec_a, *spec_b);
 }
 
 ZimtohrliParameters GetZimtohrliParameters(const Zimtohrli zimtohrli) {
@@ -96,7 +89,6 @@ ZimtohrliParameters GetZimtohrliParameters(const Zimtohrli zimtohrli) {
   ZimtohrliParameters result;
   result.PerceptualSampleRate = z->perceptual_sample_rate;
   result.FullScaleSineDB = z->full_scale_sine_db;
-  result.UnwarpWindowSeconds = z->unwarp_window_seconds;
   result.NSIMStepWindow = z->nsim_step_window;
   result.NSIMChannelWindow = z->nsim_channel_window;
   return result;
@@ -109,7 +101,6 @@ void SetZimtohrliParameters(Zimtohrli zimtohrli,
   z->full_scale_sine_db = parameters.FullScaleSineDB;
   z->nsim_step_window = parameters.NSIMStepWindow;
   z->nsim_channel_window = parameters.NSIMChannelWindow;
-  z->unwarp_window_seconds = parameters.UnwarpWindowSeconds;
 }
 
 ZimtohrliParameters DefaultZimtohrliParameters() {

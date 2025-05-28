@@ -16,20 +16,19 @@ include(GoogleTest)
 add_library(zimtohrli_base STATIC
     cpp/zimt/audio.cc
     cpp/zimt/audio.h
-    cpp/zimt/dtw.cc
     cpp/zimt/dtw.h
     cpp/zimt/fourier_bank.h
     cpp/zimt/fourier_bank.cc
     cpp/zimt/mos.cc
     cpp/zimt/mos.h
-    cpp/zimt/nsim.cc
     cpp/zimt/nsim.h
+    cpp/zimt/spectrogram.h
     cpp/zimt/zimtohrli.cc
     cpp/zimt/zimtohrli.h
 )
 target_include_directories(zimtohrli_base PUBLIC cpp)
 target_link_libraries(zimtohrli_base PRIVATE absl::check)
-target_link_libraries(zimtohrli_base PUBLIC hwy portaudio absl::statusor absl::span sndfile)
+target_link_libraries(zimtohrli_base PUBLIC absl::statusor absl::span sndfile)
 
 add_library(zimtohrli_visqol_adapter STATIC
     cpp/zimt/visqol_model.h
@@ -39,7 +38,7 @@ add_library(zimtohrli_visqol_adapter STATIC
     cpp/zimt/resample.h
 )
 target_include_directories(zimtohrli_visqol_adapter PUBLIC cpp)
-target_link_libraries(zimtohrli_visqol_adapter PRIVATE visqol samplerate hwy)
+target_link_libraries(zimtohrli_visqol_adapter PRIVATE visqol samplerate)
 target_link_libraries(zimtohrli_visqol_adapter PUBLIC absl::span)
 
 #find_package(Python3 COMPONENTS Interpreter Development)
@@ -72,8 +71,6 @@ add_custom_command(
         $$\(find ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/visqol_proto.dir/ -name \"*.o\"\)
         $$\(find ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/libsvm.dir/ -name \"*.o\"\)
         $$\(find ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/pffft.dir/ -name \"*.o\"\)
-        $$\(find ${portaudio_BINARY_DIR} -name \"*.o\"\)
-        $$\(find ${hwy_BINARY_DIR} -name \"*.o\"\)
         $$\(find ${libsndfile_BINARY_DIR}/CMakeFiles/sndfile.dir/ -name \"*.o\"\)
         $$\(find ${samplerate_BINARY_DIR} -name \"*.o\"\)
         $$\(find ${protobuf_BINARY_DIR} -name \"*.o\" ! -ipath \"*/google/protobuf/compiler/main.cc.o\"\)

@@ -15,13 +15,14 @@
 #ifndef CPP_ZIMT_ZIMTOHRLI_H_
 #define CPP_ZIMT_ZIMTOHRLI_H_
 
+#include <cmath>
 #include <cstddef>
 #include <optional>
 #include <utility>
 #include <vector>
 
 #include "absl/types/span.h"
-#include "hwy/aligned_allocator.h"
+#include "zimt/spectrogram.h"
 
 namespace zimtohrli {
 
@@ -35,42 +36,36 @@ struct EnergyAndMaxAbsAmplitude {
 };
 
 // Returns the energy and maximum absolute amplitude of a signal.
-EnergyAndMaxAbsAmplitude Measure(hwy::Span<const float> signal);
+EnergyAndMaxAbsAmplitude Measure(Span<const float> signal);
 
 // Normalizes the amplitude of the signal array to have the provided maximum
 // absolute amplitude.
 //
 // Returns the energy in dB FS, and maximum absolute amplitude, of the result.
 EnergyAndMaxAbsAmplitude NormalizeAmplitude(float max_abs_amplitude,
-                                            hwy::Span<float> signal);
+                                            Span<float> signal);
 
 // Contains parameters and code to compute perceptual spectrograms of sounds.
 struct Zimtohrli {
-  // Populates the spectrogram with the perception of frequency channels over
-  // time.
-  //
-  void Spectrogram(hwy::Span<const float> signal,
-                   hwy::AlignedNDArray<float, 2>& spectrogram) const;
+  void Analyze(Span<const float> signal, Spectrogram& spectrogram) const;
 
-  float Distance(bool verbose,
-                 const hwy::AlignedNDArray<float, 2>& spectrogram_a,
-                 const hwy::AlignedNDArray<float, 2>& spectrogram_b) const;
+  float Distance(const Spectrogram& spectrogram_a,
+                 const Spectrogram& spectrogram_b) const;
 
   std::vector<std::vector<float>> Compare(
-      const hwy::AlignedNDArray<float, 2>& frames_a,
-      absl::Span<const hwy::AlignedNDArray<float, 2>* const> frames_b_span)
-      const;
+      const AudioBuffer& frames_a,
+      Span<const AudioBuffer* const> frames_b_span) const;
 
   // The window in perceptual_sample_rate time steps when compting the NSIM.
   size_t nsim_step_window = 6;
   // The window in channels when computing the NSIM.
   size_t nsim_channel_window = 5;
+  // The clock frequency of the brain?!
+  float high_gamma_band = 84.0;
+  int samples_per_perceptual_block = int(kSampleRate / high_gamma_band);
   // Sample rate corresponding to the human hearing sensitivity to timing
   // differences.
-  float high_gamma_band = 84.0;  // The clock frequency of the brain?!
-  int samples_per_perceptual_block = int(kSampleRate / high_gamma_band);
   float perceptual_sample_rate = kSampleRate / samples_per_perceptual_block;
-  float unwarp_window_seconds = 2.0;
   // The reference dB SPL of a sine signal of amplitude 1.
   float full_scale_sine_db = 78.3;
   float epsilon = 1e-9;

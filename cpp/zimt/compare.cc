@@ -27,7 +27,6 @@
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
-#include "hwy/aligned_allocator.h"
 #include "sndfile.h"
 #include "zimt/audio.h"
 #include "zimt/fourier_bank.h"
@@ -107,7 +106,7 @@ int Main(int argc, char* argv[]) {
   for (size_t channel_index = 0; channel_index < file_a->Info().channels;
        ++channel_index) {
     EnergyAndMaxAbsAmplitude measurements =
-        Measure(file_a->Frames()[{channel_index}]);
+        Measure(file_a->Buffer()[channel_index]);
     file_a_max_abs_amplitude =
         std::max(file_a_max_abs_amplitude, measurements.max_abs_amplitude);
     file_a_measurements.push_back(measurements);
@@ -116,7 +115,7 @@ int Main(int argc, char* argv[]) {
   if (verbose) {
     PrintLoadFileInfo(path_a, file_a->Info(), file_a_measurements);
   }
-  size_t min_length = file_a->Frames().shape()[1];
+  size_t min_length = file_a->Buffer().num_frames;
 
   std::vector<AudioFile> file_b_vector;
   file_b_vector.reserve(path_b.size());
@@ -134,19 +133,19 @@ int Main(int argc, char* argv[]) {
     std::vector<EnergyAndMaxAbsAmplitude> measurements;
     for (size_t channel_index = 0; channel_index < file_b->Info().channels;
          ++channel_index) {
-      measurements.push_back(Measure(file_b->Frames()[{channel_index}]));
+      measurements.push_back(Measure(file_b->Buffer()[channel_index]));
     }
     if (verbose) {
       PrintLoadFileInfo(file_b->Path(), file_b->Info(), measurements);
     }
     CHECK_EQ(file_a->Info().channels, file_b->Info().channels);
     CHECK_EQ(file_a->Info().samplerate, file_b->Info().samplerate);
-    min_length = std::min(min_length, file_b->Frames().shape()[1]);
+    min_length = std::min(min_length, file_b->Buffer().num_frames);
     for (size_t channel_index = 0; channel_index < file_b->Info().channels;
          ++channel_index) {
       const EnergyAndMaxAbsAmplitude new_energy_and_max_abs_amplitude =
           NormalizeAmplitude(file_a_max_abs_amplitude,
-                             file_b->Frames()[{channel_index}]);
+                             file_b->Buffer()[channel_index]);
       if (verbose) {
         std::cerr << "  Normalized channel " << channel_index << " energy = "
                   << new_energy_and_max_abs_amplitude.energy_db_fs
@@ -166,36 +165,33 @@ int Main(int argc, char* argv[]) {
 
   Zimtohrli z = {
       .perceptual_sample_rate = absl::GetFlag(FLAGS_perceptual_sample_rate),
-      .unwarp_window_seconds = 2,
       .full_scale_sine_db = absl::GetFlag(FLAGS_full_scale_sine_db),
   };
 
   const bool per_channel = absl::GetFlag(FLAGS_per_channel);
   const size_t num_downscaled_samples_a = static_cast<size_t>(
-      std::ceil(static_cast<float>(file_a->Frames().shape()[1]) *
+      std::ceil(static_cast<float>(file_a->Buffer().num_frames) *
                 z.perceptual_sample_rate / kSampleRate));
-  std::vector<hwy::AlignedNDArray<float, 2>> file_a_spectrograms;
+  std::vector<Spectrogram> file_a_spectrograms;
   for (size_t channel_index = 0; channel_index < file_a->Info().channels;
        ++channel_index) {
-    hwy::AlignedNDArray<float, 2> spectrogram(
-        {num_downscaled_samples_a, kNumRotators});
-    z.Spectrogram(file_a->Frames()[{channel_index}], spectrogram);
+    Spectrogram spectrogram(num_downscaled_samples_a, kNumRotators);
+    z.Analyze(file_a->Buffer()[channel_index], spectrogram);
     file_a_spectrograms.push_back(std::move(spectrogram));
   }
   for (int file_b_index = 0; file_b_index < file_b_vector.size();
        ++file_b_index) {
     const AudioFile& file_b = file_b_vector[file_b_index];
     const size_t num_downscaled_samples_b = static_cast<size_t>(
-        std::ceil(static_cast<float>(file_b.Frames().shape()[1]) *
+        std::ceil(static_cast<float>(file_b.Buffer().num_frames) *
                   z.perceptual_sample_rate / kSampleRate));
-    hwy::AlignedNDArray<float, 2> spectrogram_b(
-        {num_downscaled_samples_b, kNumRotators});
+    Spectrogram spectrogram_b(num_downscaled_samples_b, kNumRotators);
     float sum_of_squares = 0;
     for (size_t channel_index = 0; channel_index < file_a->Info().channels;
          ++channel_index) {
-      z.Spectrogram(file_b.Frames()[{channel_index}], spectrogram_b);
+      z.Analyze(file_b.Buffer()[channel_index], spectrogram_b);
       const float distance =
-          z.Distance(false, file_a_spectrograms[channel_index], spectrogram_b);
+          z.Distance(file_a_spectrograms[channel_index], spectrogram_b);
       if (per_channel) {
         std::cout << GetMetric(distance) << std::endl;
       } else {

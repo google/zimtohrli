@@ -37,7 +37,6 @@ float SampleRate();
 typedef struct ZimtohrliParameters {
   float PerceptualSampleRate;
   float FullScaleSineDB;
-  float UnwarpWindowSeconds;
   int NSIMStepWindow;
   int NSIMChannelWindow;
 } ZimtohrliParameters;
@@ -55,11 +54,11 @@ Zimtohrli CreateZimtohrli(ZimtohrliParameters params);
 void FreeZimtohrli(Zimtohrli z);
 
 // void* representation of zimtohrli::Analysis.
-typedef void* Spec;
+typedef void* GoSpectrogram;
 
 // Returns a spectrogram by the provided zimtohrli::Zimtohrli using the provided
 // data.
-Spec Spectrogram(Zimtohrli zimtohrli, float* data, int size);
+GoSpectrogram Analyze(Zimtohrli zimtohrli, float* data, int size);
 
 // Plain C version of zimtohrli::EnergyAndMaxAbsAmplitude.
 typedef struct {
@@ -85,11 +84,11 @@ EnergyAndMaxAbsAmplitude NormalizeAmplitude(float max_abs_amplitude,
 float MOSFromZimtohrli(float zimtohrli_distance);
 
 // Deletes a spectrogram.
-void FreeSpec(Spec a);
+void FreeSpec(GoSpectrogram a);
 
 // Returns the Zimtohrli distance between two analyses using the provided
 // zimtohrli::Zimtohrli.
-float Distance(Zimtohrli zimtohrli, Spec a, Spec b);
+float Distance(Zimtohrli zimtohrli, GoSpectrogram a, GoSpectrogram b);
 
 // Sets the parameters.
 //
