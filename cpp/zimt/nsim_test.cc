@@ -56,7 +56,7 @@ TEST(NSIM, NSIMTest) {
                             13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
   EXPECT_THAT(
       NSIM(spec_a, spec_c, {{0, 0}, {1, 1}, {2, 2}, {3, 3}, {4, 4}}, 3, 3),
-      1.00001323);
+      1.0);
 }
 
 void BM_NSIM(benchmark::State& state) {
