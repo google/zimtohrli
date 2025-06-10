@@ -174,8 +174,7 @@ int Main(int argc, char* argv[]) {
   std::vector<Spectrogram> file_a_spectrograms;
   for (size_t channel_index = 0; channel_index < file_a->Info().channels;
        ++channel_index) {
-    Spectrogram spectrogram(num_downscaled_samples_a, kNumRotators);
-    z.Analyze((*file_a)[channel_index], spectrogram);
+    Spectrogram spectrogram = z.Analyze((*file_a)[channel_index]);
     file_a_spectrograms.push_back(std::move(spectrogram));
   }
   for (int file_b_index = 0; file_b_index < file_b_vector.size();
@@ -184,7 +183,7 @@ int Main(int argc, char* argv[]) {
     const size_t num_downscaled_samples_b =
         static_cast<size_t>(std::ceil(static_cast<float>(file_b.Info().frames) *
                                       z.perceptual_sample_rate / kSampleRate));
-    Spectrogram spectrogram_b(num_downscaled_samples_b, kNumRotators);
+    Spectrogram spectrogram_b(num_downscaled_samples_b);
     float sum_of_squares = 0;
     for (size_t channel_index = 0; channel_index < file_a->Info().channels;
          ++channel_index) {

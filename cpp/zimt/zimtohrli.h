@@ -263,10 +263,14 @@ struct Span {
 // ]
 struct Spectrogram {
   Spectrogram(Spectrogram&& other) = default;
+  Spectrogram(size_t num_steps)
+      : num_steps(num_steps),
+        num_dims(kNumRotators),
+        values(num_steps * kNumRotators) {}
   Spectrogram(size_t num_steps, size_t num_dims)
       : num_steps(num_steps),
         num_dims(num_dims),
-        values(num_steps * num_dims) {};
+        values(num_steps * num_dims) {}
   Spectrogram(size_t num_steps, size_t num_dims, std::vector<float> values)
       : num_steps(num_steps), num_dims(num_dims), values(values) {
     assert(num_steps * num_dims == values.size());
