@@ -30,7 +30,7 @@ float SampleRate() { return zimtohrli::kSampleRate; }
 
 EnergyAndMaxAbsAmplitude Measure(const float* signal, int size) {
   const zimtohrli::EnergyAndMaxAbsAmplitude measurements =
-      zimtohrli::Measure(zimtohrli::Span(size, signal));
+      zimtohrli::Measure(zimtohrli::Span(signal, size));
   return EnergyAndMaxAbsAmplitude{
       .EnergyDBFS = measurements.energy_db_fs,
       .MaxAbsAmplitude = measurements.max_abs_amplitude};
@@ -40,7 +40,7 @@ EnergyAndMaxAbsAmplitude NormalizeAmplitude(float max_abs_amplitude,
                                             float* signal, int size) {
   const zimtohrli::EnergyAndMaxAbsAmplitude measurements =
       zimtohrli::NormalizeAmplitude(max_abs_amplitude,
-                                    zimtohrli::Span(size, signal));
+                                    zimtohrli::Span(signal, size));
   return EnergyAndMaxAbsAmplitude{
       .EnergyDBFS = measurements.energy_db_fs,
       .MaxAbsAmplitude = measurements.max_abs_amplitude};
@@ -67,7 +67,7 @@ GoSpectrogram Analyze(Zimtohrli zimtohrli, float* data, int size) {
                       zimtohrli::kSampleRate)));
   zimtohrli::Spectrogram* spec = new zimtohrli::Spectrogram(
       num_downscaled_samples, zimtohrli::kNumRotators);
-  z->Analyze(zimtohrli::Span(size, data), *spec);
+  z->Analyze(zimtohrli::Span(data, size), *spec);
   return spec;
 }
 
@@ -114,8 +114,8 @@ MOSResult MOS(const ViSQOL v, float sample_rate, const float* reference,
               int reference_size, const float* distorted, int distorted_size) {
   const zimtohrli::ViSQOL* visqol = static_cast<const zimtohrli::ViSQOL*>(v);
   const absl::StatusOr<float> result = visqol->MOS(
-      absl::Span<const float>(reference, reference_size),
-      absl::Span<const float>(distorted, distorted_size), sample_rate);
+      zimtohrli::Span<const float>(reference, reference_size),
+      zimtohrli::Span<const float>(distorted, distorted_size), sample_rate);
   if (result.ok()) {
     return MOSResult{.MOS = result.value(), .Status = 0};
   } else {

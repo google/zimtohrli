@@ -44,12 +44,12 @@ class AudioFile {
 
   // Returns a channel of this audio file.
   Span<const float> operator[](size_t n) const {
-    return Span<const float>(info_.frames, buffer_.data() + info_.frames * n);
+    return Span<const float>(buffer_.data() + info_.frames * n, info_.frames);
   }
 
   // Returns a channel of this audio file.
   Span<float> operator[](size_t n) {
-    return Span<float>(info_.frames, buffer_.data() + info_.frames * n);
+    return Span<float>(buffer_.data() + info_.frames * n, info_.frames);
   }
 
  private:

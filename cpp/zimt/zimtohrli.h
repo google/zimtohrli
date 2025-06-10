@@ -18,11 +18,8 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
-#include <cstddef>
-#include <cstdio>
 #include <cstring>
 #include <optional>
-#include <utility>
 #include <vector>
 
 namespace zimtohrli {
@@ -230,7 +227,7 @@ template <typename T>
 struct Span {
   Span(const Span& other) = default;
   Span(std::vector<T>& vec) : size(vec.size()), data(vec.data()) {}
-  explicit Span(size_t size, T* data) : size(size), data(data) {}
+  explicit Span(T* data, size_t size) : size(size), data(data) {}
   template <typename U>
   Span(const std::vector<U>& vec) noexcept
       : data(vec.data()), size(vec.size()) {
@@ -277,47 +274,14 @@ struct Spectrogram {
   }
   Spectrogram& operator=(Spectrogram&& other) = default;
   Span<const float> operator[](size_t n) const {
-    return Span<const float>(num_dims, values.data() + n * num_dims);
+    return Span<const float>(values.data() + n * num_dims, num_dims);
   }
   Span<float> operator[](size_t n) {
-    return Span(num_dims, values.data() + n * num_dims);
+    return Span(values.data() + n * num_dims, num_dims);
   }
   size_t num_steps;
   size_t num_dims;
   std::vector<float> values;
-};
-
-// A simple buffer of float samples describing an audio file with a given number
-// of frames and channels.
-//
-// Similar to Spectrogram, except transposed.
-//
-// The frames buffer is populated like:
-// [
-//   [sample0_channel_0, sample1_channel0, ... samplen_channel0],
-//   [sample0_channel_1, sample1_channel1, ... samplen_channel1],
-//   ...,
-//   [sample0_channel_m, sample1_channelm, ... samplen_channelm],
-// ]
-struct AudioBuffer {
-  AudioBuffer(AudioBuffer&& other) = default;
-  AudioBuffer(float sample_rate, size_t num_frames, size_t num_channels)
-      : sample_rate(sample_rate),
-        num_frames(num_frames),
-        num_channels(num_channels) {
-    frames = std::vector<float>(num_frames * num_channels);
-  }
-  AudioBuffer& operator=(AudioBuffer&& other) = default;
-  Span<const float> operator[](size_t n) const {
-    return Span<const float>(num_frames, frames.data() + num_frames * n);
-  }
-  Span<float> operator[](size_t n) {
-    return Span<float>(num_frames, frames.data() + num_frames * n);
-  }
-  float sample_rate;
-  size_t num_frames;
-  size_t num_channels;
-  std::vector<float> frames;
 };
 
 template <typename T>
