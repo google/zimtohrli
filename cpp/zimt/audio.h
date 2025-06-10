@@ -23,6 +23,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "sndfile.h"
+#include "zimt/resample.h"
 #include "zimt/zimtohrli.h"
 
 namespace zimtohrli {
@@ -50,6 +51,12 @@ class AudioFile {
   // Returns a channel of this audio file.
   Span<float> operator[](size_t n) {
     return Span<float>(buffer_.data() + info_.frames * n, info_.frames);
+  }
+
+  std::vector<float> AtRate(size_t channel_id, float want_rate) {
+    return Resample<float, float>(operator[](channel_id),
+                                  static_cast<float>(info_.samplerate),
+                                  want_rate);
   }
 
  private:

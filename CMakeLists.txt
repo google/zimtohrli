@@ -71,7 +71,7 @@ add_executable(zimtohrli_compare
     cpp/zimt/compare.cc
 )
 target_include_directories(zimtohrli_compare PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cpp)
-target_link_libraries(zimtohrli_compare sndfile absl::statusor absl::check absl::flags_parse)
+target_link_libraries(zimtohrli_compare sndfile absl::statusor absl::check absl::flags_parse samplerate)
 set_target_properties(zimtohrli_compare PROPERTIES
     PREFIX ""
     OUTPUT_NAME compare

@@ -22,7 +22,7 @@ namespace zimtohrli {
 
 namespace {
 
-const std::array<float, 3> mos_params = {1.000e+00, -7.449e-09, 3.344e+00};
+const std::array<float, 3> mos_params = {1.000e+00, -1.360e-09, 1.545e+02};
 
 float sigmoid(float x) {
   return mos_params[0] / (mos_params[1] + std::exp(mos_params[2] * x));

@@ -9,7 +9,7 @@ add_executable(zimtohrli_test
     cpp/zimt/test_file_paths.cc
 )
 target_include_directories(zimtohrli_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cpp)
-target_link_libraries(zimtohrli_test gtest sndfile gmock_main benchmark absl::statusor absl::check)
+target_link_libraries(zimtohrli_test gtest sndfile gmock_main benchmark absl::statusor absl::check samplerate)
 target_compile_definitions(zimtohrli_test PRIVATE CMAKE_CURRENT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR})
 gtest_discover_tests(zimtohrli_test)
 
@@ -35,4 +35,4 @@ add_executable(zimtohrli_benchmark
     cpp/zimt/zimtohrli_test.cc
 )
 target_include_directories(zimtohrli_benchmark PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cpp)
-target_link_libraries(zimtohrli_benchmark gtest gmock benchmark_main)
+target_link_libraries(zimtohrli_benchmark gtest gmock benchmark_main samplerate)
