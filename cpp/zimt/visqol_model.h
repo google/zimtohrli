@@ -15,12 +15,12 @@
 #ifndef CPP_ZIMT_VISQOL_MODEL_H_
 #define CPP_ZIMT_VISQOL_MODEL_H_
 
-#include "absl/types/span.h"
+#include "zimt/zimtohrli.h"
 
 namespace zimtohrli {
 
 // Returns the bytes of the default ViSQOL model.
-absl::Span<const char> ViSQOLModel();
+Span<const char> ViSQOLModel();
 
 }  // namespace zimtohrli
 

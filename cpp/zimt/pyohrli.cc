@@ -108,8 +108,8 @@ std::optional<zimtohrli::Spectrogram> Analyze(
     return std::nullopt;
   }
   return std::optional<zimtohrli::Spectrogram>(zimtohrli.Analyze(
-      zimtohrli::Span<const float>(buffer_view.len / sizeof(float),
-                                   static_cast<float*>(buffer_view.buf))));
+      zimtohrli::Span<const float>(static_cast<float*>(buffer_view.buf),
+                                   buffer_view.len / sizeof(float))));
 }
 
 PyObject* BadArgument(const std::string& message) {

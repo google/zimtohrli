@@ -18,7 +18,7 @@
 #include <filesystem>
 
 #include "absl/status/statusor.h"
-#include "absl/types/span.h"
+#include "zimt/zimtohrli.h"
 
 namespace zimtohrli {
 
@@ -26,8 +26,8 @@ class ViSQOL {
  public:
   ViSQOL();
   ~ViSQOL();
-  absl::StatusOr<float> MOS(absl::Span<const float> reference,
-                            absl::Span<const float> degraded,
+  absl::StatusOr<float> MOS(Span<const float> reference,
+                            Span<const float> degraded,
                             float sample_rate) const;
 
  private:

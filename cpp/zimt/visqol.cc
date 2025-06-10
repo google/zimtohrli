@@ -27,6 +27,7 @@
 #include "visqol_api.h"
 #include "zimt/resample.h"
 #include "zimt/visqol_model.h"
+#include "zimt/zimtohrli.h"
 
 constexpr size_t SAMPLE_RATE = 48000;
 
@@ -46,8 +47,8 @@ ViSQOL::ViSQOL() {
       populated_path_template.data(), populated_path_template.size()));
   std::ofstream output_stream(model_path_);
   CHECK(output_stream.good());
-  absl::Span<const char> model = ViSQOLModel();
-  output_stream.write(model.data(), model.size());
+  Span<const char> model = ViSQOLModel();
+  output_stream.write(model.data, model.size);
   CHECK(output_stream.good());
   output_stream.close();
   CHECK(output_stream.good());
@@ -55,8 +56,8 @@ ViSQOL::ViSQOL() {
 
 ViSQOL::~ViSQOL() { std::filesystem::remove(model_path_); }
 
-absl::StatusOr<float> ViSQOL::MOS(absl::Span<const float> reference,
-                                  absl::Span<const float> degraded,
+absl::StatusOr<float> ViSQOL::MOS(Span<const float> reference,
+                                  Span<const float> degraded,
                                   float sample_rate) const {
   std::vector<double> resampled_reference =
       Resample<double>(reference, sample_rate, SAMPLE_RATE);

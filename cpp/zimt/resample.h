@@ -15,32 +15,33 @@
 #ifndef CPP_ZIMT_RESAMPLE_H_
 #define CPP_ZIMT_RESAMPLE_H_
 
+#include <cassert>
 #include <cstddef>
 #include <type_traits>
 #include <vector>
 
 #include "absl/log/check.h"
-#include "absl/types/span.h"
 #include "samplerate.h"
+#include "zimt/zimtohrli.h"
 
 namespace zimtohrli {
 
 template <typename O, typename I>
-std::vector<O> Convert(absl::Span<const I> input) {
+std::vector<O> Convert(Span<const I> input) {
   if constexpr (std::is_same<O, I>::value) {
-    std::vector<O> result(input.size());
-    memcpy(result.data(), input.data(), input.size() * sizeof(I));
+    std::vector<O> result(input.size);
+    memcpy(result.data(), input.data, input.size * sizeof(I));
     return result;
   }
-  std::vector<O> output(input.size());
-  for (size_t sample_index = 0; sample_index < input.size(); ++sample_index) {
+  std::vector<O> output(input.size);
+  for (size_t sample_index = 0; sample_index < input.size; ++sample_index) {
     output[sample_index] = input[sample_index];
   }
   return output;
 }
 
 template <typename O, typename I>
-std::vector<O> Resample(absl::Span<const I> samples, float in_sample_rate,
+std::vector<O> Resample(Span<const I> samples, float in_sample_rate,
                         float out_sample_rate) {
   if (in_sample_rate == out_sample_rate) {
     return Convert<O>(samples);
@@ -48,7 +49,7 @@ std::vector<O> Resample(absl::Span<const I> samples, float in_sample_rate,
 
   const std::vector<float> samples_as_floats = Convert<float>(samples);
   std::vector<float> result_as_floats(
-      static_cast<size_t>(samples.size() * out_sample_rate / in_sample_rate));
+      static_cast<size_t>(samples.size * out_sample_rate / in_sample_rate));
   SRC_DATA resample_data = {
       .data_in = samples_as_floats.data(),
       .data_out = result_as_floats.data(),
@@ -56,9 +57,9 @@ std::vector<O> Resample(absl::Span<const I> samples, float in_sample_rate,
       .output_frames = static_cast<long>(result_as_floats.size()),
       .src_ratio = out_sample_rate / in_sample_rate,
   };
-  CHECK_EQ(src_simple(&resample_data, SRC_SINC_BEST_QUALITY, 1), 0);
-  return Convert<O>(absl::Span<const float>(result_as_floats.data(),
-                                            result_as_floats.size()));
+  assert(src_simple(&resample_data, SRC_SINC_BEST_QUALITY, 1) == 0);
+  return Convert<O>(
+      Span<const float>(result_as_floats.data(), result_as_floats.size()));
 }
 
 }  // namespace zimtohrli
