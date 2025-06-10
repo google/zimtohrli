@@ -19,6 +19,7 @@ add_library(zimtohrli_visqol_adapter STATIC
     cpp/zimt/visqol.h
     cpp/zimt/visqol.cc
     cpp/zimt/resample.h
+    cpp/zimt/zimtohrli.h
 )
 target_include_directories(zimtohrli_visqol_adapter PUBLIC cpp)
 target_link_libraries(zimtohrli_visqol_adapter PRIVATE visqol samplerate)
