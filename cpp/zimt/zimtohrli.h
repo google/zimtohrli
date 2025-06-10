@@ -24,6 +24,29 @@
 
 namespace zimtohrli {
 
+template <typename T>
+struct Span {
+  Span(const Span& other) = default;
+  Span(std::vector<T>& vec) : size(vec.size()), data(vec.data()) {}
+  explicit Span(T* data, size_t size) : size(size), data(data) {}
+  template <typename U>
+  Span(const std::vector<U>& vec) noexcept
+      : data(vec.data()), size(vec.size()) {
+    static_assert(std::is_convertible_v<U(*)[], T(*)[]>,
+                  "Cannot construct Span from vector of incompatible type.");
+  }
+  template <typename U>
+  Span(const Span<U>& other) noexcept : data(other.data), size(other.size) {
+    static_assert(std::is_convertible_v<U(*)[], T(*)[]>,
+                  "Cannot construct Span from Span of incompatible type.");
+  }
+  Span& operator=(const Span& other) = default;
+  const T& operator[](size_t index) const { return data[index]; }
+  T& operator[](size_t index) { return data[index]; }
+  size_t size;
+  T* data;
+};
+
 namespace {
 
 constexpr int64_t kNumRotators = 128;
@@ -221,29 +244,6 @@ class Rotators {
       }
     }
   }
-};
-
-template <typename T>
-struct Span {
-  Span(const Span& other) = default;
-  Span(std::vector<T>& vec) : size(vec.size()), data(vec.data()) {}
-  explicit Span(T* data, size_t size) : size(size), data(data) {}
-  template <typename U>
-  Span(const std::vector<U>& vec) noexcept
-      : data(vec.data()), size(vec.size()) {
-    static_assert(std::is_convertible_v<U(*)[], T(*)[]>,
-                  "Cannot construct Span from vector of incompatible type.");
-  }
-  template <typename U>
-  Span(const Span<U>& other) noexcept : data(other.data), size(other.size) {
-    static_assert(std::is_convertible_v<U(*)[], T(*)[]>,
-                  "Cannot construct Span from Span of incompatible type.");
-  }
-  Span& operator=(const Span& other) = default;
-  const T& operator[](size_t index) const { return data[index]; }
-  T& operator[](size_t index) { return data[index]; }
-  size_t size;
-  T* data;
 };
 
 // A simple buffer of float samples describing a spectrogram with a given number
