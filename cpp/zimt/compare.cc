@@ -144,12 +144,6 @@ int Main(int argc, char* argv[]) {
                   << new_energy_and_max_abs_amplitude.max_abs_amplitude
                   << std::endl;
       }
-      if (std::abs(new_energy_and_max_abs_amplitude.energy_db_fs -
-                   file_a_measurements[channel_index].energy_db_fs) > 2.0f) {
-        std::cerr << "WARNING: Energies differ more than 2dB FS after "
-                     "normalizing max amplitude!"
-                  << std::endl;
-      }
     }
     file_b_vector.push_back(*std::move(file_b));
     channels_b_vector.push_back(channels_b);
