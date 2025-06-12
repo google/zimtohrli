@@ -6,6 +6,7 @@ FetchContent_Declare(benchmark
 set(BENCHMARK_ENABLE_TESTING OFF CACHE INTERNAL "")
 set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE INTERNAL "")
 set(BENCHMARK_ENABLE_ASSEMBLY_TESTS OFF CACHE INTERNAL "")
+set(BENCHMARK_ENABLE_WERROR OFF CACHE INTERNAL "")
 FetchContent_MakeAvailable(benchmark)
 
 file(GLOB_RECURSE benchmark_files ${benchmark_SOURCE_DIR} *.cc *.c *.h)
