@@ -4,6 +4,8 @@ pkg_check_modules(ogg REQUIRED ogg)
 pkg_check_modules(vorbis REQUIRED vorbis)
 pkg_check_modules(vorbisenc REQUIRED vorbisenc)
 
+pkg_check_modules(soxr REQUIRED IMPORTED_TARGET soxr)
+
 include(FetchContent)
 
 include(cmake/protobuf.cmake)
@@ -27,10 +29,3 @@ include(cmake/pffft.cmake)
 include(cmake/libsvm.cmake)
 include(cmake/armadillo.cmake)
 include(cmake/visqol.cmake)
-
-FetchContent_Declare(samplerate
-    EXCLUDE_FROM_ALL
-    GIT_REPOSITORY https://github.com/libsndfile/libsamplerate.git
-    GIT_TAG 0.2.2
-)
-FetchContent_MakeAvailable(samplerate)

@@ -20,7 +20,7 @@
 #include <vector>
 
 #include "absl/log/check.h"
-#include "samplerate.h"
+#include "soxr.h"
 #include "zimt/zimtohrli.h"
 
 namespace zimtohrli {
@@ -39,6 +39,21 @@ std::vector<O> Convert(Span<const I> input) {
   return output;
 }
 
+template <typename T>
+inline constexpr soxr_datatype_t SoxrType() {
+  if constexpr (std::is_same_v<T, int16_t>) {
+    return SOXR_INT16_I;
+  } else if constexpr (std::is_same_v<T, int32_t>) {
+    return SOXR_INT32_I;
+  } else if constexpr (std::is_same_v<T, float>) {
+    return SOXR_FLOAT32_I;
+  } else if constexpr (std::is_same_v<T, double>) {
+    return SOXR_FLOAT64_I;
+  } else {
+    static_assert(false, "Unsupported type for resampling");
+  }
+}
+
 template <typename O, typename I>
 std::vector<O> Resample(Span<const I> samples, float in_sample_rate,
                         float out_sample_rate) {
@@ -46,20 +61,15 @@ std::vector<O> Resample(Span<const I> samples, float in_sample_rate,
     return Convert<O>(samples);
   }
 
-  const std::vector<float> samples_as_floats = Convert<float>(samples);
-  std::vector<float> result_as_floats(
+  std::vector<O> result(
       static_cast<size_t>(samples.size * out_sample_rate / in_sample_rate));
-  SRC_DATA resample_data = {
-      .data_in = samples_as_floats.data(),
-      .data_out = result_as_floats.data(),
-      .input_frames = static_cast<long>(samples_as_floats.size()),
-      .output_frames = static_cast<long>(result_as_floats.size()),
-      .src_ratio = out_sample_rate / in_sample_rate,
-  };
-  int src_result = src_simple(&resample_data, SRC_SINC_BEST_QUALITY, 1);
-  assert_eq(src_result, 0);
-  return Convert<O>(
-      Span<const float>(result_as_floats.data(), result_as_floats.size()));
+  soxr_quality_spec_t quality = soxr_quality_spec(SOXR_VHQ, SOXR_LINEAR_PHASE);
+  soxr_io_spec_t io_spec = soxr_io_spec(SoxrType<I>(), SoxrType<O>());
+  const soxr_error_t error = soxr_oneshot(
+      in_sample_rate, out_sample_rate, 1, samples.data, samples.size, nullptr,
+      result.data(), result.size(), nullptr, &io_spec, &quality, nullptr);
+  assert(error == 0);
+  return result;
 }
 
 }  // namespace zimtohrli
