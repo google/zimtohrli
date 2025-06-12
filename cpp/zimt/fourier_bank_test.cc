@@ -232,7 +232,7 @@ TEST(FourierBank, GoldenNumbers) {
   };
   for (size_t chan = 0; chan < kNumRotators / 10; chan++) {
     for (size_t i = 0; i < 48; i++) {
-      assert(spec[{chan * kNumRotators / 10}][i] == want_spec[chan][i]);
+      assert(spectrogram[{chan * kNumRotators / 10}][i] == want_spec[chan][i]);
     }
   }
 }

@@ -5,8 +5,8 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_CXX_CLANG_TIDY clang-tidy)
 add_compile_options(-fPIC)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=native -O3 -ffast-math")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -O3 -ffast-math")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=native -O3")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -O3")
 
 include(cmake/deps.cmake)
 
