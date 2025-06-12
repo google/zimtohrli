@@ -22,7 +22,7 @@ add_library(zimtohrli_visqol_adapter STATIC
     cpp/zimt/zimtohrli.h
 )
 target_include_directories(zimtohrli_visqol_adapter PUBLIC cpp)
-target_link_libraries(zimtohrli_visqol_adapter PRIVATE visqol samplerate)
+target_link_libraries(zimtohrli_visqol_adapter PRIVATE visqol PkgConfig::soxr)
 target_link_libraries(zimtohrli_visqol_adapter PUBLIC absl::span)
 
 find_package(Python3 COMPONENTS Interpreter Development)
@@ -58,7 +58,6 @@ add_custom_command(
         $$\(find ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/libsvm.dir/ -name \"*.o\"\)
         $$\(find ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/pffft.dir/ -name \"*.o\"\)
         $$\(find ${libsndfile_BINARY_DIR}/CMakeFiles/sndfile.dir/ -name \"*.o\"\)
-        $$\(find ${samplerate_BINARY_DIR} -name \"*.o\"\)
         $$\(find ${protobuf_BINARY_DIR} -name \"*.o\" ! -ipath \"*/google/protobuf/compiler/main.cc.o\"\)
         -o ${zimtohrli_goohrli_object}
     COMMAND ${CMAKE_AR} rcs ${zimtohrli_goohrli_archive} ${zimtohrli_goohrli_object}
@@ -71,7 +70,7 @@ add_executable(zimtohrli_compare
     cpp/zimt/compare.cc
 )
 target_include_directories(zimtohrli_compare PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cpp)
-target_link_libraries(zimtohrli_compare sndfile absl::statusor absl::check absl::flags_parse samplerate)
+target_link_libraries(zimtohrli_compare sndfile absl::statusor absl::check absl::flags_parse PkgConfig::soxr)
 set_target_properties(zimtohrli_compare PROPERTIES
     PREFIX ""
     OUTPUT_NAME compare

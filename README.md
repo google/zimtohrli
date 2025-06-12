@@ -77,6 +77,7 @@ To build the compare tool, a few more dependencies are necessary:
 - libopus-dev
 - libasound2-dev
 - libglfw3-dev
+- libsoxr-dev
 
 Finally, to build and test the Python and Go wrappers, the following dependencies
 are necessary:
@@ -90,7 +91,7 @@ are necessary:
 To install these in a Debian-like system:
 
 ```
-sudo apt install -y cmake ninja-build clang clang-tidy libogg-dev libvorbis-dev libflac-dev libopus-dev libasound2-dev libglfw3-dev golang-go python3 xxd zlib1g-dev ffmpeg
+sudo apt install -y cmake ninja-build clang clang-tidy libogg-dev libvorbis-dev libflac-dev libopus-dev libasound2-dev libglfw3-dev libsoxr-dev golang-go python3 xxd zlib1g-dev ffmpeg
 ```
 
 Once they are installed, configure the project:
