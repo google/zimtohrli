@@ -35,7 +35,7 @@ std::vector<O> Convert(Span<const I> input) {
   }
   std::vector<O> output(input.size);
   for (size_t sample_index = 0; sample_index < input.size; ++sample_index) {
-    output[sample_index] = input[sample_index];
+    output[sample_index] = static_cast<O>(input[sample_index]);
   }
   return output;
 }
@@ -57,7 +57,8 @@ std::vector<O> Resample(Span<const I> samples, float in_sample_rate,
       .output_frames = static_cast<long>(result_as_floats.size()),
       .src_ratio = out_sample_rate / in_sample_rate,
   };
-  assert(src_simple(&resample_data, SRC_SINC_BEST_QUALITY, 1) == 0);
+  int src_result = src_simple(&resample_data, SRC_SINC_BEST_QUALITY, 1);
+  assert(src_result == 0);
   return Convert<O>(
       Span<const float>(result_as_floats.data(), result_as_floats.size()));
 }
