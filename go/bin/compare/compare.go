@@ -119,8 +119,6 @@ func main() {
 		g := goohrli.New(zimtohrliParameters)
 		if *perChannel {
 			for channelIndex := range signalA.Samples {
-				measurement := goohrli.Measure(signalA.Samples[channelIndex])
-				goohrli.NormalizeAmplitude(measurement.MaxAbsAmplitude, signalB.Samples[channelIndex])
 				fmt.Printf("Zimtohrli#%v=%v\n", channelIndex, getMetric(g.Distance(signalA.Samples[channelIndex], signalB.Samples[channelIndex])))
 			}
 		} else {

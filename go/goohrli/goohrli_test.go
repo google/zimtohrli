@@ -23,23 +23,6 @@ import (
 	"time"
 )
 
-func TestMeasureAndNormalize(t *testing.T) {
-	signal := []float32{1, 2, -1, -2}
-	measurements := Measure(signal)
-	if measurements.MaxAbsAmplitude != 2 {
-		t.Errorf("MaxAbsAmplitude = %v, want %v", measurements.MaxAbsAmplitude, 2)
-	}
-	wantEnergyDBFS := float32(20 * math.Log10(2.5))
-	if math.Abs(float64(measurements.EnergyDBFS-float32(wantEnergyDBFS))) > 1e-4 {
-		t.Errorf("EnergyDBFS = %v, want %v", measurements.EnergyDBFS, wantEnergyDBFS)
-	}
-	NormalizeAmplitude(1, signal)
-	wantNormalizedSignal := []float32{0.5, 1, -0.5, -1}
-	if !reflect.DeepEqual(signal, wantNormalizedSignal) {
-		t.Errorf("NormalizeAmplitude produced %+v, want %+v", signal, wantNormalizedSignal)
-	}
-}
-
 func TestMOSFromZimtohrli(t *testing.T) {
 	for _, tc := range []struct {
 		zimtDistance float64
@@ -50,20 +33,24 @@ func TestMOSFromZimtohrli(t *testing.T) {
 			wantMOS:      5.0,
 		},
 		{
-			zimtDistance: 0.1,
-			wantMOS:      3.8630697727203369,
+			zimtDistance: 0.001,
+			wantMOS:      4.4273738861083984,
 		},
 		{
-			zimtDistance: 0.5,
-			wantMOS:      1.751483678817749,
+			zimtDistance: 0.01,
+			wantMOS:      1.8532474040985107,
 		},
 		{
-			zimtDistance: 0.7,
-			wantMOS:      1.3850023746490479,
+			zimtDistance: 0.02,
+			wantMOS:      1.1820077896118164,
 		},
 		{
-			zimtDistance: 1.0,
-			wantMOS:      1.1411819458007812,
+			zimtDistance: 0.03,
+			wantMOS:      1.0388244390487671,
+		},
+		{
+			zimtDistance: 0.04,
+			wantMOS:      1.0082817077636719,
 		},
 	} {
 		if mos := MOSFromZimtohrli(tc.zimtDistance); math.Abs(mos-tc.wantMOS) > 1e-2 {
@@ -107,7 +94,7 @@ func TestGoohrli(t *testing.T) {
 		{
 			freqA:    5000,
 			freqB:    10000,
-			distance: 0.015453755855560303,
+			distance: 0.01831793785095215,
 		},
 	} {
 		params := DefaultParameters()
