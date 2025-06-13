@@ -20,6 +20,7 @@
 #include <cmath>
 #include <cstring>
 #include <optional>
+#include <stdexcept>
 #include <vector>
 
 namespace zimtohrli {
@@ -48,6 +49,16 @@ struct Span {
 };
 
 namespace {
+
+#define assert_eq(a, b)                                                        \
+  do {                                                                         \
+    if ((a) != (b)) {                                                          \
+      throw std::runtime_error(std::string("Assertion failed: ") + #a + " (" + \
+                               std::to_string(a) + ") == " #b + " (" +         \
+                               std::to_string(b) + ") at " + __FILE__ + ":" +  \
+                               std::to_string(__LINE__));                      \
+    }                                                                          \
+  } while (0)
 
 constexpr int64_t kNumRotators = 128;
 
@@ -270,7 +281,7 @@ struct Spectrogram {
         values(num_steps * num_dims) {}
   Spectrogram(size_t num_steps, size_t num_dims, std::vector<float> values)
       : num_steps(num_steps), num_dims(num_dims), values(values) {
-    assert(num_steps * num_dims == values.size());
+    assert_eq(num_steps * num_dims, values.size());
   }
   Spectrogram& operator=(Spectrogram&& other) = default;
   Span<const float> operator[](size_t n) const {
@@ -388,7 +399,7 @@ Spectrogram WindowMean(size_t num_steps, size_t num_channels,
 float NSIM(const Spectrogram& a, const Spectrogram& b,
            const std::vector<std::pair<size_t, size_t>>& time_pairs,
            size_t step_window, size_t channel_window) {
-  assert(a.num_dims == b.num_dims);
+  assert_eq(a.num_dims, b.num_dims);
   const size_t num_channels = a.num_dims;
   const size_t num_steps = time_pairs.size();
 
@@ -501,7 +512,7 @@ double delta_norm(const Spectrogram& a, const Spectrogram& b, size_t step_a,
                   size_t step_b) {
   Span<const float> dims_a = a[step_a];
   Span<const float> dims_b = b[step_b];
-  assert(dims_a.size == dims_b.size);
+  assert_eq(dims_a.size, dims_b.size);
   double result = 0;
   for (size_t index = 0; index < dims_a.size; index++) {
     float delta = dims_a[index] - dims_b[index];
@@ -516,7 +527,7 @@ std::vector<std::pair<size_t, size_t>> DTW(const Spectrogram& spec_a,
                                            const Spectrogram& spec_b) {
   // Sanity check that both spectrograms have the same number of feature
   // dimensions.
-  assert(spec_a.num_dims == spec_b.num_dims);
+  assert_eq(spec_a.num_dims, spec_b.num_dims);
   // Initialize a cost matrix with 0 at the start point, infinity at [*, 0] and
   // [0, *].
   CostMatrix cost_matrix(spec_a.num_steps, spec_b.num_steps);
@@ -610,7 +621,7 @@ EnergyAndMaxAbsAmplitude NormalizeAmplitude(float max_abs_amplitude,
 // Contains parameters and code to compute perceptual spectrograms of sounds.
 struct Zimtohrli {
   void Analyze(Span<const float> signal, Spectrogram& spectrogram) const {
-    assert(spectrogram.num_dims == kNumRotators);
+    assert_eq(spectrogram.num_dims, kNumRotators);
     Rotators rots;
     rots.FilterAndDownsample(signal.data, signal.size,
                              spectrogram.values.data(), spectrogram.num_steps,
@@ -629,7 +640,7 @@ struct Zimtohrli {
 
   float Distance(const Spectrogram& spectrogram_a,
                  const Spectrogram& spectrogram_b) const {
-    assert(spectrogram_a.num_dims == spectrogram_b.num_dims);
+    assert_eq(spectrogram_a.num_dims, spectrogram_b.num_dims);
     std::vector<std::pair<size_t, size_t>> time_pairs;
     time_pairs = DTW(spectrogram_a, spectrogram_b);
     return 1 - NSIM(spectrogram_a, spectrogram_b, time_pairs, nsim_step_window,

@@ -155,9 +155,6 @@ int Main(int argc, char* argv[]) {
   };
 
   const bool per_channel = absl::GetFlag(FLAGS_per_channel);
-  const size_t num_downscaled_samples_a =
-      static_cast<size_t>(std::ceil(static_cast<float>(file_a->Info().frames) *
-                                    z.perceptual_sample_rate / kSampleRate));
   std::vector<Spectrogram> file_a_spectrograms;
   for (size_t channel_index = 0; channel_index < file_a->Info().channels;
        ++channel_index) {
@@ -169,16 +166,17 @@ int Main(int argc, char* argv[]) {
     const AudioFile& file_b = file_b_vector[file_b_index];
     const std::vector<std::vector<float>>& channels_b =
         channels_b_vector[file_b_index];
-    const size_t num_downscaled_samples_b =
-        static_cast<size_t>(std::ceil(static_cast<float>(file_b.Info().frames) *
-                                      z.perceptual_sample_rate / kSampleRate));
-    Spectrogram spectrogram_b(num_downscaled_samples_b);
+    std::optional<Spectrogram> spectrogram_b;
     float sum_of_squares = 0;
     for (size_t channel_index = 0; channel_index < file_a->Info().channels;
          ++channel_index) {
-      z.Analyze(channels_b[channel_index], spectrogram_b);
+      if (spectrogram_b.has_value()) {
+        z.Analyze(channels_b[channel_index], *spectrogram_b);
+      } else {
+        spectrogram_b = z.Analyze(channels_b[channel_index]);
+      }
       const float distance =
-          z.Distance(file_a_spectrograms[channel_index], spectrogram_b);
+          z.Distance(file_a_spectrograms[channel_index], *spectrogram_b);
       if (per_channel) {
         std::cout << GetMetric(distance) << std::endl;
       } else {
