@@ -16,7 +16,6 @@
 #define CPP_ZIMT_ZIMTOHRLI_H_
 
 #include <algorithm>
-#include <cassert>
 #include <cmath>
 #include <cstring>
 #include <optional>
@@ -290,6 +289,22 @@ struct Spectrogram {
   Span<float> operator[](size_t n) {
     return Span(values.data() + n * num_dims, num_dims);
   }
+  float max() const {
+    float res = 0;
+    for (size_t step_idx = 0; step_idx < num_steps; ++step_idx) {
+      for (size_t dim_idx = 0; dim_idx < num_dims; ++dim_idx) {
+        res = std::max(res, std::abs(operator[](step_idx)[dim_idx]));
+      }
+    }
+    return res;
+  }
+  void rescale(float f) {
+    for (size_t step_idx = 0; step_idx < num_steps; ++step_idx) {
+      for (size_t dim_idx = 0; dim_idx < num_dims; ++dim_idx) {
+        operator[](step_idx)[dim_idx] *= f;
+      }
+    }
+  }
   size_t num_steps;
   size_t num_dims;
   std::vector<float> values;
@@ -499,7 +514,7 @@ struct CostMatrix {
       : steps_a(steps_a),
         steps_b(steps_b),
         values(std::vector<double>(steps_a * steps_b,
-                                   std::numeric_limits<double>::infinity())) {
+                                   std::numeric_limits<double>::max())) {
     set(0, 0, 0);
   }
   size_t steps_a;
@@ -528,8 +543,6 @@ std::vector<std::pair<size_t, size_t>> DTW(const Spectrogram& spec_a,
   // Sanity check that both spectrograms have the same number of feature
   // dimensions.
   assert_eq(spec_a.num_dims, spec_b.num_dims);
-  // Initialize a cost matrix with 0 at the start point, infinity at [*, 0] and
-  // [0, *].
   CostMatrix cost_matrix(spec_a.num_steps, spec_b.num_steps);
   // Compute cost as cost as weighted sum of feature dimension norms to each
   // cell.
@@ -557,7 +570,7 @@ std::vector<std::pair<size_t, size_t>> DTW(const Spectrogram& spec_a,
   result.push_back(pos);
   while (pos.first + 1 < spec_a.num_steps &&
          pos.second + 1 < spec_b.num_steps) {
-    double min_cost = std::numeric_limits<double>::infinity();
+    double min_cost = std::numeric_limits<double>::max();
     for (const auto& test_pos :
          {std::pair<size_t, size_t>{pos.first + 1, pos.second + 1},
           std::pair<size_t, size_t>{pos.first + 1, pos.second},
@@ -575,48 +588,6 @@ std::vector<std::pair<size_t, size_t>> DTW(const Spectrogram& spec_a,
 
 // Expected signal sample rate.
 constexpr float kSampleRate = 48000;
-
-// Contains the energy in dB FS, and maximum absolute amplitude, of a signal.
-struct EnergyAndMaxAbsAmplitude {
-  float energy_db_fs;
-  float max_abs_amplitude;
-};
-
-// Returns the energy and maximum absolute amplitude of a signal.
-EnergyAndMaxAbsAmplitude Measure(Span<const float> signal) {
-  float signal_max = 0;
-  float signal_energy = 0;
-  for (size_t index = 0; index < signal.size; ++index) {
-    const float amplitude = signal.data[index];
-    signal_energy += amplitude * amplitude;
-    signal_max = std::max(signal_max, std::abs(amplitude));
-  }
-  return {.energy_db_fs =
-              20 * std::log10(signal_energy / static_cast<float>(signal.size)),
-          .max_abs_amplitude = signal_max};
-}
-
-// Normalizes the amplitude of the signal array to have the provided maximum
-// absolute amplitude.
-//
-// Returns the energy in dB FS, and maximum absolute amplitude, of the result.
-EnergyAndMaxAbsAmplitude NormalizeAmplitude(float max_abs_amplitude,
-                                            Span<float> signal) {
-  float signal_max = 0;
-  float signal_energy = 0;
-  for (size_t index = 0; index < signal.size; ++index) {
-    signal_max = std::max(signal_max, std::abs(signal.data[index]));
-  }
-  const float scaling = max_abs_amplitude / signal_max;
-  for (size_t index = 0; index < signal.size; ++index) {
-    const float new_amplitude = scaling * signal.data[index];
-    signal_energy += new_amplitude * new_amplitude;
-    signal.data[index] = new_amplitude;
-  }
-  return {.energy_db_fs =
-              20 * std::log10(signal_energy / static_cast<float>(signal.size)),
-          .max_abs_amplitude = max_abs_amplitude};
-}
 
 // Contains parameters and code to compute perceptual spectrograms of sounds.
 struct Zimtohrli {
@@ -639,8 +610,13 @@ struct Zimtohrli {
   }
 
   float Distance(const Spectrogram& spectrogram_a,
-                 const Spectrogram& spectrogram_b) const {
+                 Spectrogram& spectrogram_b) const {
     assert_eq(spectrogram_a.num_dims, spectrogram_b.num_dims);
+    const float max_a = spectrogram_a.max();
+    const float max_b = spectrogram_b.max();
+    if (max_a != max_b) {
+      spectrogram_b.rescale(max_a / max_b);
+    }
     std::vector<std::pair<size_t, size_t>> time_pairs;
     time_pairs = DTW(spectrogram_a, spectrogram_b);
     return 1 - NSIM(spectrogram_a, spectrogram_b, time_pairs, nsim_step_window,

@@ -28,24 +28,6 @@
 
 float SampleRate() { return zimtohrli::kSampleRate; }
 
-EnergyAndMaxAbsAmplitude Measure(const float* signal, int size) {
-  const zimtohrli::EnergyAndMaxAbsAmplitude measurements =
-      zimtohrli::Measure(zimtohrli::Span(signal, size));
-  return EnergyAndMaxAbsAmplitude{
-      .EnergyDBFS = measurements.energy_db_fs,
-      .MaxAbsAmplitude = measurements.max_abs_amplitude};
-}
-
-EnergyAndMaxAbsAmplitude NormalizeAmplitude(float max_abs_amplitude,
-                                            float* signal, int size) {
-  const zimtohrli::EnergyAndMaxAbsAmplitude measurements =
-      zimtohrli::NormalizeAmplitude(max_abs_amplitude,
-                                    zimtohrli::Span(signal, size));
-  return EnergyAndMaxAbsAmplitude{
-      .EnergyDBFS = measurements.energy_db_fs,
-      .MaxAbsAmplitude = measurements.max_abs_amplitude};
-}
-
 float MOSFromZimtohrli(float zimtohrli_distance) {
   return zimtohrli::MOSFromZimtohrli(zimtohrli_distance);
 }

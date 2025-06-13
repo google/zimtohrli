@@ -42,22 +42,13 @@ namespace zimtohrli {
 
 namespace {
 
-void PrintLoadFileInfo(
-    const std::string& path, const SF_INFO& file_info,
-    const std::vector<EnergyAndMaxAbsAmplitude>& measurements) {
+void PrintLoadFileInfo(const std::string& path, const SF_INFO& file_info) {
   std::cout << "Loaded " << path << " (" << file_info.channels << "x"
             << file_info.frames << "@" << file_info.samplerate << "Hz "
             << GetFormatName(file_info.format) << ", "
             << (static_cast<float>(file_info.frames) /
                 static_cast<float>(file_info.samplerate))
             << "s)\n";
-  for (size_t channel_index = 0; channel_index < measurements.size();
-       ++channel_index) {
-    std::cout << "  Channel " << channel_index
-              << " energy = " << measurements[channel_index].energy_db_fs
-              << "dB FS, max abs amplitude = "
-              << measurements[channel_index].max_abs_amplitude << std::endl;
-  }
 }
 
 float GetMetric(float zimtohrli_score) {
@@ -92,18 +83,9 @@ int Main(int argc, char* argv[]) {
        ++channel_idx) {
     channels_a.push_back(file_a->AtRate(channel_idx, kSampleRate));
   }
-  std::vector<EnergyAndMaxAbsAmplitude> file_a_measurements;
-  float file_a_max_abs_amplitude = 0;
-  for (size_t channel_index = 0; channel_index < file_a->Info().channels;
-       ++channel_index) {
-    EnergyAndMaxAbsAmplitude measurements = Measure(channels_a[channel_index]);
-    file_a_max_abs_amplitude =
-        std::max(file_a_max_abs_amplitude, measurements.max_abs_amplitude);
-    file_a_measurements.push_back(measurements);
-  }
   const bool verbose = absl::GetFlag(FLAGS_verbose);
   if (verbose) {
-    PrintLoadFileInfo(path_a, file_a->Info(), file_a_measurements);
+    PrintLoadFileInfo(path_a, file_a->Info());
   }
 
   std::vector<AudioFile> file_b_vector;
@@ -122,29 +104,11 @@ int Main(int argc, char* argv[]) {
          ++channel_idx) {
       channels_b.push_back(file_b->AtRate(channel_idx, kSampleRate));
     }
-    std::vector<EnergyAndMaxAbsAmplitude> measurements;
-    for (size_t channel_index = 0; channel_index < file_b->Info().channels;
-         ++channel_index) {
-      measurements.push_back(Measure(channels_b[channel_index]));
-    }
     if (verbose) {
-      PrintLoadFileInfo(file_b->Path(), file_b->Info(), measurements);
+      PrintLoadFileInfo(file_b->Path(), file_b->Info());
     }
     CHECK_EQ(file_a->Info().channels, file_b->Info().channels);
     CHECK_EQ(file_a->Info().samplerate, file_b->Info().samplerate);
-    for (size_t channel_index = 0; channel_index < file_b->Info().channels;
-         ++channel_index) {
-      const EnergyAndMaxAbsAmplitude new_energy_and_max_abs_amplitude =
-          NormalizeAmplitude(file_a_max_abs_amplitude,
-                             channels_b[channel_index]);
-      if (verbose) {
-        std::cerr << "  Normalized channel " << channel_index << " energy = "
-                  << new_energy_and_max_abs_amplitude.energy_db_fs
-                  << "dB FS, max abs amplitude = "
-                  << new_energy_and_max_abs_amplitude.max_abs_amplitude
-                  << std::endl;
-      }
-    }
     file_b_vector.push_back(*std::move(file_b));
     channels_b_vector.push_back(channels_b);
   }

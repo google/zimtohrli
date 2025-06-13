@@ -129,7 +129,7 @@ PyObject* Pyohrli_distance(PyohrliObject* self, PyObject* const* args,
   if (!spectrogram_a.has_value()) {
     return nullptr;
   }
-  const std::optional<zimtohrli::Spectrogram> spectrogram_b =
+  std::optional<zimtohrli::Spectrogram> spectrogram_b =
       Analyze(zimtohrli, args[1]);
   if (!spectrogram_b.has_value()) {
     return nullptr;

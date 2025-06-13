@@ -32,31 +32,6 @@ import (
 	"github.com/google/zimtohrli/go/audio"
 )
 
-// EnergyAndMaxAbsAmplitude is holds the energy and maximum absolute amplitude of a measurement.
-type EnergyAndMaxAbsAmplitude struct {
-	EnergyDBFS      float32
-	MaxAbsAmplitude float32
-}
-
-// Measure returns the energy in dB FS and maximum absolute amplitude of the signal.
-func Measure(signal []float32) EnergyAndMaxAbsAmplitude {
-	measurements := C.Measure((*C.float)(&signal[0]), C.int(len(signal)))
-	return EnergyAndMaxAbsAmplitude{
-		EnergyDBFS:      float32(measurements.EnergyDBFS),
-		MaxAbsAmplitude: float32(measurements.MaxAbsAmplitude),
-	}
-}
-
-// NormalizeAmplitude normalizes the amplitudes of the signal so that it has the provided max
-// amplitude, and returns the new energ in dB FS, and the new maximum absolute amplitude.
-func NormalizeAmplitude(maxAbsAmplitude float32, signal []float32) EnergyAndMaxAbsAmplitude {
-	measurements := C.NormalizeAmplitude(C.float(maxAbsAmplitude), (*C.float)(&signal[0]), C.int(len(signal)))
-	return EnergyAndMaxAbsAmplitude{
-		EnergyDBFS:      float32(measurements.EnergyDBFS),
-		MaxAbsAmplitude: float32(measurements.MaxAbsAmplitude),
-	}
-}
-
 // MOSFromZimtohrli returns an approximate mean opinion score for a given zimtohrli distance.
 func MOSFromZimtohrli(zimtohrliDistance float64) float64 {
 	return float64(C.MOSFromZimtohrli(C.float(zimtohrliDistance)))
@@ -217,8 +192,6 @@ func (g *Goohrli) NormalizedAudioDistance(audioA, audioB *audio.Audio) (float64,
 		return 0, fmt.Errorf("the audio files don't have any channels")
 	}
 	for channelIndex := range audioA.Samples {
-		measurement := Measure(audioA.Samples[channelIndex])
-		NormalizeAmplitude(measurement.MaxAbsAmplitude, audioB.Samples[channelIndex])
 		dist := float64(g.Distance(audioA.Samples[channelIndex], audioB.Samples[channelIndex]))
 		if math.IsNaN(dist) {
 			return 0, fmt.Errorf("%v.Distance(...) returned %v", g, dist)

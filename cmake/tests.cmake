@@ -4,8 +4,6 @@ add_executable(zimtohrli_test
     cpp/zimt/dtw_test.cc
     cpp/zimt/mos_test.cc
     cpp/zimt/nsim_test.cc
-    cpp/zimt/zimtohrli_test.cc
-    cpp/zimt/fourier_bank_test.cc
     cpp/zimt/test_file_paths.cc
 )
 target_include_directories(zimtohrli_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cpp)
@@ -32,7 +30,6 @@ add_test(NAME zimtohrli_go_test
 add_executable(zimtohrli_benchmark
     cpp/zimt/dtw_test.cc
     cpp/zimt/nsim_test.cc
-    cpp/zimt/zimtohrli_test.cc
 )
 target_include_directories(zimtohrli_benchmark PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cpp)
 target_link_libraries(zimtohrli_benchmark gtest gmock benchmark_main samplerate)

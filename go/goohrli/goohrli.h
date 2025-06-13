@@ -60,21 +60,6 @@ typedef void* GoSpectrogram;
 // data.
 GoSpectrogram Analyze(Zimtohrli zimtohrli, float* data, int size);
 
-// Plain C version of zimtohrli::EnergyAndMaxAbsAmplitude.
-typedef struct {
-  float EnergyDBFS;
-  float MaxAbsAmplitude;
-} EnergyAndMaxAbsAmplitude;
-
-// Returns the energy in dB FS, and maximum absolute amplitude, of the signal.
-EnergyAndMaxAbsAmplitude Measure(const float* signal, int size);
-
-// Normalizes the amplitudes of the signal so that it has the provided max
-// amplitude, and returns the new energ in dB FS, and the new maximum absolute
-// amplitude.
-EnergyAndMaxAbsAmplitude NormalizeAmplitude(float max_abs_amplitude,
-                                            float* signal_data, int size);
-
 // Returns a _very_approximate_ mean opinion score based on the
 // provided Zimtohrli distance.
 // This is calibrated using default settings of v0.1.5, with a

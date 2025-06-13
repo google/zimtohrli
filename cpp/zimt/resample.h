@@ -15,7 +15,6 @@
 #ifndef CPP_ZIMT_RESAMPLE_H_
 #define CPP_ZIMT_RESAMPLE_H_
 
-#include <cassert>
 #include <cstddef>
 #include <type_traits>
 #include <vector>
@@ -58,7 +57,7 @@ std::vector<O> Resample(Span<const I> samples, float in_sample_rate,
       .src_ratio = out_sample_rate / in_sample_rate,
   };
   int src_result = src_simple(&resample_data, SRC_SINC_BEST_QUALITY, 1);
-  assert(src_result == 0);
+  assert_eq(src_result, 0);
   return Convert<O>(
       Span<const float>(result_as_floats.data(), result_as_floats.size()));
 }
