@@ -68,7 +68,7 @@ void BM_NSIM(benchmark::State& state) {
   for (auto s : state) {
     NSIM(spec_a, spec_a, time_pairs, 9, 9);
   }
-  state.SetItemsProcessed(spec_a.values.size() * state.iterations());
+  state.SetItemsProcessed(spec_a.size() * state.iterations());
 }
 BENCHMARK_RANGE(BM_NSIM, 1, 60);
 

@@ -31,7 +31,12 @@ extern "C" {
 #define NUM_LOUDNESS_L_U_PARAMS 16
 #define NUM_LOUDNESS_T_F_PARAMS 13
 
+// The supported sample rate for Zimtohrli.
 float SampleRate();
+
+// The number of rotators used by Zimtohrli, i.e. the number
+// of dimensions in the spectrograms.
+int NumRotators();
 
 // Contains the parameters controlling Zimtohrli behavior.
 typedef struct ZimtohrliParameters {
@@ -53,14 +58,28 @@ Zimtohrli CreateZimtohrli(ZimtohrliParameters params);
 // Deletes a zimtohrli::Zimtohrli.
 void FreeZimtohrli(Zimtohrli z);
 
-// void* representation of zimtohrli::Analysis.
-typedef void* GoSpectrogram;
+// Returns the number of steps a spectrogram of the given number
+// of samples requires.
+int SpectrogramSteps(Zimtohrli zimtohrli, int samples);
+
+// Represents a zimtohrli::Span.
+typedef struct {
+  float* data;
+  int size;
+} GoSpan;
+
+// Represents a zimtohrli::Spectrogram.
+typedef struct {
+  float* values;
+  int steps;
+  int dims;
+} GoSpectrogram;
 
 // Returns a spectrogram by the provided zimtohrli::Zimtohrli using the provided
 // data.
-GoSpectrogram Analyze(Zimtohrli zimtohrli, float* data, int size);
+void Analyze(Zimtohrli zimtohrli, const GoSpan* signal, GoSpectrogram* spec);
 
-// Returns a _very_approximate_ mean opinion score based on the
+// Returns an approximate mean opinion score based on the
 // provided Zimtohrli distance.
 // This is calibrated using default settings of v0.1.5, with a
 // minimum channel bandwidth (zimtohrli::Cam.minimum_bandwidth_hz)
@@ -68,12 +87,9 @@ GoSpectrogram Analyze(Zimtohrli zimtohrli, float* data, int size);
 // (zimtohrli::Distance(..., perceptual_sample_rate, ...) of 100Hz.
 float MOSFromZimtohrli(float zimtohrli_distance);
 
-// Deletes a spectrogram.
-void FreeSpec(GoSpectrogram a);
-
 // Returns the Zimtohrli distance between two analyses using the provided
 // zimtohrli::Zimtohrli.
-float Distance(Zimtohrli zimtohrli, GoSpectrogram a, GoSpectrogram b);
+float Distance(Zimtohrli zimtohrli, const GoSpectrogram* a, GoSpectrogram* b);
 
 // Sets the parameters.
 //
@@ -101,8 +117,9 @@ typedef struct {
 } MOSResult;
 
 // MOS returns a ViSQOL MOS between reference and distorted.
-MOSResult MOS(ViSQOL v, float sample_rate, const float* reference,
-              int reference_size, const float* distorted, int distorted_size);
+MOSResult ViSQOLMOS(ViSQOL v, float sample_rate, const float* reference,
+                    int reference_size, const float* distorted,
+                    int distorted_size);
 
 #ifdef __cplusplus
 }

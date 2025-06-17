@@ -205,34 +205,56 @@ func (g *Goohrli) NormalizedAudioDistance(audioA, audioB *audio.Audio) (float64,
 	return result, nil
 }
 
-// Spec is a Go wrapper around zimthrli::Analysis.
+// Spec contains a zimtohrli::Spectrogram.
 type Spec struct {
-	spec C.GoSpectrogram
+	Values []float32
+	Steps  int
+}
+
+func (s *Spec) toC(pinner *runtime.Pinner) *C.GoSpectrogram {
+	pinner.Pin(&s.Values[0])
+	return &C.GoSpectrogram{
+		values: (*C.float)(&s.Values[0]),
+		steps:  C.int(s.Steps),
+		dims:   C.int(len(s.Values) / s.Steps),
+	}
+}
+
+func toC(pinner *runtime.Pinner, signal []float32) *C.GoSpan {
+	pinner.Pin(&signal[0])
+	return &C.GoSpan{
+		data: (*C.float)(&signal[0]),
+		size: C.int(len(signal)),
+	}
 }
 
 // Spectrogram returns a spectrogram of the signal.
 func (g *Goohrli) Analyze(signal []float32) *Spec {
+	steps := int(C.SpectrogramSteps(g.zimtohrli, C.int(len(signal))))
 	result := &Spec{
-		spec: C.Analyze(g.zimtohrli, (*C.float)(&signal[0]), C.int(len(signal))),
+		Values: make([]float32, steps*int(C.NumRotators())),
+		Steps:  steps,
 	}
-	runtime.SetFinalizer(result, func(a *Spec) {
-		C.FreeSpec(a.spec)
-	})
+	pinner := &runtime.Pinner{}
+	defer pinner.Unpin()
+	C.Analyze(g.zimtohrli, toC(pinner, signal), result.toC(pinner))
 	return result
 }
 
-// SpecDistance returns the Zimtohrli distance between two analyses.
+// SpecDistance returns the Zimtohrli distance between two spectrograms.
 func (g *Goohrli) SpecDistance(specA *Spec, specB *Spec) float32 {
-	return float32(C.Distance(g.zimtohrli, specA.spec, specB.spec))
+	pinner := &runtime.Pinner{}
+	defer pinner.Unpin()
+	return float32(C.Distance(g.zimtohrli, specA.toC(pinner), specB.toC(pinner)))
 }
 
 // Distance returns the Zimtohrli distance between two signals.
 func (g *Goohrli) Distance(signalA []float32, signalB []float32) float64 {
-	specA := C.Analyze(g.zimtohrli, (*C.float)(&signalA[0]), C.int(len(signalA)))
-	defer C.FreeSpec(specA)
-	specB := C.Analyze(g.zimtohrli, (*C.float)(&signalB[0]), C.int(len(signalB)))
-	defer C.FreeSpec(specB)
-	return float64(C.Distance(g.zimtohrli, specA, specB))
+	specA := g.Analyze(signalA)
+	specB := g.Analyze(signalB)
+	pinner := &runtime.Pinner{}
+	defer pinner.Unpin()
+	return float64(C.Distance(g.zimtohrli, specA.toC(pinner), specB.toC(pinner)))
 }
 
 // ViSQOL is a Go wrapper around zimtohrli::ViSQOL.
@@ -253,7 +275,7 @@ func NewViSQOL() *ViSQOL {
 
 // MOS returns the ViSQOL mean opinion score of the degraded samples comapred to the reference samples.
 func (v *ViSQOL) MOS(sampleRate float64, reference []float32, degraded []float32) (float64, error) {
-	result := C.MOS(v.visqol, C.float(sampleRate), (*C.float)(&reference[0]), C.int(len(reference)), (*C.float)(&degraded[0]), C.int(len(degraded)))
+	result := C.ViSQOLMOS(v.visqol, C.float(sampleRate), (*C.float)(&reference[0]), C.int(len(reference)), (*C.float)(&degraded[0]), C.int(len(degraded)))
 	if result.Status != 0 {
 		return 0, fmt.Errorf("calling ViSQOL returned status %v", result.Status)
 	}

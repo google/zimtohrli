@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <vector>
@@ -273,21 +274,28 @@ struct Spectrogram {
   Spectrogram(size_t num_steps)
       : num_steps(num_steps),
         num_dims(kNumRotators),
-        values(num_steps * kNumRotators) {}
+        values(std::make_unique<float[]>(num_steps * kNumRotators)) {}
   Spectrogram(size_t num_steps, size_t num_dims)
       : num_steps(num_steps),
         num_dims(num_dims),
-        values(num_steps * num_dims) {}
-  Spectrogram(size_t num_steps, size_t num_dims, std::vector<float> values)
-      : num_steps(num_steps), num_dims(num_dims), values(values) {
-    assert_eq(num_steps * num_dims, values.size());
+        values(std::make_unique<float[]>(num_steps * num_dims)) {}
+  Spectrogram(size_t num_steps, size_t num_dims,
+              std::unique_ptr<float[]> values)
+      : num_steps(num_steps), num_dims(num_dims), values(std::move(values)) {}
+  Spectrogram(size_t num_steps, size_t num_dims, std::vector<float> data)
+      : num_steps(num_steps),
+        num_dims(num_dims),
+        values(std::make_unique<float[]>(data.size())) {
+    std::memcpy(values.get(), data.data(), data.size() * sizeof(float));
   }
+  Spectrogram(size_t num_steps, size_t num_dims, float* data)
+      : num_steps(num_steps), num_dims(num_dims), values(data) {}
   Spectrogram& operator=(Spectrogram&& other) = default;
   Span<const float> operator[](size_t n) const {
-    return Span<const float>(values.data() + n * num_dims, num_dims);
+    return Span<const float>(values.get() + n * num_dims, num_dims);
   }
   Span<float> operator[](size_t n) {
-    return Span(values.data() + n * num_dims, num_dims);
+    return Span(values.get() + n * num_dims, num_dims);
   }
   float max() const {
     float res = 0;
@@ -305,9 +313,10 @@ struct Spectrogram {
       }
     }
   }
+  size_t size() const { return num_steps * num_dims; }
   size_t num_steps;
   size_t num_dims;
-  std::vector<float> values;
+  std::unique_ptr<float[]> values;
 };
 
 template <typename T>
@@ -339,7 +348,7 @@ Spectrogram WindowMean(size_t num_steps, size_t num_channels,
   // Populate tmp_a with windowed sums across the step axis using the prefix
   // sums in tmp_b.
   // 1: Copy the step_window first rows from tmp_b to tmp_a.
-  std::memcpy(tmp_a.values.data(), tmp_b.values.data(),
+  std::memcpy(tmp_a.values.get(), tmp_b.values.get(),
               step_window * num_channels * sizeof(float));
   // 2: Compute windowed sums by subtracting prefix sums from each other.
   for (size_t step_index = step_window; step_index < num_steps; ++step_index) {
@@ -594,19 +603,20 @@ struct Zimtohrli {
   void Analyze(Span<const float> signal, Spectrogram& spectrogram) const {
     assert_eq(spectrogram.num_dims, kNumRotators);
     Rotators rots;
-    rots.FilterAndDownsample(signal.data, signal.size,
-                             spectrogram.values.data(), spectrogram.num_steps,
-                             spectrogram.num_dims,
+    rots.FilterAndDownsample(signal.data, signal.size, spectrogram.values.get(),
+                             spectrogram.num_steps, spectrogram.num_dims,
                              signal.size / spectrogram.num_steps);
   }
 
   Spectrogram Analyze(Span<const float> signal) const {
-    size_t num_steps =
-        static_cast<size_t>(std::ceil(static_cast<float>(signal.size) *
-                                      perceptual_sample_rate / kSampleRate));
-    Spectrogram spec(num_steps, kNumRotators);
+    Spectrogram spec(SpectrogramSteps(signal.size), kNumRotators);
     Analyze(signal, spec);
     return spec;
+  }
+
+  size_t SpectrogramSteps(size_t num_samples) const {
+    return static_cast<size_t>(std::ceil(static_cast<float>(num_samples) *
+                                         perceptual_sample_rate / kSampleRate));
   }
 
   float Distance(const Spectrogram& spectrogram_a,

@@ -28,6 +28,8 @@
 
 float SampleRate() { return zimtohrli::kSampleRate; }
 
+int NumRotators() { return zimtohrli::kNumRotators; }
+
 float MOSFromZimtohrli(float zimtohrli_distance) {
   return zimtohrli::MOSFromZimtohrli(zimtohrli_distance);
 }
@@ -42,26 +44,29 @@ void FreeZimtohrli(Zimtohrli zimtohrli) {
   delete static_cast<zimtohrli::Zimtohrli*>(zimtohrli);
 }
 
-GoSpectrogram Analyze(Zimtohrli zimtohrli, float* data, int size) {
+int SpectrogramSteps(Zimtohrli zimtohrli, int samples) {
   zimtohrli::Zimtohrli* z = static_cast<zimtohrli::Zimtohrli*>(zimtohrli);
-  const size_t num_downscaled_samples = static_cast<size_t>(std::max(
-      1.0f, std::ceil(static_cast<float>(size) * z->perceptual_sample_rate /
-                      zimtohrli::kSampleRate)));
-  zimtohrli::Spectrogram* spec = new zimtohrli::Spectrogram(
-      num_downscaled_samples, zimtohrli::kNumRotators);
-  z->Analyze(zimtohrli::Span(data, size), *spec);
-  return spec;
+  return z->SpectrogramSteps(static_cast<size_t>(samples));
 }
 
-void FreeSpec(GoSpectrogram a) {
-  delete static_cast<zimtohrli::Spectrogram*>(a);
+void Analyze(Zimtohrli zimtohrli, const GoSpan* signal, GoSpectrogram* result) {
+  zimtohrli::Zimtohrli* z = static_cast<zimtohrli::Zimtohrli*>(zimtohrli);
+  zimtohrli::Spectrogram spec =
+      zimtohrli::Spectrogram(result->steps, result->dims, result->values);
+  z->Analyze(zimtohrli::Span(signal->data, signal->size), spec);
+  spec.values.release();
 }
 
-float Distance(Zimtohrli zimtohrli, GoSpectrogram a, GoSpectrogram b) {
+float Distance(Zimtohrli zimtohrli, const GoSpectrogram* a, GoSpectrogram* b) {
   zimtohrli::Zimtohrli* z = static_cast<zimtohrli::Zimtohrli*>(zimtohrli);
-  zimtohrli::Spectrogram* spec_a = static_cast<zimtohrli::Spectrogram*>(a);
-  zimtohrli::Spectrogram* spec_b = static_cast<zimtohrli::Spectrogram*>(b);
-  return z->Distance(*spec_a, *spec_b);
+  zimtohrli::Spectrogram spec_a =
+      zimtohrli::Spectrogram(a->steps, a->dims, a->values);
+  zimtohrli::Spectrogram spec_b =
+      zimtohrli::Spectrogram(b->steps, b->dims, b->values);
+  const float result = z->Distance(spec_a, spec_b);
+  spec_a.values.release();
+  spec_b.values.release();
+  return result;
 }
 
 ZimtohrliParameters GetZimtohrliParameters(const Zimtohrli zimtohrli) {
@@ -92,8 +97,9 @@ ViSQOL CreateViSQOL() { return new zimtohrli::ViSQOL(); }
 
 void FreeViSQOL(ViSQOL v) { delete (zimtohrli::ViSQOL*)(v); }
 
-MOSResult MOS(const ViSQOL v, float sample_rate, const float* reference,
-              int reference_size, const float* distorted, int distorted_size) {
+MOSResult ViSQOLMOS(const ViSQOL v, float sample_rate, const float* reference,
+                    int reference_size, const float* distorted,
+                    int distorted_size) {
   const zimtohrli::ViSQOL* visqol = static_cast<const zimtohrli::ViSQOL*>(v);
   const absl::StatusOr<float> result = visqol->MOS(
       zimtohrli::Span<const float>(reference, reference_size),
