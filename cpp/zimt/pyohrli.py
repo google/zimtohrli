@@ -42,7 +42,7 @@ class Pyohrli:
     def distance(self, signal_a: npt.ArrayLike, signal_b: npt.ArrayLike) -> float:
         """Computes the distance between two signals.
 
-        See 'analyze' for the signal format.
+        The signals must be (num_samples,)-shaped 48kHz [-1, 1] float arrays.
 
         Args:
           signal_a: A signal to compare.
@@ -55,6 +55,22 @@ class Pyohrli:
             np.asarray(signal_a).astype(np.float32).ravel().data,
             np.asarray(signal_b).astype(np.float32).ravel().data,
         )
+
+    def analyze(self, signal: npt.ArrayLike) -> np.array:
+        """Computes the Zimtohrli spectrogram of a signal.compile
+
+        Args:
+          signal: A (num_samples,)-shaped 48kHz [-1, 1] float array.
+        Returns:
+          A (num_steps, num_dims)-shaped float array with the Zimtohrli
+          spectrogram of the signal.
+        """
+        bytes = self._cc_pyohrli.analyze(
+            np.asarray(signal).astype(np.float32).ravel().data
+        )
+        result = np.frombuffer(bytes, dtype=np.float32)
+        num_rotators = self._cc_pyohrli.num_rotators()
+        return result.reshape((result.shape[0] // num_rotators, num_rotators))
 
     @property
     def full_scale_sine_db(self) -> float:

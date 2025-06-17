@@ -138,7 +138,37 @@ PyObject* Pyohrli_distance(PyohrliObject* self, PyObject* const* args,
       zimtohrli.Distance(spectrogram_a.value(), spectrogram_b.value()));
 }
 
+PyObject* Pyohrli_analyze(PyohrliObject* self, PyObject* const* args,
+                          Py_ssize_t nargs) {
+  if (nargs != 1) {
+    return BadArgument("not exactly 1 argument provided");
+  }
+  const zimtohrli::Zimtohrli zimtohrli =
+      *static_cast<zimtohrli::Zimtohrli*>(self->zimtohrli);
+  const std::optional<zimtohrli::Spectrogram> spectrogram =
+      Analyze(zimtohrli, args[0]);
+  if (!spectrogram.has_value()) {
+    return nullptr;
+  }
+  return PyBytes_FromStringAndSize(
+      reinterpret_cast<const char*>(spectrogram->values.get()),
+      spectrogram->size() * sizeof(float));
+}
+
+PyObject* Pyohrli_num_rotators(PyohrliObject* self, PyObject* const* args,
+                               Py_ssize_t nargs) {
+  if (nargs != 0) {
+    return BadArgument("not exactly 0 arguments provided");
+  }
+  return PyLong_FromLong(zimtohrli::kNumRotators);
+}
+
 PyMethodDef Pyohrli_methods[] = {
+    {"num_rotators", (PyCFunction)Pyohrli_num_rotators, METH_FASTCALL,
+     "Returns the number of rotators, i.e. the number of dimensions in a "
+     "spectrogram."},
+    {"analyze", (PyCFunction)Pyohrli_analyze, METH_FASTCALL,
+     "Returns a spectrogram of the provided signal."},
     {"distance", (PyCFunction)Pyohrli_distance, METH_FASTCALL,
      "Returns the distance between the two provided signals."},
     {nullptr} /* Sentinel */
