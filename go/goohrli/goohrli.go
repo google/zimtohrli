@@ -16,7 +16,7 @@
 package goohrli
 
 /*
-#cgo LDFLAGS: ${SRCDIR}/goohrli.a -lz -lopus -lFLAC -lvorbis -lvorbisenc -logg -lasound -lm -lstdc++
+#cgo LDFLAGS: ${SRCDIR}/goohrli.a -lsoxr -lz -lopus -lFLAC -lvorbis -lvorbisenc -logg -lasound -lm -lstdc++
 #cgo CFLAGS: -O3
 #include "goohrli.h"
 */

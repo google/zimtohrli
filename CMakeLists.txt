@@ -40,11 +40,9 @@ target_link_libraries(zimtohrli_pyohrli Python3::Python absl::check)
 
 add_library(zimtohrli_goohrli_glue STATIC
     cpp/zimt/goohrli.cc
-    cpp/zimt/zimtohrli.h
-    go/goohrli/goohrli.h
 )
 target_include_directories(zimtohrli_goohrli_glue PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cpp ${CMAKE_CURRENT_SOURCE_DIR}/go/goohrli ${CMAKE_CURRENT_SOURCE_DIR}/go/gosqol)
-target_link_libraries(zimtohrli_goohrli_glue zimtohrli_visqol_adapter)
+target_link_libraries(zimtohrli_goohrli_glue zimtohrli_visqol_adapter PkgConfig::soxr)
 
 set(zimtohrli_goohrli_object ${CMAKE_CURRENT_BINARY_DIR}/goohrli.o)
 set(zimtohrli_goohrli_archive ${CMAKE_CURRENT_SOURCE_DIR}/go/goohrli/goohrli.a)
