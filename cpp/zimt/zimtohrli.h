@@ -83,7 +83,7 @@ inline void LoudnessDb(float* channels) {
   };
   static const float kBaseNoise = 886018.44434708043;
   for (int k = 0; k < kNumRotators; ++k) {
-    channels[k] = log(channels[k] + kBaseNoise + pow(kBaseNoise2, kMul[k])) * kMul[k];
+    channels[k] = log(channels[k] + kBaseNoise) * kMul[k];
   }
 }
 
@@ -649,7 +649,6 @@ struct Zimtohrli {
   float perceptual_sample_rate = kSampleRate / samples_per_perceptual_block;
   // The reference dB SPL of a sine signal of amplitude 1.
   float full_scale_sine_db = 78.3;
-  float epsilon = 1e-9;
 };
 
 }  // namespace
