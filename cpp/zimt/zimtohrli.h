@@ -202,9 +202,9 @@ class Rotators {
         out[zz * out_stride + k] = 0;
       }
     }
-    std::vector<float> window(downsample);
+    std::vector<float> downsample_window(downsample);
     for (int i = 0; i < downsample; ++i) {
-      window[i] =
+      downsample_window[i] =
           1.0 / (1.0 + exp(7.9446 * ((2.0 / downsample) * (i + 0.5) - 1)));
     }
     Resonator resonator;
@@ -231,7 +231,7 @@ class Rotators {
       -0.72083484154250099, 0.84200784192262634, -0.10112736611558046, -0.44049413285605787,
     };
     for (size_t in_ix = 0, dix = 0; in_ix + kKernelSize < in_size; ++in_ix) {
-      const float weight = window[dix];
+      const float weight = downsample_window[dix];
       IncrementAll(resonator.Update(Dot32(&in[in_ix], &reso_kernel[0])) +
                    Dot32(&in[in_ix], &linear_kernel[0]));
       if (out_ix + 1 < out_shape0) {
