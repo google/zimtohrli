@@ -25,6 +25,8 @@
 
 namespace zimtohrli {
 
+// Lightweight non-owning view of a contiguous array.
+// Similar to std::span but available pre-C++20.
 template <typename T>
 struct Span {
   Span(const Span& other) = default;
@@ -62,6 +64,9 @@ namespace {
 
 constexpr int64_t kNumRotators = 128;
 
+// Converts energy values in frequency channels to loudness in dB using
+// psychoacoustic weighting factors for each frequency band.
+// Applies frequency-dependent gain correction and logarithmic scaling.
 inline void LoudnessDb(float* channels) {
   static const float kMul[128] = {
       0.69022, 0.68908, 0.69206, 0.68780, 0.68780, 0.68780, 0.68780, 0.68780,
@@ -103,6 +108,8 @@ struct Resonator {
   }
 };
 
+// Computes dot product of two 32-element float arrays.
+// Optimized for SIMD vectorization with -ffast-math.
 inline float Dot32(const float* a, const float* b) {
   // -ffast-math is helpful here, and clang can simdify this.
   float sum = 0;
@@ -110,6 +117,9 @@ inline float Dot32(const float* a, const float* b) {
   return sum;
 }
 
+// Returns the center frequency in Hz for filter bank channel i.
+// The 128 channels are spaced to match human auditory perception,
+// with finer resolution at lower frequencies.
 float Freq(int i) {
   // Center frequencies of the filter bank, plus one frequency in both ends.
   static const float kFreq[130] = {
@@ -134,10 +144,14 @@ float Freq(int i) {
   return kFreq[i + 1];
 }
 
+// Calculates the effective bandwidth in Hz for filter bank channel i.
+// Uses geometric mean spacing between adjacent channels.
 double CalculateBandwidthInHz(int i) {
   return std::sqrt(Freq(i + 1) * Freq(i)) - std::sqrt(Freq(i - 1) * Freq(i));
 }
 
+// Core signal processing engine using rotating phasors (Goertzel-like algorithm)
+// for efficient frequency analysis. Implements the Tabuli filterbank.
 class Rotators {
  private:
   // Four arrays of rotators, with memory layout for up to 128-way
@@ -151,6 +165,8 @@ class Rotators {
   float window[kNumRotators];
   float gain[kNumRotators];
 
+  // Renormalizes the rotating phasors to prevent numerical drift.
+  // Called periodically during signal processing.
   void OccasionallyRenormalize() {
     for (int i = 0; i < kNumRotators; ++i) {
       float norm =
@@ -159,6 +175,8 @@ class Rotators {
       rot[3][i] *= norm;
     }
   }
+  // Updates all rotators and accumulators with a new signal sample.
+  // Applies windowing, rotates phasors, and accumulates energy.
   void IncrementAll(float signal) {
     for (int i = 0; i < kNumRotators; i++) {  // clang simdifies this.
       const float w = window[i];
@@ -176,6 +194,15 @@ class Rotators {
   }
 
  public:
+  // Main signal processing function that converts time-domain audio to a
+  // perceptual spectrogram. Applies resonator filtering, frequency analysis
+  // via rotating phasors, and downsampling.
+  // in: input audio samples
+  // in_size: number of input samples
+  // out: output spectrogram buffer
+  // out_shape0: number of time steps in output
+  // out_stride: stride between time steps in output buffer
+  // downsample: downsampling factor
   void FilterAndDownsample(const float* in, size_t in_size, float* out,
                            size_t out_shape0, size_t out_stride,
                            int downsample) {
@@ -298,6 +325,7 @@ struct Spectrogram {
   Span<float> operator[](size_t n) {
     return Span(values.get() + n * num_dims, num_dims);
   }
+  // Returns the maximum absolute value across all spectrogram values.
   float max() const {
     float res = 0;
     for (size_t step_idx = 0; step_idx < num_steps; ++step_idx) {
@@ -307,6 +335,7 @@ struct Spectrogram {
     }
     return res;
   }
+  // Multiplies all spectrogram values by the given factor.
   void rescale(float f) {
     for (size_t step_idx = 0; step_idx < num_steps; ++step_idx) {
       for (size_t dim_idx = 0; dim_idx < num_dims; ++dim_idx) {
@@ -320,6 +349,13 @@ struct Spectrogram {
   std::unique_ptr<float[]> values;
 };
 
+// Computes windowed mean values over a 2D spectrogram using efficient
+// prefix sum computation. Used by NSIM to compute local statistics.
+// num_steps: number of time steps
+// num_channels: number of frequency channels
+// step_window: window size in time dimension
+// channel_window: window size in frequency dimension
+// input_loader: function(step, channel) that loads input values
 template <typename T>
 Spectrogram WindowMean(size_t num_steps, size_t num_channels,
                        size_t step_window, size_t channel_window,
@@ -535,7 +571,9 @@ struct CostMatrix {
   std::vector<double> values;
 };
 
-// Computes the norm of the delta between two spectrograms at two given steps.
+// Computes the perceptual distance between two spectrogram frames.
+// Uses L2 norm with psychoacoustic weighting (power 0.233).
+// Used by DTW to compute frame-to-frame alignment costs.
 double delta_norm(const Spectrogram& a, const Spectrogram& b, size_t step_a,
                   size_t step_b) {
   Span<const float> dims_a = a[step_a];
@@ -602,8 +640,14 @@ std::vector<std::pair<size_t, size_t>> DTW(const Spectrogram& spec_a,
 // Expected signal sample rate.
 constexpr float kSampleRate = 48000;
 
-// Contains parameters and code to compute perceptual spectrograms of sounds.
+// Main class for psychoacoustic audio analysis.
+// Converts audio signals to perceptual spectrograms and computes
+// perceptual distance between audio signals using the Zimtohrli metric.
+// Expected input: 48kHz mono audio with samples in range [-1, 1].
 struct Zimtohrli {
+  // Analyzes an audio signal and fills the provided spectrogram.
+  // signal: input audio samples at 48kHz, range [-1, 1]
+  // spectrogram: pre-allocated output spectrogram to fill
   void Analyze(Span<const float> signal, Spectrogram& spectrogram) const {
     assert_eq(spectrogram.num_dims, kNumRotators);
     Rotators rots;
@@ -612,17 +656,26 @@ struct Zimtohrli {
                              signal.size / spectrogram.num_steps);
   }
 
+  // Analyzes an audio signal and returns a new spectrogram.
+  // signal: input audio samples at 48kHz, range [-1, 1]
+  // Returns: perceptual spectrogram representation
   Spectrogram Analyze(Span<const float> signal) const {
     Spectrogram spec(SpectrogramSteps(signal.size), kNumRotators);
     Analyze(signal, spec);
     return spec;
   }
 
+  // Calculates the number of time steps in the output spectrogram
+  // based on the input signal length and perceptual sample rate.
   size_t SpectrogramSteps(size_t num_samples) const {
     return static_cast<size_t>(std::ceil(static_cast<float>(num_samples) *
                                          perceptual_sample_rate / kSampleRate));
   }
 
+  // Computes perceptual distance between two spectrograms.
+  // Uses DTW for time alignment and NSIM for similarity measurement.
+  // Returns: distance in range [0, 1], where 0 = identical, 1 = maximally different
+  // Note: spectrogram_b may be rescaled to match spectrogram_a's energy
   float Distance(const Spectrogram& spectrogram_a,
                  Spectrogram& spectrogram_b) const {
     assert_eq(spectrogram_a.num_dims, spectrogram_b.num_dims);
