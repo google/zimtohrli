@@ -124,7 +124,7 @@ PyObject* Pyohrli_distance(PyohrliObject* self, PyObject* const* args,
   }
   const zimtohrli::Zimtohrli zimtohrli =
       *static_cast<zimtohrli::Zimtohrli*>(self->zimtohrli);
-  const std::optional<zimtohrli::Spectrogram> spectrogram_a =
+  std::optional<zimtohrli::Spectrogram> spectrogram_a =
       Analyze(zimtohrli, args[0]);
   if (!spectrogram_a.has_value()) {
     return nullptr;
