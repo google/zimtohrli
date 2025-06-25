@@ -101,7 +101,7 @@ def Eval(vec, binary_name, cached=True):
   #corpus = 'odaq'
   print("popen")
   process = subprocess.Popen(
-      ('/usr/lib/google-golang/bin/go', 'run', '../go/bin/score/score.go', '--force',
+      ('/usr/bin/go', 'run', '../go/bin/score/score.go', '--force',
        '--calculate_zimtohrli',
        '--calculate', '/usr/local/google/home/jyrki/' + g_sample + '/' + corpus,
        '--leaderboard', '/usr/local/google/home/jyrki/' + g_sample + '/' + corpus,
