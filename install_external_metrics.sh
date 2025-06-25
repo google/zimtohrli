@@ -475,7 +475,7 @@ import (
     "github.com/google/zimtohrli/go/audio"
 )
 
-const rate = 44100
+const rate = 16000
 
 func truncateAndResample(paths []string) ([]string, error) {
     shortestLength := -1
