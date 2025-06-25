@@ -191,7 +191,7 @@ class Rotators {
       window[i] = std::pow(kWindow, bandwidth * kBandwidthMagic);
       float windowM1 = 1.0f - window[i];
       const float f = Freq(i) * kHzToRad;
-      gain[i] = gainer * pow(windowM1, 3.0) * Freq(i) / bandwidth;
+      gain[i] = gainer * (windowM1 * windowM1 * windowM1) * Freq(i) / bandwidth;
       rot[0][i] = float(std::cos(f));
       rot[1][i] = float(-std::sin(f));
       rot[2][i] = gain[i];
