@@ -197,9 +197,14 @@ class Rotators {
       rot[2][i] = gain[i];
       rot[3][i] = 0.0f;
     }
-    for (size_t zz = 0; zz < out_shape0; zz++) {
-      for (int k = 0; k < kNumRotators; ++k) {
-        out[zz * out_stride + k] = 0;
+    // Zero out the output array
+    if (out_stride == kNumRotators) {
+      // Contiguous case: can use memset for the entire array
+      std::memset(out, 0, out_shape0 * kNumRotators * sizeof(float));
+    } else {
+      // Non-contiguous case: zero each row
+      for (size_t zz = 0; zz < out_shape0; zz++) {
+        std::memset(out + zz * out_stride, 0, kNumRotators * sizeof(float));
       }
     }
     std::vector<float> downsample_window(downsample);
