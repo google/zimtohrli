@@ -154,12 +154,3 @@ Build the project:
 ```
 (cd build && ninja && ninja test)
 ```
-
-## Quirks
-
-- When building with ninja, the Go wrapper glue file go/goohrli/goohrli.a is built.
-  Currently there's a known bug: ninja sometimes doesn't detect that this file needs to
-  be rebuilt when the C++ files it depends on are changed.
-  Therefore, sometimes `rm go/goohrli/goorhli.a` before running ninja is needed.
-  E.g. `( rm go/goohrli/goohrli.a ; cd build && ninja )`.
-
