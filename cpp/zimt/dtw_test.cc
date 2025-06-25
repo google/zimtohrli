@@ -41,7 +41,7 @@ void BM_DTW(benchmark::State& state) {
   for (size_t step_index = 0; step_index < spec_a.num_steps; ++step_index) {
     for (size_t channel_index = 0; channel_index < spec_a.num_dims;
          ++channel_index) {
-      spec_a[{step_index}][channel_index] = 1.0;
+      spec_a[step_index][channel_index] = 1.0;
     }
   }
 

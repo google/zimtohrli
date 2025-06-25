@@ -45,9 +45,11 @@ target_include_directories(zimtohrli_goohrli_glue PRIVATE ${CMAKE_CURRENT_SOURCE
 target_link_libraries(zimtohrli_goohrli_glue zimtohrli_visqol_adapter PkgConfig::soxr)
 
 set(zimtohrli_goohrli_object ${CMAKE_CURRENT_BINARY_DIR}/goohrli.o)
+set(zimtohrli_goohrli_archive_build ${CMAKE_CURRENT_BINARY_DIR}/goohrli.a)
 set(zimtohrli_goohrli_archive ${CMAKE_CURRENT_SOURCE_DIR}/go/goohrli/goohrli.a)
+
 add_custom_command(
-    OUTPUT ${zimtohrli_goohrli_archive}
+    OUTPUT ${zimtohrli_goohrli_archive_build}
     COMMAND ${CMAKE_LINKER} -r
         $$\(find ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/zimtohrli_goohrli_glue.dir/ -name \"*.o\"\)
         $$\(find ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/zimtohrli_visqol_adapter.dir/ -name \"*.o\"\)
@@ -58,10 +60,11 @@ add_custom_command(
         $$\(find ${libsndfile_BINARY_DIR}/CMakeFiles/sndfile.dir/ -name \"*.o\"\)
         $$\(find ${protobuf_BINARY_DIR} -name \"*.o\" ! -ipath \"*/google/protobuf/compiler/main.cc.o\"\)
         -o ${zimtohrli_goohrli_object}
-    COMMAND ${CMAKE_AR} rcs ${zimtohrli_goohrli_archive} ${zimtohrli_goohrli_object}
+    COMMAND ${CMAKE_AR} rcs ${zimtohrli_goohrli_archive_build} ${zimtohrli_goohrli_object}
+    COMMAND ${CMAKE_COMMAND} -E copy ${zimtohrli_goohrli_archive_build} ${zimtohrli_goohrli_archive}
     DEPENDS zimtohrli_goohrli_glue zimtohrli_visqol_adapter
 )
-add_custom_target(zimtohrli_goohrli ALL DEPENDS ${zimtohrli_goohrli_archive})
+add_custom_target(zimtohrli_goohrli ALL DEPENDS ${zimtohrli_goohrli_archive_build})
 
 add_executable(zimtohrli_compare
     cpp/zimt/audio.cc
