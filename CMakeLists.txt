@@ -26,7 +26,7 @@ target_link_libraries(zimtohrli_visqol_adapter PRIVATE visqol PkgConfig::soxr)
 target_link_libraries(zimtohrli_visqol_adapter PUBLIC absl::span)
 # Use selective fast-math flags only for zimtohrli code to avoid protobuf warnings
 target_compile_options(zimtohrli_visqol_adapter PRIVATE 
-    -fassociative-math -freciprocal-math -fno-signed-zeros -fno-math-errno)
+    -freciprocal-math -fno-signed-zeros -fno-math-errno)
 
 find_package(Python3 COMPONENTS Interpreter Development)
 add_library(zimtohrli_pyohrli SHARED
