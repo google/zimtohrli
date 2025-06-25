@@ -29,7 +29,7 @@ template <typename T>
 struct Span {
   Span(const Span& other) = default;
   Span(std::vector<T>& vec) : size(vec.size()), data(vec.data()) {}
-  explicit Span(T* data, size_t size) : size(size), data(data) {}
+  Span(T* data, size_t size) : size(size), data(data) {}
   template <typename U>
   Span(const std::vector<U>& vec) noexcept
       : data(vec.data()), size(vec.size()) {
