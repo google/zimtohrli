@@ -50,45 +50,17 @@ func main() {
 	leaderboard := flag.String("leaderboard", "", "Glob to directories with databases to compute leaderboard for.")
 	report := flag.String("report", "", "Glob to directories with databases to generate a report for.")
 	accuracy := flag.String("accuracy", "", "Glob to directories with databases to provide JND accuracy for.")
-	optimize := flag.String("optimize", "", "Glob to directories with databases to optimize for.")
-	optimizeLogfile := flag.String("optimize_logfile", "", "File to write optimization events to.")
-	optimizeStartStep := flag.Float64("optimize_start_step", 1, "Start step for the simulated annealing.")
-	optimizeNumSteps := flag.Float64("optimize_num_steps", 1000, "Number of steps for the simulated annealing.")
 	workers := flag.Int("workers", runtime.NumCPU(), "Number of concurrent workers for tasks.")
 	failFast := flag.Bool("fail_fast", false, "Whether to panic immediately on any error.")
 	flag.Parse()
 
-	if *details == "" && *calculate == "" && *correlate == "" && *accuracy == "" && *leaderboard == "" && *report == "" && *optimize == "" {
+	if *details == "" && *calculate == "" && *correlate == "" && *accuracy == "" && *leaderboard == "" && *report == "" {
 		flag.Usage()
 		os.Exit(1)
 	}
 
 	if err := zimtohrliParameters.Update([]byte(*zimtohrliParametersJSON)); err != nil {
 		log.Panic(err)
-	}
-
-	if *optimize != "" {
-		bundles, err := data.OpenBundles(*optimize)
-		if err != nil {
-			log.Fatal(err)
-		}
-		optimizeLog := func(ev data.OptimizationEvent) {}
-		if *optimizeLogfile != "" {
-			fmt.Println(optimizeLogfile)
-			f, err := os.OpenFile(*optimizeLogfile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
-			if err != nil {
-				log.Fatal(err)
-			}
-			optimizeLog = func(ev data.OptimizationEvent) {
-				b, _ := json.Marshal(ev)
-				f.WriteString(string(b) + "\n")
-				f.Sync()
-			}
-		}
-		err = bundles.Optimize(*optimizeStartStep, *optimizeNumSteps, optimizeLog)
-		if err != nil {
-			log.Fatal(err)
-		}
 	}
 
 	if *calculate != "" {
