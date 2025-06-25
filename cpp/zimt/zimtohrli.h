@@ -300,18 +300,18 @@ struct Spectrogram {
   }
   float max() const {
     float res = 0;
-    for (size_t step_idx = 0; step_idx < num_steps; ++step_idx) {
-      for (size_t dim_idx = 0; dim_idx < num_dims; ++dim_idx) {
-        res = std::max(res, std::abs(operator[](step_idx)[dim_idx]));
-      }
+    const size_t total_size = num_steps * num_dims;
+    const float* data = values.get();
+    for (size_t i = 0; i < total_size; ++i) {
+      res = std::max(res, std::abs(data[i]));
     }
     return res;
   }
   void rescale(float f) {
-    for (size_t step_idx = 0; step_idx < num_steps; ++step_idx) {
-      for (size_t dim_idx = 0; dim_idx < num_dims; ++dim_idx) {
-        operator[](step_idx)[dim_idx] *= f;
-      }
+    const size_t total_size = num_steps * num_dims;
+    float* data = values.get();
+    for (size_t i = 0; i < total_size; ++i) {
+      data[i] *= f;
     }
   }
   size_t size() const { return num_steps * num_dims; }
