@@ -5,8 +5,8 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_CXX_CLANG_TIDY clang-tidy)
 add_compile_options(-fPIC)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=native -O3 -ffast-math")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -O3 -ffast-math")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=native -O3")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -O3")
 
 include(cmake/deps.cmake)
 
@@ -24,6 +24,9 @@ add_library(zimtohrli_visqol_adapter STATIC
 target_include_directories(zimtohrli_visqol_adapter PUBLIC cpp)
 target_link_libraries(zimtohrli_visqol_adapter PRIVATE visqol PkgConfig::soxr)
 target_link_libraries(zimtohrli_visqol_adapter PUBLIC absl::span)
+# Use selective fast-math flags only for zimtohrli code to avoid protobuf warnings
+target_compile_options(zimtohrli_visqol_adapter PRIVATE 
+    -fassociative-math -freciprocal-math -fno-signed-zeros -fno-math-errno)
 
 find_package(Python3 COMPONENTS Interpreter Development)
 add_library(zimtohrli_pyohrli SHARED
@@ -43,6 +46,9 @@ add_library(zimtohrli_goohrli_glue STATIC
 )
 target_include_directories(zimtohrli_goohrli_glue PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cpp ${CMAKE_CURRENT_SOURCE_DIR}/go/goohrli ${CMAKE_CURRENT_SOURCE_DIR}/go/gosqol)
 target_link_libraries(zimtohrli_goohrli_glue zimtohrli_visqol_adapter PkgConfig::soxr)
+# Use selective fast-math flags only for zimtohrli code
+target_compile_options(zimtohrli_goohrli_glue PRIVATE 
+    -fassociative-math -freciprocal-math -fno-signed-zeros -fno-math-errno)
 
 set(zimtohrli_goohrli_object ${CMAKE_CURRENT_BINARY_DIR}/goohrli.o)
 set(zimtohrli_goohrli_archive_build ${CMAKE_CURRENT_BINARY_DIR}/goohrli.a)
@@ -77,6 +83,9 @@ set_target_properties(zimtohrli_compare PROPERTIES
     OUTPUT_NAME compare
     SUFFIX ""
 )
+# Use selective fast-math flags for compare tool
+target_compile_options(zimtohrli_compare PRIVATE 
+    -fassociative-math -freciprocal-math -fno-signed-zeros -fno-math-errno)
 
 option(BUILD_ZIMTOHRLI_TESTS "Build Zimtohrli test binaries." ON)
 if (BUILD_ZIMTOHRLI_TESTS)
