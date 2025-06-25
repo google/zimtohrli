@@ -473,16 +473,16 @@ float NSIM(const Spectrogram& a, const Spectrogram& b,
   //
   // These changes were measured to be small improvements on a multi-corpus
   // test.
-  const float C1 = 28.341082593304403;
-  const float C3 = 1.6705576583956854;
-  const float C4 = 5.5778917823818053e-05;
-  const float C5 = 2.5568733818058373e-07;
-  const float C6 = 3.510912492638396e-08;
-  const float C7 = 2.4720299934548813e-07;
-  const float C8 = 0.63782947152876834;
-  const float P0 = 0.84007774751632736;
-  const float P1 = 1.7336006381611897;
-  const float P2 = 0.19488367705873288;
+  static const float C1 = 28.341082593304403;
+  static const float C3 = 1.6705576583956854;
+  static const float C4 = 5.5778917823818053e-05;
+  static const float C5 = 2.5568733818058373e-07;
+  static const float C6 = 3.510912492638396e-08;
+  static const float C7 = 2.4720299934548813e-07;
+  static const float C8 = 0.54045365472095119;
+  static const float P0 = 0.84013864788155035;
+  static const float P1 = 1.7336006370531516;
+  static const float P2 = 0.19488365206961764;
 
   float nsim_sum = 0.0;
   for (size_t step_index = 0; step_index < num_steps; ++step_index) {
@@ -546,7 +546,8 @@ double delta_norm(const Spectrogram& a, const Spectrogram& b, size_t step_a,
     float delta = dims_a[index] - dims_b[index];
     result += delta * delta;
   }
-  return std::pow(result, 0.23289303544689094);
+  static const float pp = 0.35491343190704761;
+  return std::pow(result, pp);
 }
 
 // Computes the DTW (https://en.wikipedia.org/wiki/Dynamic_time_warping)
@@ -559,7 +560,7 @@ std::vector<std::pair<size_t, size_t>> DTW(const Spectrogram& spec_a,
   CostMatrix cost_matrix(spec_a.num_steps, spec_b.num_steps);
   // Compute cost as cost as weighted sum of feature dimension norms to each
   // cell.
-  static const double kMul00 = 0.98585952515276176;
+  static const double kMul00 = 0.97775949394431627;
   for (size_t spec_a_index = 1; spec_a_index < spec_a.num_steps;
        ++spec_a_index) {
     for (size_t spec_b_index = 1; spec_b_index < spec_b.num_steps;
@@ -623,13 +624,19 @@ struct Zimtohrli {
                                          perceptual_sample_rate / kSampleRate));
   }
 
-  float Distance(const Spectrogram& spectrogram_a,
+  float Distance(Spectrogram& spectrogram_a,
                  Spectrogram& spectrogram_b) const {
     assert_eq(spectrogram_a.num_dims, spectrogram_b.num_dims);
-    const float max_a = spectrogram_a.max();
-    const float max_b = spectrogram_b.max();
+    const double max_a = spectrogram_a.max();
+    const double max_b = spectrogram_b.max();
     if (max_a != max_b) {
-      spectrogram_b.rescale(max_a / max_b);
+      float cora = 0.48234235170721046;
+      float corb = 0.43404193485438936;
+      if (max_a > max_b) {
+	std::swap(cora, corb);
+      }
+      spectrogram_b.rescale(pow(max_a / max_b, cora));
+      spectrogram_a.rescale(pow(max_b / max_a, corb));
     }
     std::vector<std::pair<size_t, size_t>> time_pairs;
     time_pairs = DTW(spectrogram_a, spectrogram_b);
