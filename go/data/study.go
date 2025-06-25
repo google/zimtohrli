@@ -27,7 +27,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -35,8 +34,6 @@ import (
 	"github.com/dgryski/go-onlinestats"
 	"github.com/google/zimtohrli/go/aio"
 	"github.com/google/zimtohrli/go/audio"
-	"github.com/google/zimtohrli/go/goohrli"
-	"github.com/google/zimtohrli/go/progress"
 	"github.com/google/zimtohrli/go/worker"
 
 	_ "github.com/mattn/go-sqlite3" // To open sqlite3-databases.
@@ -411,81 +408,6 @@ func (s Studies) ToBundles() (ReferenceBundles, error) {
 	return result, nil
 }
 
-// CalculateZimtohrliMSE returns the mean-squared-error for the Zimtohrli score
-// in the bundles. For JDN bundles this means 1 - accuracy, for the MOS bundles it means
-// 1 - Spearman correlation.
-func (r ReferenceBundles) CalculateZimtohrliMSE(z *goohrli.Goohrli) (float64, error) {
-	sumOfSquares := 0.0
-	for _, bundle := range r {
-		bar := progress.New(fmt.Sprintf("Calculating for %v", filepath.Base(bundle.Dir)))
-		pool := &worker.Pool[any]{
-			Workers: runtime.NumCPU(),
-		}
-		if err := bundle.Calculate(map[ScoreType]Measurement{Zimtohrli: z.NormalizedAudioDistance}, pool, true); err != nil {
-			return 0, err
-		}
-		if bundle.IsJND() {
-			accuracy, _, err := bundle.JNDAccuracyAndThreshold(Zimtohrli)
-			if err != nil {
-				return 0, err
-			}
-			e := (1 - accuracy)
-			sumOfSquares += e * e
-
-		} else {
-			correlation, err := bundle.Correlation(Zimtohrli, MOS)
-			if err != nil {
-				return 0, err
-			}
-			e := (1 - correlation)
-			sumOfSquares += e * e
-		}
-		bar.Finish()
-	}
-	return sumOfSquares / float64(len(r)), nil
-}
-
-func mutateFloat(f, min, max float64, rng *rand.Rand, temp float64) float64 {
-	r := math.Sqrt(temp) * rng.NormFloat64() * 0.2 * (max - min)
-	if f == min || r > 0 {
-		f += math.Abs(r)
-	} else if f == max || r < 0 {
-		f -= math.Abs(r)
-	} else if r == 0 {
-		return f
-	}
-	if f < min {
-		f = min
-	}
-	if f > max {
-		f = max
-	}
-	return f
-}
-
-func mutateInt(i, min, max int, rng *rand.Rand, temp float64) int {
-	if float64(i)*temp < 1 {
-		i += (rng.Int() % 3) - 1
-		if i < min {
-			i = min
-		}
-		if i > max {
-			i = max
-		}
-		return i
-	}
-	return int(mutateFloat(float64(i), float64(min), float64(max), rng, temp))
-}
-
-func mutate(z *goohrli.Goohrli, rng *rand.Rand, temp float64) *goohrli.Goohrli {
-	params := z.Parameters()
-	params.PerceptualSampleRate = mutateFloat(params.PerceptualSampleRate, 50, 150, rng, temp)
-	params.NSIMChannelWindow = mutateInt(params.NSIMChannelWindow, 3, 64, rng, temp)
-	params.NSIMStepWindow = mutateInt(params.NSIMStepWindow, 3, 64, rng, temp)
-	result := goohrli.New(params)
-	return result
-}
-
 // References returns the sum of the number of references in all the bundles.
 func (r ReferenceBundles) References() int {
 	res := 0
@@ -522,54 +444,6 @@ func (r ReferenceBundles) Split(rng *rand.Rand, split float64) (ReferenceBundles
 		}
 	}
 	return left, right
-}
-
-// OptimizationEvent is a step in the optimization process.
-type OptimizationEvent struct {
-	Parameters goohrli.Parameters
-	Step       int
-	Loss       float64
-	Temp       float64
-}
-
-// Optimize will use simulated annealing to optimize a Zimtohrli metric for predicting
-// these bundles.
-func (r ReferenceBundles) Optimize(startStep, numSteps float64, logger func(OptimizationEvent)) error {
-	z := goohrli.New(goohrli.DefaultParameters())
-	loss, err := r.CalculateZimtohrliMSE(z)
-	if err != nil {
-		return err
-	}
-	logger(OptimizationEvent{Parameters: z.Parameters(), Step: 0, Loss: loss, Temp: 1})
-	log.Printf("Created initial solution %v with loss %.15f", z, loss)
-	for step := startStep; step < numSteps; step++ {
-		rng := rand.New(rand.NewSource(int64(step)))
-		temp := 1.0 - (step+1)/numSteps
-		newZ := mutate(z, rng, temp)
-		log.Printf("Created new solution %+v", newZ)
-		newLoss, err := r.CalculateZimtohrliMSE(newZ)
-		if err != nil {
-			return err
-		}
-		log.Printf("Step %v, temp %v, old loss %.15f, new loss %.15f", step, temp, loss, newLoss)
-		logger(OptimizationEvent{Parameters: newZ.Parameters(), Step: int(step), Loss: newLoss, Temp: temp})
-		if newLoss < loss {
-			z = newZ
-			loss = newLoss
-			log.Print("*** Accepting better solution")
-		} else {
-			acceptanceProb := math.Exp(-(newLoss - loss) / temp)
-			dice := rng.Float64()
-			if dice < acceptanceProb {
-				z = newZ
-				loss = newLoss
-				log.Printf("*** Accepting poorer solution due to acceptanceProb=%.15f > dice=%.15f", acceptanceProb, dice)
-			} else {
-				log.Print("Discarding poorer solution")
-			}
-		}
-	}
-	return nil
 }
 
 func gitIdentity() (*string, error) {
