@@ -39,6 +39,8 @@ Most of those datasets can be acquired using the tools [coresvnet](go/bin/coresv
 [odaq](go/bin/odaq), and [tcd_voip](go/bin/tcd_voip).
 A couple of them are unpublished and can't be downloaded.
 
+Zimtohrli can compare ~70 seconds of audio per second on a single 2.5GHz core.
+
 ## Compatibility
 
 Zimtohrli is a project under development, and is built and tested in a Debian-like
