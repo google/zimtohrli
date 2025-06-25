@@ -134,9 +134,6 @@ float Freq(int i) {
   return kFreq[i + 1];
 }
 
-double CalculateBandwidthInHz(int i) {
-  return std::sqrt(Freq(i + 1) * Freq(i)) - std::sqrt(Freq(i - 1) * Freq(i));
-}
 
 class Rotators {
  private:
@@ -187,11 +184,15 @@ class Rotators {
     static const double kScale = 929900594411.23657;
     const float gainer = sqrt(kScale / downsample);
     for (int i = 0; i < kNumRotators; ++i) {
-      float bandwidth = CalculateBandwidthInHz(i);  // bandwidth per bucket.
+      const float freq_i = Freq(i);
+      const float freq_i_minus_1 = Freq(i - 1);
+      const float freq_i_plus_1 = Freq(i + 1);
+      // Inline bandwidth calculation to avoid redundant Freq(i) call
+      const float bandwidth = std::sqrt(freq_i_plus_1 * freq_i) - std::sqrt(freq_i_minus_1 * freq_i);
       window[i] = std::pow(kWindow, bandwidth * kBandwidthMagic);
       float windowM1 = 1.0f - window[i];
-      const float f = Freq(i) * kHzToRad;
-      gain[i] = gainer * (windowM1 * windowM1 * windowM1) * Freq(i) / bandwidth;
+      const float f = freq_i * kHzToRad;
+      gain[i] = gainer * (windowM1 * windowM1 * windowM1) * freq_i / bandwidth;
       rot[0][i] = float(std::cos(f));
       rot[1][i] = float(-std::sin(f));
       rot[2][i] = gain[i];
