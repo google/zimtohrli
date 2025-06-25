@@ -30,6 +30,7 @@ add_test(NAME zimtohrli_go_test
 add_executable(zimtohrli_benchmark
     cpp/zimt/dtw_test.cc
     cpp/zimt/nsim_test.cc
+    cpp/zimt/distance_benchmark_test.cc
 )
 target_include_directories(zimtohrli_benchmark PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cpp)
 target_link_libraries(zimtohrli_benchmark gtest gmock benchmark_main PkgConfig::soxr)
