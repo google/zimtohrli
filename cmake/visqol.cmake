@@ -23,7 +23,7 @@ target_include_directories(visqol_proto PUBLIC ${visqol_PROTO_DIR})
 set(visqol_MODEL_H ${visqol_SOURCE_DIR}/src/include/libsvm_nu_svr_model.h)
 add_custom_command(
     OUTPUT ${visqol_MODEL_H}
-	COMMAND sh -c "xxd -i ${visqol_SOURCE_DIR}/model/libsvm_nu_svr_model.txt | sed 's/\\w*libsvm_nu_svr_model_txt/visqol_model_bytes/' > ${visqol_MODEL_H}"
+	COMMAND sh -c "xxd -i ${visqol_SOURCE_DIR}/model/libsvm_nu_svr_model.txt | sed 's/[A-Za-z_]*libsvm_nu_svr_model_txt/visqol_model_bytes/' > ${visqol_MODEL_H}"
     DEPENDS ${visqol_SOURCE_DIR}/model/libsvm_nu_svr_model.txt
 	VERBATIM
 ) 

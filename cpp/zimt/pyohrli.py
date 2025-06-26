@@ -19,25 +19,30 @@ import numpy.typing as npt
 import _pyohrli
 
 
+def mos_from_zimtohrli(zimtohrli_distance: float) -> float:
+    """Returns an approximate mean opinion score based on the provided Zimtohrli distance."""
+    return _pyohrli.MOSFromZimtohrli(zimtohrli_distance)
+
+
+class Spectrogram:
+    """Wrapper around C++ zimtohrli::Spectrogram."""
+
+    _cc_analysis: _pyohrli.Spectrogram
+
+
 class Pyohrli:
     """Wrapper around C++ zimtohrli::Zimtohrli."""
 
     _cc_pyohrli: _pyohrli.Pyohrli
 
-    def __init__(self, sample_rate: float):
-        """Initializes the instance.
-
-        Args:
-          sample_rate: The sample rate this Pyohrli instance expects for signals.
-          frequency_resolution: The smallest bandwidth of the channel filters, i.e.
-            the expected frequency resolution of human hearing at low frequencies.
-        """
-        self._cc_pyohrli = _pyohrli.Pyohrli(sample_rate)
+    def __init__(self):
+        """Initializes the instance."""
+        self._cc_pyohrli = _pyohrli.Pyohrli()
 
     def distance(self, signal_a: npt.ArrayLike, signal_b: npt.ArrayLike) -> float:
         """Computes the distance between two signals.
 
-        See 'analyze' for the signal format.
+        The signals must be (num_samples,)-shaped 48kHz [-1, 1] float arrays.
 
         Args:
           signal_a: A signal to compare.
@@ -51,9 +56,21 @@ class Pyohrli:
             np.asarray(signal_b).astype(np.float32).ravel().data,
         )
 
-    def mos_from_zimtohrli(self, zimtohrli_distance: float) -> float:
-        """Returns an approximate mean opinion score based on the provided Zimtohrli distance."""
-        return self._cc_pyohrli.mos_from_zimtohrli(zimtohrli_distance)
+    def analyze(self, signal: npt.ArrayLike) -> np.array:
+        """Computes the Zimtohrli spectrogram of a signal.compile
+
+        Args:
+          signal: A (num_samples,)-shaped 48kHz [-1, 1] float array.
+        Returns:
+          A (num_steps, num_dims)-shaped float array with the Zimtohrli
+          spectrogram of the signal.
+        """
+        bytes = self._cc_pyohrli.analyze(
+            np.asarray(signal).astype(np.float32).ravel().data
+        )
+        result = np.frombuffer(bytes, dtype=np.float32)
+        num_rotators = self._cc_pyohrli.num_rotators()
+        return result.reshape((result.shape[0] // num_rotators, num_rotators))
 
     @property
     def full_scale_sine_db(self) -> float:
@@ -84,12 +101,3 @@ class Pyohrli:
     @nsim_channel_window.setter
     def nsim_channel_window(self, value: float):
         self._cc_pyohrli.set_nsim_channel_window(value)
-
-    @property
-    def unwarp_window(self) -> float:
-        """Length of dynamic time warp unwarp window in seconds."""
-        return self._cc_pyohrli.unwarp_window
-
-    @unwarp_window.setter
-    def unwarp_window(self, value: float):
-        self._cc_pyohrli.unwarp_window = value

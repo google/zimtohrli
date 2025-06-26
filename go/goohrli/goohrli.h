@@ -30,83 +30,66 @@ extern "C" {
 #define NUM_LOUDNESS_A_F_PARAMS 10
 #define NUM_LOUDNESS_L_U_PARAMS 16
 #define NUM_LOUDNESS_T_F_PARAMS 13
-#define NUM_MOS_MAPPER_PARAMS 3
 
-// Returns the number of LoudnessAFParams in ZimtohrliParameters.
-int NumLoudnessAFParams();
+// The supported sample rate for Zimtohrli.
+float SampleRate();
 
-// Returns the number of LoudnessLUParams in ZimtohrliParameters.
-int NumLoudnessLUParams();
-
-// Returns the number of LoudnessTFParams in ZimtohrliParameters.
-int NumLoudnessTFParams();
-
-// Returns the number of MOSMapperParams in ZimtohrliParameters.
-int NumMOSMapperParams();
+// The number of rotators used by Zimtohrli, i.e. the number
+// of dimensions in the spectrograms.
+int NumRotators();
 
 // Contains the parameters controlling Zimtohrli behavior.
 typedef struct ZimtohrliParameters {
-  float SampleRate;
-  float FrequencyResolution;
   float PerceptualSampleRate;
-  int ApplyMasking;
   float FullScaleSineDB;
-  int ApplyLoudness;
-  float UnwarpWindowSeconds;
   int NSIMStepWindow;
   int NSIMChannelWindow;
-  float MaskingLowerZeroAt20;
-  float MaskingLowerZeroAt80;
-  float MaskingUpperZeroAt20;
-  float MaskingUpperZeroAt80;
-  float MaskingMaxMask;
-  int FilterOrder;
-  float FilterStopBandRipple;
-  float FilterPassBandRipple;
-  float LoudnessAFParams[NUM_LOUDNESS_A_F_PARAMS];
-  float LoudnessLUParams[NUM_LOUDNESS_L_U_PARAMS];
-  float LoudnessTFParams[NUM_LOUDNESS_T_F_PARAMS];
-  float MOSMapperParams[NUM_MOS_MAPPER_PARAMS];
 } ZimtohrliParameters;
 
 // Returns the default parameters.
-ZimtohrliParameters DefaultZimtohrliParameters(float sample_rate);
+ZimtohrliParameters DefaultZimtohrliParameters();
 
 // void* representation of zimtohrli::Zimtohrli.
 typedef void* Zimtohrli;
 
 // Returns a zimtohrli::Zimtohrli for the given parameters.
-Zimtohrli CreateZimtohrli(const ZimtohrliParameters params);
+Zimtohrli CreateZimtohrli(ZimtohrliParameters params);
 
 // Deletes a zimtohrli::Zimtohrli.
 void FreeZimtohrli(Zimtohrli z);
 
-// Plain C version of zimtohrli::EnergyAndMaxAbsAmplitude.
+// Returns the number of steps a spectrogram of the given number
+// of samples requires.
+int SpectrogramSteps(Zimtohrli zimtohrli, int samples);
+
+// Represents a zimtohrli::Span.
 typedef struct {
-  float EnergyDBFS;
-  float MaxAbsAmplitude;
-} EnergyAndMaxAbsAmplitude;
+  float* data;
+  int size;
+} GoSpan;
 
-// Returns the energy in dB FS, and maximum absolute amplitude, of the signal.
-EnergyAndMaxAbsAmplitude Measure(const float* signal, int size);
+// Represents a zimtohrli::Spectrogram.
+typedef struct {
+  float* values;
+  int steps;
+  int dims;
+} GoSpectrogram;
 
-// Normalizes the amplitudes of the signal so that it has the provided max
-// amplitude, and returns the new energ in dB FS, and the new maximum absolute
-// amplitude.
-EnergyAndMaxAbsAmplitude NormalizeAmplitude(float max_abs_amplitude,
-                                            float* signal_data, int size);
+// Returns a spectrogram by the provided zimtohrli::Zimtohrli using the provided
+// data.
+void Analyze(Zimtohrli zimtohrli, const GoSpan* signal, GoSpectrogram* spec);
 
-// Returns a _very_approximate_ mean opinion score based on the
+// Returns an approximate mean opinion score based on the
 // provided Zimtohrli distance.
 // This is calibrated using default settings of v0.1.5, with a
 // minimum channel bandwidth (zimtohrli::Cam.minimum_bandwidth_hz)
 // of 5Hz and perceptual sample rate
 // (zimtohrli::Distance(..., perceptual_sample_rate, ...) of 100Hz.
-float MOSFromZimtohrli(const Zimtohrli zimtohrli, float zimtohrli_distance);
+float MOSFromZimtohrli(float zimtohrli_distance);
 
-// Returns the Zimtohrli distance between data_b and data_b.
-float Distance(const Zimtohrli zimtohrli, float* data_a, int size_a,
-               float* data_b, int size_b);
+// Returns the Zimtohrli distance between two analyses using the provided
+// zimtohrli::Zimtohrli.
+float Distance(Zimtohrli zimtohrli, const GoSpectrogram* a, GoSpectrogram* b);
 
 // Sets the parameters.
 //
@@ -116,7 +99,7 @@ void SetZimtohrliParameters(Zimtohrli zimtohrli,
                             ZimtohrliParameters parameters);
 
 // Returns the parameters.
-ZimtohrliParameters GetZimtohrliParameters(const Zimtohrli zimtohrli);
+ZimtohrliParameters GetZimtohrliParameters(Zimtohrli zimtohrli);
 
 // void* representation of zimtohrli::ViSQOL.
 typedef void* ViSQOL;
@@ -134,8 +117,9 @@ typedef struct {
 } MOSResult;
 
 // MOS returns a ViSQOL MOS between reference and distorted.
-MOSResult MOS(const ViSQOL v, float sample_rate, const float* reference,
-              int reference_size, const float* distorted, int distorted_size);
+MOSResult ViSQOLMOS(ViSQOL v, float sample_rate, const float* reference,
+                    int reference_size, const float* distorted,
+                    int distorted_size);
 
 #ifdef __cplusplus
 }

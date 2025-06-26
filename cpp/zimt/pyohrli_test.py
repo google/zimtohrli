@@ -53,31 +53,23 @@ class PyohrliTest(unittest.TestCase):
     )
     def test_distance(self, a_hz: float, b_hz: float, distance: float):
         sample_rate = 48000.0
-        metric = pyohrli.Pyohrli(sample_rate)
+        metric = pyohrli.Pyohrli()
         signal_a = np.sin(np.linspace(0.0, np.pi * 2 * a_hz, int(sample_rate)))
         signal_b = np.sin(np.linspace(0.0, np.pi * 2 * b_hz, int(sample_rate)))
         distance = metric.distance(signal_a, signal_b)
         self.assertLess(abs(distance - distance), 1e-3)
 
-    def test_nyquist_threshold(self):
-        sample_rate = 12000.0
-        metric = pyohrli.Pyohrli(sample_rate)
-        signal = np.sin(np.linspace(0.0, np.pi * 2 * 440.0, int(sample_rate)))
-        # This would crash the program if pyohrli.cc didn't limit the upper
-        # threshold to half the sample rate.
-        metric.distance(signal, signal)
-
     @parameterize(
         dict(zimtohrli_distance=0.0, mos=5.0),
-        dict(zimtohrli_distance=0.1, mos=3.8630697727203369),
-        dict(zimtohrli_distance=0.5, mos=1.751483678817749),
-        dict(zimtohrli_distance=0.7, mos=1.3850023746490479),
-        dict(zimtohrli_distance=1.0, mos=1.1411819458007812),
+        dict(zimtohrli_distance=0.001, mos=4.800886631011963),
+        dict(zimtohrli_distance=0.01, mos=3.4005415439605713),
+        dict(zimtohrli_distance=0.02, mos=2.4406499862670898),
+        dict(zimtohrli_distance=0.03, mos=1.8645849227905273),
+        dict(zimtohrli_distance=0.04, mos=1.5188679695129395),
     )
     def test_mos_from_zimtohrli(self, zimtohrli_distance: float, mos: float):
-        metric = pyohrli.Pyohrli(48000.0)
         self.assertAlmostEqual(
-            mos, metric.mos_from_zimtohrli(zimtohrli_distance), places=3
+            mos, pyohrli.mos_from_zimtohrli(zimtohrli_distance), places=3
         )
 
 

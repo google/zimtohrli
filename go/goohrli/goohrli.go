@@ -16,7 +16,7 @@
 package goohrli
 
 /*
-#cgo LDFLAGS: ${SRCDIR}/goohrli.a -lz -lopus -lFLAC -lvorbis -lvorbisenc -logg -lasound -lm -lstdc++
+#cgo LDFLAGS: ${SRCDIR}/goohrli.a -lsoxr -lz -lopus -lFLAC -lvorbis -lvorbisenc -logg -lasound -lm -lstdc++
 #cgo CFLAGS: -O3
 #include "goohrli.h"
 */
@@ -24,7 +24,6 @@ import "C"
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"math"
 	"reflect"
 	"runtime"
@@ -33,29 +32,9 @@ import (
 	"github.com/google/zimtohrli/go/audio"
 )
 
-// EnergyAndMaxAbsAmplitude is holds the energy and maximum absolute amplitude of a measurement.
-type EnergyAndMaxAbsAmplitude struct {
-	EnergyDBFS      float32
-	MaxAbsAmplitude float32
-}
-
-// Measure returns the energy in dB FS and maximum absolute amplitude of the signal.
-func Measure(signal []float32) EnergyAndMaxAbsAmplitude {
-	measurements := C.Measure((*C.float)(&signal[0]), C.int(len(signal)))
-	return EnergyAndMaxAbsAmplitude{
-		EnergyDBFS:      float32(measurements.EnergyDBFS),
-		MaxAbsAmplitude: float32(measurements.MaxAbsAmplitude),
-	}
-}
-
-// NormalizeAmplitude normalizes the amplitudes of the signal so that it has the provided max
-// amplitude, and returns the new energ in dB FS, and the new maximum absolute amplitude.
-func NormalizeAmplitude(maxAbsAmplitude float32, signal []float32) EnergyAndMaxAbsAmplitude {
-	measurements := C.NormalizeAmplitude(C.float(maxAbsAmplitude), (*C.float)(&signal[0]), C.int(len(signal)))
-	return EnergyAndMaxAbsAmplitude{
-		EnergyDBFS:      float32(measurements.EnergyDBFS),
-		MaxAbsAmplitude: float32(measurements.MaxAbsAmplitude),
-	}
+// MOSFromZimtohrli returns an approximate mean opinion score for a given zimtohrli distance.
+func MOSFromZimtohrli(zimtohrliDistance float64) float64 {
+	return float64(C.MOSFromZimtohrli(C.float(zimtohrliDistance)))
 }
 
 // Goohrli is a Go wrapper around zimtohrli::Zimtohrli.
@@ -102,35 +81,21 @@ const (
 	numLoudnessAFParams = 10
 	numLoudnessLUParams = 16
 	numLoudnessTFParams = 13
-	numMOSMapperParams  = 3
 )
 
 // Parameters contains the parameters used by a Goohrli instance.
 type Parameters struct {
-	SampleRate           float64
-	FrequencyResolution  float64
 	PerceptualSampleRate float64
-	ApplyMasking         bool
 	FullScaleSineDB      float64
-	ApplyLoudness        bool
-	UnwarpWindow         Duration
 	NSIMStepWindow       int
 	NSIMChannelWindow    int
-	MaskingLowerZeroAt20 float64
-	MaskingLowerZeroAt80 float64
-	MaskingUpperZeroAt20 float64
-	MaskingUpperZeroAt80 float64
-	MaskingMaxMask       float64
-	FilterOrder          int
-	FilterPassBandRipple float64
-	FilterStopBandRipple float64
-	LoudnessAFParams     [numLoudnessAFParams]float64
-	LoudnessLUParams     [numLoudnessLUParams]float64
-	LoudnessTFParams     [numLoudnessTFParams]float64
-	MOSMapperParams      [numMOSMapperParams]float64
 }
 
 var durationType = reflect.TypeOf(time.Second)
+
+func SampleRate() float64 {
+	return float64(C.SampleRate())
+}
 
 // Update assumes the argument is JSON and updates the parameters with the fields present in the provided JSON object.
 func (p *Parameters) Update(b []byte) error {
@@ -176,108 +141,26 @@ func (p *Parameters) Update(b []byte) error {
 
 func cFromGoParameters(params Parameters) C.ZimtohrliParameters {
 	var cParams C.ZimtohrliParameters
-	cParams.SampleRate = C.float(params.SampleRate)
-	cParams.FrequencyResolution = C.float(params.FrequencyResolution)
 	cParams.PerceptualSampleRate = C.float(params.PerceptualSampleRate)
-	if params.ApplyMasking {
-		cParams.ApplyMasking = 1
-	} else {
-		cParams.ApplyMasking = 0
-	}
 	cParams.FullScaleSineDB = C.float(params.FullScaleSineDB)
-	if params.ApplyLoudness {
-		cParams.ApplyLoudness = 1
-	} else {
-		cParams.ApplyLoudness = 0
-	}
-	cParams.UnwarpWindowSeconds = C.float(float64(params.UnwarpWindow.Duration) / float64(time.Second))
 	cParams.NSIMStepWindow = C.int(params.NSIMStepWindow)
 	cParams.NSIMChannelWindow = C.int(params.NSIMChannelWindow)
-	cParams.MaskingLowerZeroAt20 = C.float(params.MaskingLowerZeroAt20)
-	cParams.MaskingLowerZeroAt80 = C.float(params.MaskingLowerZeroAt80)
-	cParams.MaskingUpperZeroAt20 = C.float(params.MaskingUpperZeroAt20)
-	cParams.MaskingUpperZeroAt80 = C.float(params.MaskingUpperZeroAt80)
-	cParams.MaskingMaxMask = C.float(params.MaskingMaxMask)
-	cParams.FilterOrder = C.int(params.FilterOrder)
-	cParams.FilterPassBandRipple = C.float(params.FilterPassBandRipple)
-	cParams.FilterStopBandRipple = C.float(params.FilterStopBandRipple)
-	if int(C.NumLoudnessAFParams()) != len(params.LoudnessAFParams) {
-		log.Panicf("C++ API uses %v AF parameters for loudness, but Go API uses %v", C.NumLoudnessAFParams(), len(params.LoudnessAFParams))
-	}
-	for i, f := range params.LoudnessAFParams {
-		cParams.LoudnessAFParams[i] = C.float(f)
-	}
-	if int(C.NumLoudnessLUParams()) != len(params.LoudnessLUParams) {
-		log.Panicf("C++ API uses %v LU parameters for loudness, but Go API uses %v", C.NumLoudnessLUParams(), len(params.LoudnessLUParams))
-	}
-	for i, f := range params.LoudnessLUParams {
-		cParams.LoudnessLUParams[i] = C.float(f)
-	}
-	if int(C.NumLoudnessTFParams()) != len(params.LoudnessTFParams) {
-		log.Panicf("C++ API uses %v TF parameters for loudness, but Go API uses %v", C.NumLoudnessTFParams(), len(params.LoudnessTFParams))
-	}
-	for i, f := range params.LoudnessTFParams {
-		cParams.LoudnessTFParams[i] = C.float(f)
-	}
-	if int(C.NumMOSMapperParams()) != len(params.MOSMapperParams) {
-		log.Panicf("C++ API uses %v parameters for MOS mapping, but Go API uses %v", C.NumMOSMapperParams(), len(params.MOSMapperParams))
-	}
-	for i, f := range params.MOSMapperParams {
-		cParams.MOSMapperParams[i] = C.float(f)
-	}
 	return cParams
 }
 
 func goFromCParameters(cParams C.ZimtohrliParameters) Parameters {
 	result := Parameters{
-		SampleRate:           float64(cParams.SampleRate),
-		FrequencyResolution:  float64(cParams.FrequencyResolution),
 		PerceptualSampleRate: float64(cParams.PerceptualSampleRate),
-		ApplyMasking:         cParams.ApplyMasking != 0,
 		FullScaleSineDB:      float64(cParams.FullScaleSineDB),
-		ApplyLoudness:        cParams.ApplyLoudness != 0,
-		UnwarpWindow:         Duration{time.Duration(float64(time.Second) * float64(cParams.UnwarpWindowSeconds))},
 		NSIMStepWindow:       int(cParams.NSIMStepWindow),
 		NSIMChannelWindow:    int(cParams.NSIMChannelWindow),
-		MaskingLowerZeroAt20: float64(cParams.MaskingLowerZeroAt20),
-		MaskingLowerZeroAt80: float64(cParams.MaskingLowerZeroAt80),
-		MaskingUpperZeroAt20: float64(cParams.MaskingUpperZeroAt20),
-		MaskingUpperZeroAt80: float64(cParams.MaskingUpperZeroAt80),
-		MaskingMaxMask:       float64(cParams.MaskingMaxMask),
-		FilterOrder:          int(cParams.FilterOrder),
-		FilterPassBandRipple: float64(cParams.FilterPassBandRipple),
-		FilterStopBandRipple: float64(cParams.FilterStopBandRipple),
-	}
-	if int(C.NumLoudnessAFParams()) != len(result.LoudnessAFParams) {
-		log.Panicf("C++ API uses %v AF parameters for loudness, but Go API uses %v", C.NumLoudnessAFParams(), len(result.LoudnessAFParams))
-	}
-	for i, cFloat := range cParams.LoudnessAFParams {
-		result.LoudnessAFParams[i] = float64(cFloat)
-	}
-	if int(C.NumLoudnessLUParams()) != len(result.LoudnessLUParams) {
-		log.Panicf("C++ API uses %v LU parameters for loudness, but Go API uses %v", C.NumLoudnessLUParams(), len(result.LoudnessLUParams))
-	}
-	for i, cFloat := range cParams.LoudnessLUParams {
-		result.LoudnessLUParams[i] = float64(cFloat)
-	}
-	if int(C.NumLoudnessTFParams()) != len(result.LoudnessTFParams) {
-		log.Panicf("C++ API uses %v TF parameters for loudness, but Go API uses %v", C.NumLoudnessTFParams(), len(result.LoudnessTFParams))
-	}
-	for i, cFloat := range cParams.LoudnessTFParams {
-		result.LoudnessTFParams[i] = float64(cFloat)
-	}
-	if int(C.NumMOSMapperParams()) != len(result.MOSMapperParams) {
-		log.Panicf("C++ API uses %v parameters for MOS mapping, but Go API uses %v", C.NumMOSMapperParams(), len(result.MOSMapperParams))
-	}
-	for i, cFloat := range cParams.MOSMapperParams {
-		result.MOSMapperParams[i] = float64(cFloat)
 	}
 	return result
 }
 
 // DefaultParameters returns the default Zimtohrli parameters.
-func DefaultParameters(sampleRate float64) Parameters {
-	return goFromCParameters(C.DefaultZimtohrliParameters(C.float(sampleRate)))
+func DefaultParameters() Parameters {
+	return goFromCParameters(C.DefaultZimtohrliParameters())
 }
 
 // Parameters returns the parameters controlling the behavior of this instance.
@@ -296,17 +179,11 @@ func (g *Goohrli) String() string {
 	return fmt.Sprintf("%+v", g.Parameters())
 }
 
-// MOSFromZimtohrli returns an approximate mean opinion score for a given zimtohrli distance.
-func (g *Goohrli) MOSFromZimtohrli(zimtohrliDistance float64) float64 {
-	return float64(C.MOSFromZimtohrli(g.zimtohrli, C.float(zimtohrliDistance)))
-}
-
 // NormalizedAudioDistance returns the distance between the audio files after normalizing their amplitudes for the same max amplitude.
 func (g *Goohrli) NormalizedAudioDistance(audioA, audioB *audio.Audio) (float64, error) {
 	sumOfSquares := 0.0
-	params := g.Parameters()
-	if params.SampleRate != audioA.Rate || params.SampleRate != audioB.Rate {
-		return 0, fmt.Errorf("one of the audio files doesn't have the expected sample rate %v: %v, %v", params.SampleRate, audioA.Rate, audioB.Rate)
+	if int(audioA.Rate) != int(C.SampleRate()) || int(audioB.Rate) != int(C.SampleRate()) {
+		return 0, fmt.Errorf("one of the audio files doesn't have the expected sample rate %v: %v, %v", C.SampleRate(), audioA.Rate, audioB.Rate)
 	}
 	if len(audioA.Samples) != len(audioB.Samples) {
 		return 0, fmt.Errorf("the audio files don't have the same number of channels: %v, %v", len(audioA.Samples), len(audioB.Samples))
@@ -315,8 +192,6 @@ func (g *Goohrli) NormalizedAudioDistance(audioA, audioB *audio.Audio) (float64,
 		return 0, fmt.Errorf("the audio files don't have any channels")
 	}
 	for channelIndex := range audioA.Samples {
-		measurement := Measure(audioA.Samples[channelIndex])
-		NormalizeAmplitude(measurement.MaxAbsAmplitude, audioB.Samples[channelIndex])
 		dist := float64(g.Distance(audioA.Samples[channelIndex], audioB.Samples[channelIndex]))
 		if math.IsNaN(dist) {
 			return 0, fmt.Errorf("%v.Distance(...) returned %v", g, dist)
@@ -330,9 +205,56 @@ func (g *Goohrli) NormalizedAudioDistance(audioA, audioB *audio.Audio) (float64,
 	return result, nil
 }
 
+// Spec contains a zimtohrli::Spectrogram.
+type Spec struct {
+	Values []float32
+	Steps  int
+}
+
+func (s *Spec) toC(pinner *runtime.Pinner) *C.GoSpectrogram {
+	pinner.Pin(&s.Values[0])
+	return &C.GoSpectrogram{
+		values: (*C.float)(&s.Values[0]),
+		steps:  C.int(s.Steps),
+		dims:   C.int(len(s.Values) / s.Steps),
+	}
+}
+
+func toC(pinner *runtime.Pinner, signal []float32) *C.GoSpan {
+	pinner.Pin(&signal[0])
+	return &C.GoSpan{
+		data: (*C.float)(&signal[0]),
+		size: C.int(len(signal)),
+	}
+}
+
+// Spectrogram returns a spectrogram of the signal.
+func (g *Goohrli) Analyze(signal []float32) *Spec {
+	steps := int(C.SpectrogramSteps(g.zimtohrli, C.int(len(signal))))
+	result := &Spec{
+		Values: make([]float32, steps*int(C.NumRotators())),
+		Steps:  steps,
+	}
+	pinner := &runtime.Pinner{}
+	defer pinner.Unpin()
+	C.Analyze(g.zimtohrli, toC(pinner, signal), result.toC(pinner))
+	return result
+}
+
+// SpecDistance returns the Zimtohrli distance between two spectrograms.
+func (g *Goohrli) SpecDistance(specA *Spec, specB *Spec) float32 {
+	pinner := &runtime.Pinner{}
+	defer pinner.Unpin()
+	return float32(C.Distance(g.zimtohrli, specA.toC(pinner), specB.toC(pinner)))
+}
+
 // Distance returns the Zimtohrli distance between two signals.
 func (g *Goohrli) Distance(signalA []float32, signalB []float32) float64 {
-	return float64(C.Distance(g.zimtohrli, (*C.float)(&signalA[0]), C.int(len(signalA)), (*C.float)(&signalB[0]), C.int(len(signalB))))
+	specA := g.Analyze(signalA)
+	specB := g.Analyze(signalB)
+	pinner := &runtime.Pinner{}
+	defer pinner.Unpin()
+	return float64(C.Distance(g.zimtohrli, specA.toC(pinner), specB.toC(pinner)))
 }
 
 // ViSQOL is a Go wrapper around zimtohrli::ViSQOL.
@@ -353,7 +275,7 @@ func NewViSQOL() *ViSQOL {
 
 // MOS returns the ViSQOL mean opinion score of the degraded samples comapred to the reference samples.
 func (v *ViSQOL) MOS(sampleRate float64, reference []float32, degraded []float32) (float64, error) {
-	result := C.MOS(v.visqol, C.float(sampleRate), (*C.float)(&reference[0]), C.int(len(reference)), (*C.float)(&degraded[0]), C.int(len(degraded)))
+	result := C.ViSQOLMOS(v.visqol, C.float(sampleRate), (*C.float)(&reference[0]), C.int(len(reference)), (*C.float)(&degraded[0]), C.int(len(degraded)))
 	if result.Status != 0 {
 		return 0, fmt.Errorf("calling ViSQOL returned status %v", result.Status)
 	}

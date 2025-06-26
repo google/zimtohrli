@@ -23,25 +23,7 @@ import (
 	"time"
 )
 
-func TestMeasureAndNormalize(t *testing.T) {
-	signal := []float32{1, 2, -1, -2}
-	measurements := Measure(signal)
-	if measurements.MaxAbsAmplitude != 2 {
-		t.Errorf("MaxAbsAmplitude = %v, want %v", measurements.MaxAbsAmplitude, 2)
-	}
-	wantEnergyDBFS := float32(20 * math.Log10(2.5))
-	if math.Abs(float64(measurements.EnergyDBFS-float32(wantEnergyDBFS))) > 1e-4 {
-		t.Errorf("EnergyDBFS = %v, want %v", measurements.EnergyDBFS, wantEnergyDBFS)
-	}
-	NormalizeAmplitude(1, signal)
-	wantNormalizedSignal := []float32{0.5, 1, -0.5, -1}
-	if !reflect.DeepEqual(signal, wantNormalizedSignal) {
-		t.Errorf("NormalizeAmplitude produced %+v, want %+v", signal, wantNormalizedSignal)
-	}
-}
-
 func TestMOSFromZimtohrli(t *testing.T) {
-	g := New(DefaultParameters(48000))
 	for _, tc := range []struct {
 		zimtDistance float64
 		wantMOS      float64
@@ -51,46 +33,43 @@ func TestMOSFromZimtohrli(t *testing.T) {
 			wantMOS:      5.0,
 		},
 		{
-			zimtDistance: 0.1,
-			wantMOS:      3.8630697727203369,
+			zimtDistance: 0.001,
+			wantMOS:      4.8008866310119629,
 		},
 		{
-			zimtDistance: 0.5,
-			wantMOS:      1.751483678817749,
+			zimtDistance: 0.01,
+			wantMOS:      3.4005415439605713,
 		},
 		{
-			zimtDistance: 0.7,
-			wantMOS:      1.3850023746490479,
+			zimtDistance: 0.02,
+			wantMOS:      2.4406499862670898,
 		},
 		{
-			zimtDistance: 1.0,
-			wantMOS:      1.1411819458007812,
+			zimtDistance: 0.03,
+			wantMOS:      1.8645849227905273,
+		},
+		{
+			zimtDistance: 0.04,
+			wantMOS:      1.5188679695129395,
 		},
 	} {
-		if mos := g.MOSFromZimtohrli(tc.zimtDistance); math.Abs(mos-tc.wantMOS) > 1e-2 {
+		if mos := MOSFromZimtohrli(tc.zimtDistance); math.Abs(mos-tc.wantMOS) > 1e-2 {
 			t.Errorf("MOSFromZimtohrli(%v) = %v, want %v", tc.zimtDistance, mos, tc.wantMOS)
 		}
 	}
 }
 
 func TestParams(t *testing.T) {
-	g := New(DefaultParameters(48000))
+	g := New(DefaultParameters())
 
 	params := g.Parameters()
-	params.ApplyLoudness = false
-	params.ApplyMasking = false
-	params.FrequencyResolution *= 0.5
 	params.FullScaleSineDB *= 0.5
 	params.NSIMChannelWindow *= 2
 	params.NSIMStepWindow *= 2
 	params.PerceptualSampleRate *= 0.5
-	params.SampleRate *= 0.5
-	params.UnwarpWindow.Duration *= 2
 
 	g.Set(params)
 	newParams := g.Parameters()
-	params.FrequencyResolution = newParams.FrequencyResolution
-	params.SampleRate = newParams.SampleRate
 	if !reflect.DeepEqual(newParams, params) {
 		t.Errorf("Expected updated parameters to be %+v, got %+v", params, newParams)
 	}
@@ -110,24 +89,29 @@ func TestGoohrli(t *testing.T) {
 		{
 			freqA:    5000,
 			freqB:    5010,
-			distance: 5.2988529205322266e-05,
+			distance: 0,
 		},
 		{
 			freqA:    5000,
 			freqB:    10000,
-			distance: 0.31002843379974365,
+			distance: 0.02702277898788452,
 		},
 	} {
-		params := DefaultParameters(48000)
-		params.FrequencyResolution = 4.0
+		params := DefaultParameters()
 		g := New(params)
-		soundA := make([]float32, int(params.SampleRate))
+		soundA := make([]float32, int(SampleRate()))
 		for index := 0; index < len(soundA); index++ {
-			soundA[index] = float32(math.Sin(2 * math.Pi * tc.freqA * float64(index) / params.SampleRate))
+			soundA[index] = float32(math.Sin(2 * math.Pi * tc.freqA * float64(index) / SampleRate()))
 		}
-		soundB := make([]float32, int(params.SampleRate))
+		analysisA := g.Analyze(soundA)
+		soundB := make([]float32, int(SampleRate()))
 		for index := 0; index < len(soundB); index++ {
-			soundB[index] = float32(math.Sin(2 * math.Pi * tc.freqB * float64(index) / params.SampleRate))
+			soundB[index] = float32(math.Sin(2 * math.Pi * tc.freqB * float64(index) / SampleRate()))
+		}
+		analysisB := g.Analyze(soundB)
+		analysisDistance := float64(g.SpecDistance(analysisA, analysisB))
+		if d := rdiff(analysisDistance, tc.distance); d > 0.1 {
+			t.Errorf("Distance = %v, want %v", analysisDistance, tc.distance)
 		}
 		distance := float64(g.Distance(soundA, soundB))
 		if d := rdiff(distance, tc.distance); d > 0.1 {
@@ -273,7 +257,7 @@ func TestParamConversion(t *testing.T) {
 }
 
 func TestParamUpdate(t *testing.T) {
-	params := DefaultParameters(48000)
+	params := DefaultParameters()
 	js, err := json.Marshal(params)
 	if err != nil {
 		t.Fatal(err)

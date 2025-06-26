@@ -1,39 +1,17 @@
 cmake_minimum_required(VERSION 3.27)
 
 project(Zimtohrli)
-
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_CXX_CLANG_TIDY clang-tidy)
+add_compile_options(-fPIC)
+
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=native -O3")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -O3")
 
 include(cmake/deps.cmake)
 
 enable_testing()
 include(GoogleTest)
-
-add_library(zimtohrli_base STATIC
-    cpp/zimt/audio.cc
-    cpp/zimt/audio.h
-    cpp/zimt/cam.cc
-    cpp/zimt/cam.h
-    cpp/zimt/dtw.cc
-    cpp/zimt/dtw.h
-    cpp/zimt/elliptic.cc
-    cpp/zimt/elliptic.h
-    cpp/zimt/filterbank.cc
-    cpp/zimt/filterbank.h
-    cpp/zimt/loudness.cc
-    cpp/zimt/loudness.h
-    cpp/zimt/masking.cc
-    cpp/zimt/masking.h
-    cpp/zimt/mos.cc
-    cpp/zimt/mos.h
-    cpp/zimt/nsim.cc
-    cpp/zimt/nsim.h
-    cpp/zimt/zimtohrli.cc
-    cpp/zimt/zimtohrli.h
-)
-target_include_directories(zimtohrli_base PUBLIC cpp)
-target_link_libraries(zimtohrli_base PRIVATE absl::check)
-target_link_libraries(zimtohrli_base PUBLIC hwy portaudio absl::statusor absl::span sndfile)
 
 add_library(zimtohrli_visqol_adapter STATIC
     cpp/zimt/visqol_model.h
@@ -41,69 +19,73 @@ add_library(zimtohrli_visqol_adapter STATIC
     cpp/zimt/visqol.h
     cpp/zimt/visqol.cc
     cpp/zimt/resample.h
+    cpp/zimt/zimtohrli.h
 )
 target_include_directories(zimtohrli_visqol_adapter PUBLIC cpp)
-target_link_libraries(zimtohrli_visqol_adapter PRIVATE visqol samplerate hwy)
+target_link_libraries(zimtohrli_visqol_adapter PRIVATE visqol PkgConfig::soxr)
 target_link_libraries(zimtohrli_visqol_adapter PUBLIC absl::span)
+# Use selective fast-math flags only for zimtohrli code to avoid protobuf warnings
+target_compile_options(zimtohrli_visqol_adapter PRIVATE 
+    -freciprocal-math -fno-signed-zeros -fno-math-errno)
 
 find_package(Python3 COMPONENTS Interpreter Development)
 add_library(zimtohrli_pyohrli SHARED
-    cpp/zimt/pyohrli.cc
+   cpp/zimt/zimtohrli.h
+   cpp/zimt/pyohrli.cc
 )
+target_include_directories(zimtohrli_pyohrli PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cpp)
 set_target_properties(zimtohrli_pyohrli PROPERTIES
-    PREFIX ""
-    OUTPUT_NAME _pyohrli.so
-    SUFFIX ""
+   PREFIX ""
+   OUTPUT_NAME _pyohrli.so
+   SUFFIX ""
 )
-target_link_libraries(zimtohrli_pyohrli zimtohrli_base Python3::Python absl::check)
+target_link_libraries(zimtohrli_pyohrli Python3::Python absl::check)
 
 add_library(zimtohrli_goohrli_glue STATIC
     cpp/zimt/goohrli.cc
-    go/goohrli/goohrli.h
 )
-target_include_directories(zimtohrli_goohrli_glue PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/go/goohrli ${CMAKE_CURRENT_SOURCE_DIR}/go/gosqol)
-target_link_libraries(zimtohrli_goohrli_glue zimtohrli_base zimtohrli_visqol_adapter)
+target_include_directories(zimtohrli_goohrli_glue PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cpp ${CMAKE_CURRENT_SOURCE_DIR}/go/goohrli ${CMAKE_CURRENT_SOURCE_DIR}/go/gosqol)
+target_link_libraries(zimtohrli_goohrli_glue zimtohrli_visqol_adapter PkgConfig::soxr)
+# Use selective fast-math flags only for zimtohrli code
+target_compile_options(zimtohrli_goohrli_glue PRIVATE 
+    -fassociative-math -freciprocal-math -fno-signed-zeros -fno-math-errno)
 
 set(zimtohrli_goohrli_object ${CMAKE_CURRENT_BINARY_DIR}/goohrli.o)
+set(zimtohrli_goohrli_archive_build ${CMAKE_CURRENT_BINARY_DIR}/goohrli.a)
 set(zimtohrli_goohrli_archive ${CMAKE_CURRENT_SOURCE_DIR}/go/goohrli/goohrli.a)
+
 add_custom_command(
-    OUTPUT ${zimtohrli_goohrli_archive}
+    OUTPUT ${zimtohrli_goohrli_archive_build}
     COMMAND ${CMAKE_LINKER} -r
         $$\(find ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/zimtohrli_goohrli_glue.dir/ -name \"*.o\"\)
-        $$\(find ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/zimtohrli_base.dir/ -name \"*.o\"\)
         $$\(find ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/zimtohrli_visqol_adapter.dir/ -name \"*.o\"\)
         $$\(find ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/visqol.dir/ -name \"*.o\"\)
         $$\(find ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/visqol_proto.dir/ -name \"*.o\"\)
         $$\(find ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/libsvm.dir/ -name \"*.o\"\)
         $$\(find ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/pffft.dir/ -name \"*.o\"\)
-        $$\(find ${portaudio_BINARY_DIR} -name \"*.o\"\)
-        $$\(find ${hwy_BINARY_DIR} -name \"*.o\"\)
         $$\(find ${libsndfile_BINARY_DIR}/CMakeFiles/sndfile.dir/ -name \"*.o\"\)
-        $$\(find ${samplerate_BINARY_DIR} -name \"*.o\"\)
         $$\(find ${protobuf_BINARY_DIR} -name \"*.o\" ! -ipath \"*/google/protobuf/compiler/main.cc.o\"\)
         -o ${zimtohrli_goohrli_object}
-    COMMAND ${CMAKE_AR} rcs ${zimtohrli_goohrli_archive} ${zimtohrli_goohrli_object}
-    DEPENDS zimtohrli_goohrli_glue zimtohrli_base zimtohrli_visqol_adapter
+    COMMAND ${CMAKE_AR} rcs ${zimtohrli_goohrli_archive_build} ${zimtohrli_goohrli_object}
+    COMMAND ${CMAKE_COMMAND} -E copy ${zimtohrli_goohrli_archive_build} ${zimtohrli_goohrli_archive}
+    DEPENDS zimtohrli_goohrli_glue zimtohrli_visqol_adapter
 )
-add_custom_target(zimtohrli_goohrli ALL DEPENDS ${zimtohrli_goohrli_archive})
-
-add_library(zimtohrli_ux STATIC
-    cpp/zimt/ux.cc
-    cpp/zimt/ux.h
-)
-target_include_directories(zimtohrli_ux PRIVATE ${imgui_SOURCE_DIR}/backends ${gles_INCLUDE_DIRS})
-target_include_directories(zimtohrli_ux PUBLIC ${imgui_SOURCE_DIR})
-target_link_libraries(zimtohrli_ux zimtohrli_base glfw OpenGL::GL imgui)
+add_custom_target(zimtohrli_goohrli ALL DEPENDS ${zimtohrli_goohrli_archive_build})
 
 add_executable(zimtohrli_compare
+    cpp/zimt/audio.cc
     cpp/zimt/compare.cc
 )
-target_link_libraries(zimtohrli_compare zimtohrli_ux zimtohrli_base absl::flags_parse)
+target_include_directories(zimtohrli_compare PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cpp)
+target_link_libraries(zimtohrli_compare sndfile absl::statusor absl::check absl::flags_parse PkgConfig::soxr)
 set_target_properties(zimtohrli_compare PROPERTIES
     PREFIX ""
     OUTPUT_NAME compare
     SUFFIX ""
 )
+# Use selective fast-math flags for compare tool
+target_compile_options(zimtohrli_compare PRIVATE 
+    -fassociative-math -freciprocal-math -fno-signed-zeros -fno-math-errno)
 
 option(BUILD_ZIMTOHRLI_TESTS "Build Zimtohrli test binaries." ON)
 if (BUILD_ZIMTOHRLI_TESTS)

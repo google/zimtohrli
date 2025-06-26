@@ -111,15 +111,7 @@ func (b *Bar) filler(prefix, suffix string) string {
 	return filler.String()
 }
 
-// RelUpdate changes complated and total tasks for the bar and updates it.
-func (b *Bar) RelUpdate(total, completed, errors int) {
-	b.lock.Lock()
-	t, c, e := b.total, b.completed, b.errors
-	b.lock.Unlock()
-	b.Update(t+total, c+completed, e+errors)
-}
-
-// Update sets completed and total tasks for the bar and updates it.
+// Update update completed and total tasks to the bar and updates it.
 func (b *Bar) Update(total, completed, errors int) {
 	b.lock.Lock()
 	defer b.lock.Unlock()

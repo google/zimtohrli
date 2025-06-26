@@ -32,10 +32,10 @@ func main() {
 	pathA := flag.String("path_a", "", "Path to ffmpeg-decodable file with signal A.")
 	pathB := flag.String("path_b", "", "Path to ffmpeg-decodable file with signal B.")
 	visqol := flag.Bool("visqol", false, "Whether to measure using ViSQOL.")
-	pipeMetric := flag.String("pipe_metric", "", "Path to a binary that serves metrics via stdin/stdout pipe. Install some of the via 'install_python_metrics.py'.")
+	pipeMetric := flag.String("pipe_metric", "", "Path to a binary that serves metrics via stdin/stdout pipe. Install some of them via 'install_python_metrics.py'.")
 	zimtohrli := flag.Bool("zimtohrli", true, "Whether to measure using Zimtohrli.")
 	outputZimtohrliDistance := flag.Bool("output_zimtohrli_distance", false, "Whether to output the raw Zimtohrli distance instead of a mapped mean opinion score.")
-	zimtohrliParameters := goohrli.DefaultParameters(48000)
+	zimtohrliParameters := goohrli.DefaultParameters()
 	b, err := json.Marshal(zimtohrliParameters)
 	if err != nil {
 		log.Panic(err)
@@ -49,11 +49,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	signalA, err := aio.LoadAtRate(*pathA, int(zimtohrliParameters.SampleRate))
+	signalA, err := aio.LoadAtRate(*pathA, int(goohrli.SampleRate()))
 	if err != nil {
 		log.Panic(err)
 	}
-	signalB, err := aio.LoadAtRate(*pathB, int(zimtohrliParameters.SampleRate))
+	signalB, err := aio.LoadAtRate(*pathB, int(goohrli.SampleRate()))
 	if err != nil {
 		log.Panic(err)
 	}
@@ -103,25 +103,22 @@ func main() {
 	}
 
 	if *zimtohrli {
-		g := goohrli.New(zimtohrliParameters)
 		getMetric := func(f float64) float64 {
 			if *outputZimtohrliDistance {
 				return f
 			}
-			return g.MOSFromZimtohrli(f)
+			return goohrli.MOSFromZimtohrli(f)
 		}
 
 		if err := zimtohrliParameters.Update([]byte(*zimtohrliParametersJSON)); err != nil {
 			log.Panic(err)
 		}
-		if !reflect.DeepEqual(zimtohrliParameters, goohrli.DefaultParameters(zimtohrliParameters.SampleRate)) {
+		if !reflect.DeepEqual(zimtohrliParameters, goohrli.DefaultParameters()) {
 			log.Printf("Using %+v", zimtohrliParameters)
 		}
-		zimtohrliParameters.SampleRate = signalA.Rate
+		g := goohrli.New(zimtohrliParameters)
 		if *perChannel {
 			for channelIndex := range signalA.Samples {
-				measurement := goohrli.Measure(signalA.Samples[channelIndex])
-				goohrli.NormalizeAmplitude(measurement.MaxAbsAmplitude, signalB.Samples[channelIndex])
 				fmt.Printf("Zimtohrli#%v=%v\n", channelIndex, getMetric(g.Distance(signalA.Samples[channelIndex], signalB.Samples[channelIndex])))
 			}
 		} else {

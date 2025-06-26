@@ -23,10 +23,10 @@ import (
 	"io"
 	"log"
 	"math"
+	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -34,10 +34,7 @@ import (
 	"github.com/dgryski/go-onlinestats"
 	"github.com/google/zimtohrli/go/aio"
 	"github.com/google/zimtohrli/go/audio"
-	"github.com/google/zimtohrli/go/goohrli"
-	"github.com/google/zimtohrli/go/progress"
 	"github.com/google/zimtohrli/go/worker"
-	"gonum.org/v1/gonum/optimize"
 
 	_ "github.com/mattn/go-sqlite3" // To open sqlite3-databases.
 )
@@ -93,19 +90,23 @@ type Study struct {
 	db  *sql.DB
 }
 
+func (s *Study) ClearScore(name ScoreType) error {
+	newRefs := []*Reference{}
+	s.ViewEachReference(func(r *Reference) error {
+		for _, dist := range r.Distortions {
+			delete(dist.Scores, name)
+		}
+		newRefs = append(newRefs, r)
+		return nil
+	})
+	return s.Put(newRefs)
+}
+
 // ReferenceBundle is a plain data type containing a bunch of references, typicall the content of a study.
 type ReferenceBundle struct {
-	// Dir is the directory of the source study.
-	Dir string
-	// References are all the reference sounds of the bundle.
+	Dir        string
 	References []*Reference
-	// ScoreTypes are the number of scores of each type in the bundle.
 	ScoreTypes map[ScoreType]int
-	// ScoreTypeLimits are the upper/lower limits of each score type in the bundle.
-	ScoreTypeLimits map[ScoreType][2]*float64
-
-	// mosScaler returns the MOS score provided scaled to 1-5. Useful for datasets where the MOS is scaled up to 0-100.
-	mosScaler func(float64) float64
 }
 
 // ReferenceBundles is a slice of ReferenceBundle.
@@ -115,38 +116,6 @@ type ReferenceBundles []*ReferenceBundle
 func (r *ReferenceBundle) IsJND() bool {
 	_, res := r.ScoreTypes[JND]
 	return res
-}
-
-var ErrNoMOSAvailable = fmt.Errorf("no MOS scores available")
-
-// MOSScaler returns a function that scales MOS scores of this bundle to the range 1-5.
-func (r *ReferenceBundle) MOSScaler() (func(float64) float64, error) {
-	if _, found := r.ScoreTypes[MOS]; !found {
-		return nil, ErrNoMOSAvailable
-	}
-	if r.mosScaler == nil {
-		if math.Abs(*r.ScoreTypeLimits[MOS][1]-5) < 0.2 {
-			r.mosScaler = func(mos float64) float64 {
-				return mos
-			}
-		} else if math.Abs(*r.ScoreTypeLimits[MOS][1]-100) < 10 {
-			r.mosScaler = func(mos float64) float64 {
-				return 1 + 0.04*mos
-			}
-		} else {
-			return nil, fmt.Errorf("%q: maximum MOS %v are confusing", r.Dir, *r.ScoreTypeLimits[MOS][1])
-		}
-	}
-	return r.mosScaler, nil
-}
-
-// ScaledMOS returns the MOS score scaled to 1-5.
-func (r *ReferenceBundle) ScaledMOS(mos float64) (float64, error) {
-	scaler, err := r.MOSScaler()
-	if err != nil {
-		return 0, err
-	}
-	return scaler(mos), nil
 }
 
 // SortedTypes returns the score types of a bundle, alphabetically ordered.
@@ -162,20 +131,8 @@ func (r *ReferenceBundle) SortedTypes() ScoreTypes {
 // Add adds a reference to a bundle.
 func (r *ReferenceBundle) Add(ref *Reference) {
 	for _, dist := range ref.Distortions {
-		for scoreType, value := range dist.Scores {
+		for scoreType := range dist.Scores {
 			r.ScoreTypes[scoreType]++
-			if r.ScoreTypeLimits[scoreType][0] == nil || *r.ScoreTypeLimits[scoreType][0] > value {
-				valueCopy := value
-				limits := r.ScoreTypeLimits[scoreType]
-				limits[0] = &valueCopy
-				r.ScoreTypeLimits[scoreType] = limits
-			}
-			if r.ScoreTypeLimits[scoreType][1] == nil || *r.ScoreTypeLimits[scoreType][1] < value {
-				valueCopy := value
-				limits := r.ScoreTypeLimits[scoreType]
-				limits[1] = &valueCopy
-				r.ScoreTypeLimits[scoreType] = limits
-			}
 		}
 	}
 	r.References = append(r.References, ref)
@@ -184,9 +141,8 @@ func (r *ReferenceBundle) Add(ref *Reference) {
 // ToBundle returns a reference bundle for this study.
 func (s *Study) ToBundle() (*ReferenceBundle, error) {
 	result := &ReferenceBundle{
-		Dir:             s.dir,
-		ScoreTypes:      map[ScoreType]int{},
-		ScoreTypeLimits: map[ScoreType][2]*float64{},
+		Dir:        s.dir,
+		ScoreTypes: map[ScoreType]int{},
 	}
 	if err := s.ViewEachReference(func(ref *Reference) error {
 		result.Add(ref)
@@ -256,14 +212,14 @@ func (c CorrelationTable) String() string {
 	for _, scores := range c {
 		row := Row{string(scores[0].ScoreTypeA)}
 		for _, score := range scores {
-			row = append(row, fmt.Sprintf("%.2f", score.Score))
+			row = append(row, fmt.Sprintf("%.15f", score.Score))
 		}
 		tableResult = append(tableResult, row)
 		if scores[0].ScoreTypeA == MOS {
 			sort.Sort(scores)
 			for _, score := range scores {
 				if score.ScoreTypeB != MOS {
-					listResult = append(listResult, Row{string(score.ScoreTypeB), fmt.Sprintf("%.2f", score.Score)})
+					listResult = append(listResult, Row{string(score.ScoreTypeB), fmt.Sprintf("%.15f", score.Score)})
 				}
 			}
 		}
@@ -275,24 +231,21 @@ func (c CorrelationTable) String() string {
 func (r *ReferenceBundle) Correlation(typeA, typeB ScoreType) (float64, error) {
 	scoresA := []float64{}
 	scoresB := []float64{}
-	appender := func(scores *[]float64, typ ScoreType, dist *Distortion) error {
-		score := dist.Scores[typ]
-		if typ == MOS {
-			var err error
-			if score, err = r.ScaledMOS(score); err != nil {
-				return err
-			}
-		}
-		*scores = append(*scores, score)
-		return nil
-	}
 	for _, ref := range r.References {
 		for _, dist := range ref.Distortions {
-			if err := appender(&scoresA, typeA, dist); err != nil {
-				return 0, err
+			scoresA = append(scoresA, dist.Scores[typeA])
+			scoresB = append(scoresB, dist.Scores[typeB])
+		}
+		// include this loop for 'soft' Spearman for optimization
+		// for example 70 iterations
+		for ii := 1; ii < 1; ii++ {
+			for _, dist := range ref.Distortions {
+				scoresA = append(scoresA, (1.0+float64(ii)*0.0004)*dist.Scores[typeA])
+				scoresB = append(scoresB, dist.Scores[typeB])
 			}
-			if err := appender(&scoresB, typeB, dist); err != nil {
-				return 0, err
+			for _, dist := range ref.Distortions {
+				scoresA = append(scoresA, (1.0-float64(ii)*0.0004)*dist.Scores[typeA])
+				scoresB = append(scoresB, dist.Scores[typeB])
 			}
 		}
 	}
@@ -327,22 +280,6 @@ func (r *ReferenceBundle) Correlate() (CorrelationTable, error) {
 	return result, nil
 }
 
-// Correlate returns a table of all scores in the bundles Spearman correlated to each other.
-func (r ReferenceBundles) Correlate() (CorrelationTable, error) {
-	merged := &ReferenceBundle{
-		ScoreTypes:      map[ScoreType]int{},
-		ScoreTypeLimits: map[ScoreType][2]*float64{},
-	}
-	for _, bundle := range r {
-		if !bundle.IsJND() {
-			for _, ref := range bundle.References {
-				merged.Add(ref)
-			}
-		}
-	}
-	return merged.Correlate()
-}
-
 // JNDAccuracyScore contains the accuracy for a metric when used to predict audible differences, and the threshold when that accuracy was achieved.
 type JNDAccuracyScore struct {
 	ScoreType ScoreType
@@ -357,7 +294,7 @@ func (a JNDAccuracyScores) String() string {
 	table := Table{Row{"Score type", "Accuracy", "Threshold"}}
 	table = append(table, nil)
 	for _, score := range a {
-		table = append(table, Row{string(score.ScoreType), fmt.Sprintf("%.2f", score.Accuracy), fmt.Sprintf("%.2v", score.Threshold)})
+		table = append(table, Row{string(score.ScoreType), fmt.Sprintf("%.15f", score.Accuracy), fmt.Sprintf("%.15v", score.Threshold)})
 	}
 	return fmt.Sprintf("### Maximal audibility classification accuracy and threshold per score type\n\n%s", table.String())
 }
@@ -468,114 +405,6 @@ func (r *ReferenceBundle) JNDAccuracy() (JNDAccuracyScores, error) {
 	return result, nil
 }
 
-// JNDAccuracy returns the accuracy of each score type when used to predict audible differences.
-func (r ReferenceBundles) JNDAccuracy() (JNDAccuracyScores, error) {
-	merged := &ReferenceBundle{
-		ScoreTypes:      map[ScoreType]int{},
-		ScoreTypeLimits: map[ScoreType][2]*float64{},
-	}
-	for _, bundle := range r {
-		if bundle.IsJND() {
-			for _, ref := range bundle.References {
-				merged.Add(ref)
-			}
-		}
-	}
-	return merged.JNDAccuracy()
-}
-
-// OptimizedZimtohrliMSE optimizes the MOS mapping and returns the ZimtohrliMSE using the optimized mapping.
-func (r ReferenceBundles) OptimizedZimtohrliMSE() (float64, error) {
-	optResult, err := r.OptimizeMapping()
-	if err != nil {
-		return 0, err
-	}
-	params := goohrli.DefaultParameters(aio.DefaultSampleRate)
-	copy(params.MOSMapperParams[:], optResult.ParamsAfter)
-	z := goohrli.New(params)
-	return r.ZimtohrliMSE(z, true)
-}
-
-// ZimtohrliMSE returns the mean square of the ZimtohrliMSE of the bundles.
-func (r ReferenceBundles) ZimtohrliMSE(z *goohrli.Goohrli, includeJND bool) (float64, error) {
-	sumOfSquares := 0.0
-	count := 0
-	for _, bundle := range r {
-		if includeJND || !bundle.IsJND() {
-			mse, err := bundle.ZimtohrliMSE(z)
-			if err != nil {
-				return 0, err
-			}
-			sumOfSquares += mse * mse
-			count++
-		}
-	}
-	return sumOfSquares / float64(count), nil
-}
-
-// ZimtohrliMSE returns the precision when predicting the MOS score or JND difference.
-func (r *ReferenceBundle) ZimtohrliMSE(z *goohrli.Goohrli) (float64, error) {
-	if r.IsJND() {
-		_, threshold, err := r.JNDAccuracyAndThreshold(Zimtohrli)
-		if err != nil {
-			return 0, err
-		}
-		sumOfSquares := 0.0
-		count := 0
-		for _, ref := range r.References {
-			for _, dist := range ref.Distortions {
-				jnd, found := dist.Scores[JND]
-				if !found {
-					return 0, fmt.Errorf("%+v doesn't have a JND score", ref)
-				}
-				zimt, found := dist.Scores[Zimtohrli]
-				if !found {
-					return 0, fmt.Errorf("%+v doesn't have a Zimtohrli score", ref)
-				}
-				switch jnd {
-				case 0:
-					if zimt >= threshold {
-						delta := zimt - threshold
-						sumOfSquares += delta * delta
-					}
-				case 1:
-					if zimt < threshold {
-						delta := zimt - threshold
-						sumOfSquares += delta * delta
-					}
-				default:
-					return 0, fmt.Errorf("%+v JND isn't 0 or 1", ref)
-				}
-				count++
-			}
-		}
-		return sumOfSquares / float64(count), nil
-	} else {
-		sumOfSquares := 0.0
-		count := 0
-		for _, ref := range r.References {
-			for _, dist := range ref.Distortions {
-				mos, found := dist.Scores[MOS]
-				if !found {
-					return 0, fmt.Errorf("%+v doesn't have a MOS score", ref)
-				}
-				zimt, found := dist.Scores[Zimtohrli]
-				if !found {
-					return 0, fmt.Errorf("%+v doesn't have a Zimtohrli score", ref)
-				}
-				scaledMOS, err := r.ScaledMOS(mos)
-				if err != nil {
-					return 0, err
-				}
-				delta := scaledMOS - z.MOSFromZimtohrli(zimt)
-				sumOfSquares += delta * delta
-				count++
-			}
-		}
-		return sumOfSquares / float64(count), nil
-	}
-}
-
 // Studies is a slice of studies.
 type Studies []*Study
 
@@ -591,158 +420,42 @@ func (s Studies) ToBundles() (ReferenceBundles, error) {
 	return result, nil
 }
 
-// CalculateZimtohrliMSE calculates Zimtohrli scores for all examples in the bundles, optimizes the MOS mapping, and returns the resulting MSE.
-func (r ReferenceBundles) CalculateZimtohrliMSE(z *goohrli.Goohrli) (float64, error) {
+// References returns the sum of the number of references in all the bundles.
+func (r ReferenceBundles) References() int {
+	res := 0
 	for _, bundle := range r {
-		bar := progress.New(fmt.Sprintf("Calculating for %v", filepath.Base(bundle.Dir)))
-		pool := &worker.Pool[any]{
-			Workers:  runtime.NumCPU(),
-			OnChange: bar.Update,
+		res += len(bundle.References)
+	}
+	return res
+}
+
+// Split will split the bundle randomly in two parts, at the split provided.
+func (r ReferenceBundles) Split(rng *rand.Rand, split float64) (ReferenceBundles, ReferenceBundles) {
+	left := ReferenceBundles{}
+	right := ReferenceBundles{}
+	for _, bundle := range r {
+		newLeft := &ReferenceBundle{
+			Dir:        bundle.Dir,
+			References: nil,
+			ScoreTypes: map[ScoreType]int{},
 		}
-		if err := bundle.Calculate(map[ScoreType]Measurement{Zimtohrli: z.NormalizedAudioDistance}, pool, true); err != nil {
-			return 0, err
+		left = append(left, newLeft)
+		newRight := &ReferenceBundle{
+			Dir:        bundle.Dir,
+			References: nil,
+			ScoreTypes: map[ScoreType]int{},
 		}
-		bar.Finish()
+		right = append(right, newRight)
+		numLeft := int(split * float64(len(bundle.References)))
+		indices := rng.Perm(len(bundle.References))
+		for _, index := range indices[:numLeft] {
+			newLeft.Add(bundle.References[index])
+		}
+		for _, index := range indices[numLeft:] {
+			newRight.Add(bundle.References[index])
+		}
 	}
-	return r.OptimizedZimtohrliMSE()
-}
-
-// MappingOptimizationResult contains the results of optimizing the MOS mapping.
-type MappingOptimizationResult struct {
-	ParamsBefore []float64
-	MSEBefore    float64
-	ParamsAfter  []float64
-	MSEAfter     float64
-}
-
-// OptimizeMapping optimizes the MOS mapping parameters.
-func (r ReferenceBundles) OptimizeMapping() (*MappingOptimizationResult, error) {
-	startParams := goohrli.DefaultParameters(aio.DefaultSampleRate)
-	errors := []error{}
-	p := optimize.Problem{
-		Func: func(x []float64) float64 {
-			params := startParams
-			for index := range params.MOSMapperParams {
-				params.MOSMapperParams[index] = math.Abs(x[index])
-			}
-			z := goohrli.New(params)
-			result, err := r.ZimtohrliMSE(z, false)
-			if err != nil {
-				errors = append(errors, err)
-			}
-			return result
-		},
-		Status: func() (optimize.Status, error) {
-			if len(errors) > 0 {
-				return optimize.Failure, fmt.Errorf("%+v", errors)
-			}
-			return optimize.NotTerminated, nil
-		},
-	}
-	result := &MappingOptimizationResult{
-		ParamsBefore: startParams.MOSMapperParams[:],
-		MSEBefore:    p.Func(startParams.MOSMapperParams[:]),
-	}
-	optResult, err := optimize.Minimize(p, startParams.MOSMapperParams[:], &optimize.Settings{Concurrent: runtime.NumCPU()}, nil)
-	if err != nil {
-		return nil, err
-	}
-	if err := optResult.Status.Err(); err != nil {
-		return nil, err
-	}
-	result.ParamsAfter = optResult.X
-	result.MSEAfter = optResult.F
-	return result, nil
-}
-
-// OptimizeEvent is a step in the optimization process.
-type OptimizeEvent struct {
-	Parameters goohrli.Parameters
-	Step       int
-	MSE        float64
-}
-
-// Recorder logs optimization progress.
-type Recorder struct {
-	Output *os.File
-
-	startParameters goohrli.Parameters
-}
-
-// Init does nothing.
-func (r *Recorder) Init() error {
-	return nil
-}
-
-func (r *Recorder) paramsToX(p goohrli.Parameters) []float64 {
-	return []float64{p.FrequencyResolution / r.startParameters.FrequencyResolution}
-}
-
-func (r *Recorder) xToParams(x []float64) goohrli.Parameters {
-	cpy := r.startParameters
-	cpy.FrequencyResolution *= x[0]
-	return cpy
-}
-
-// Record prints optimization statistics to the log.
-func (r *Recorder) Record(loc *optimize.Location, op optimize.Operation, stats *optimize.Stats) error {
-	params := r.xToParams(loc.X)
-	switch op {
-	case optimize.InitIteration:
-		log.Printf("Initialized solution %+v with MSE %v", params, loc.F)
-	case optimize.MajorIteration:
-		log.Printf("%v iterations, candidate solution %+v with MSE %v", stats.MajorIterations, params, loc.F)
-	case optimize.FuncEvaluation:
-		log.Printf("%v iterations, evaluated at %+v with MSE %v", stats.MajorIterations, params, loc.F)
-	case optimize.MethodDone:
-		log.Printf("Solution %+v found with MSE %v", loc.F, loc.X)
-	}
-	if r.Output == nil {
-		return nil
-	}
-	ev := OptimizeEvent{
-		Parameters: params,
-		Step:       stats.MajorIterations,
-		MSE:        loc.F,
-	}
-	b, err := json.Marshal(ev)
-	if err != nil {
-		return err
-	}
-	if _, err := r.Output.WriteString(string(b) + "\n"); err != nil {
-		return err
-	}
-	return r.Output.Sync()
-}
-
-// Optimize will use optimize a Zimtohrli metric for predicting these bundles.
-func (r ReferenceBundles) Optimize(recorder *Recorder) error {
-	recorder.startParameters = goohrli.DefaultParameters(aio.DefaultSampleRate)
-	errors := []error{}
-	p := optimize.Problem{
-		Func: func(x []float64) float64 {
-			z := goohrli.New(recorder.xToParams(x))
-			mse, err := r.CalculateZimtohrliMSE(z)
-			if err != nil {
-				errors = append(errors, err)
-			}
-			return mse
-		},
-		Status: func() (optimize.Status, error) {
-			if len(errors) > 0 {
-				return optimize.Failure, fmt.Errorf("%+v", errors)
-			}
-			return optimize.NotTerminated, nil
-		},
-	}
-	optResult, err := optimize.Minimize(p, recorder.paramsToX(recorder.startParameters), &optimize.Settings{Recorder: recorder}, nil)
-	if err != nil {
-		return err
-	}
-	if err := optResult.Status.Err(); err != nil {
-		return err
-	}
-	return nil
+	return left, right
 }
 
 func gitIdentity() (*string, error) {
@@ -797,9 +510,9 @@ Created at %s
 		}
 	}
 
-	fmt.Fprintf(res, "## Global leaderboard across all studies\n\n")
+	fmt.Fprintf(res, "## Global leaderboard across all studies\n\nContains only scores present in all studies.\n\n")
 
-	board, err := r.Leaderboard(2)
+	board, err := r.Leaderboard(15)
 	if err != nil {
 		return "", err
 	}
@@ -1088,39 +801,6 @@ func (s *Study) ViewEachReference(f func(*Reference) error) error {
 	return nil
 }
 
-// Copy inserts some reference into a study, and copies the audio files of the references and their distortions, assuming they are relative to the provided directory.
-func (s *Study) Copy(dir string, refs []*Reference, minMOS float64, mosScaler func(float64) float64, progress func(int, int, int)) error {
-	for index, ref := range refs {
-		refCopy := &Reference{}
-		*refCopy = *ref
-		newRefPath := fmt.Sprintf("%v_%v", filepath.Base(dir), filepath.Base(ref.Path))
-		refCopy.Path = newRefPath
-		if err := os.Symlink(filepath.Join(dir, ref.Path), filepath.Join(s.dir, newRefPath)); err != nil {
-			return err
-		}
-		refCopy.Distortions = nil
-		for _, dist := range ref.Distortions {
-			if mosScaler == nil || mosScaler(dist.Scores[MOS]) >= minMOS {
-				distCopy := &Distortion{}
-				*distCopy = *dist
-				newDistPath := fmt.Sprintf("%v_%v", filepath.Base(dir), filepath.Base(dist.Path))
-				distCopy.Path = newDistPath
-				if err := os.Symlink(filepath.Join(dir, dist.Path), filepath.Join(s.dir, newDistPath)); err != nil {
-					return err
-				}
-				refCopy.Distortions = append(refCopy.Distortions, distCopy)
-			}
-		}
-		if len(refCopy.Distortions) > 0 {
-			if err := s.Put([]*Reference{refCopy}); err != nil {
-				return err
-			}
-		}
-		progress(len(refs), index, 0)
-	}
-	return nil
-}
-
 // Put inserts some references into a study.
 func (s *Study) Put(refs []*Reference) error {
 	tx, err := s.db.Begin()
@@ -1164,15 +844,6 @@ type Reference struct {
 	Name        string
 	Path        string
 	Distortions []*Distortion
-}
-
-func (r *Reference) HasMOSAbove(min float64, scaler func(float64) float64) bool {
-	for _, dist := range r.Distortions {
-		if scaler(dist.Scores[MOS]) >= min {
-			return true
-		}
-	}
-	return false
 }
 
 // Load returns the audio for this reference.

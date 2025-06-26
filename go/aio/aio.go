@@ -27,11 +27,6 @@ import (
 	"github.com/google/zimtohrli/go/audio"
 )
 
-const (
-	// DefaultSampleRate is the default sample rate.
-	DefaultSampleRate = 48000
-)
-
 // Fetch calls Recode if path ends with .wav, otherwise Copy.
 func Fetch(path string, dir string) (string, error) {
 	if strings.ToLower(filepath.Ext(path)) == ".wav" {
@@ -42,7 +37,7 @@ func Fetch(path string, dir string) (string, error) {
 
 // Load loads audio from an ffmpeg-decodable file from a path (which may be a URL).
 func Load(path string) (*audio.Audio, error) {
-	return LoadAtRate(path, DefaultSampleRate)
+	return LoadAtRate(path, 48000)
 }
 
 // LoadAtRate loads audio from an ffmpeg-decodable file from a path (which may be a URL) and returns it at the given sample rate.

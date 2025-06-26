@@ -31,34 +31,30 @@ TEST(AudioFile, LoadAudioFileTest) {
       GetTestFilePath("cpp/zimt/test.wav");
   absl::StatusOr<AudioFile> audio_file = AudioFile::Load(test_wav_path);
   CHECK_OK(audio_file.status());
-  EXPECT_EQ(audio_file->Frames().shape()[0], 2);
-  EXPECT_EQ(audio_file->Frames().shape()[1], 10);
-  for (size_t frame_index = 0; frame_index < audio_file->Frames().shape()[1];
+  EXPECT_EQ(audio_file->Info().channels, 2);
+  EXPECT_EQ(audio_file->Info().frames, 10);
+  for (size_t frame_index = 0; frame_index < audio_file->Info().frames;
        ++frame_index) {
-    for (size_t channel_index = 0;
-         channel_index < audio_file->Frames().shape()[0]; ++channel_index) {
+    for (size_t channel_index = 0; channel_index < audio_file->Info().channels;
+         ++channel_index) {
       switch (channel_index) {
         case 0:
           switch (frame_index % 2) {
             case 0:
-              EXPECT_EQ(audio_file->Frames()[{channel_index}][frame_index],
-                        0.5);
+              EXPECT_EQ((*audio_file)[channel_index][frame_index], 0.5);
               break;
             case 1:
-              EXPECT_EQ(audio_file->Frames()[{channel_index}][frame_index],
-                        -0.5);
+              EXPECT_EQ((*audio_file)[channel_index][frame_index], -0.5);
               break;
           }
           break;
         case 1:
           switch (frame_index % 2) {
             case 0:
-              EXPECT_EQ(audio_file->Frames()[{channel_index}][frame_index],
-                        0.25);
+              EXPECT_EQ((*audio_file)[channel_index][frame_index], 0.25);
               break;
             case 1:
-              EXPECT_EQ(audio_file->Frames()[{channel_index}][frame_index],
-                        -0.25);
+              EXPECT_EQ((*audio_file)[channel_index][frame_index], -0.25);
               break;
           }
           break;

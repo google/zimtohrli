@@ -14,13 +14,13 @@
 
 #include "visqol_model.h"
 
-#include "absl/types/span.h"
 #include "libsvm_nu_svr_model.h"
+#include "zimt/zimtohrli.h"
 
 namespace zimtohrli {
 
-absl::Span<const char> ViSQOLModel() {
-  return absl::Span<char>(reinterpret_cast<char*>(visqol_model_bytes),
+Span<const char> ViSQOLModel() {
+  return Span<const char>(reinterpret_cast<const char*>(visqol_model_bytes),
                           visqol_model_bytes_len);
 }
 
