@@ -90,6 +90,18 @@ type Study struct {
 	db  *sql.DB
 }
 
+func (s *Study) ClearScore(name ScoreType) error {
+	newRefs := []*Reference{}
+	s.ViewEachReference(func(r *Reference) error {
+		for _, dist := range r.Distortions {
+			delete(dist.Scores, name)
+		}
+		newRefs = append(newRefs, r)
+		return nil
+	})
+	return s.Put(newRefs)
+}
+
 // ReferenceBundle is a plain data type containing a bunch of references, typicall the content of a study.
 type ReferenceBundle struct {
 	Dir        string

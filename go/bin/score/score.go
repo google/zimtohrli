@@ -52,15 +52,30 @@ func main() {
 	accuracy := flag.String("accuracy", "", "Glob to directories with databases to provide JND accuracy for.")
 	workers := flag.Int("workers", runtime.NumCPU(), "Number of concurrent workers for tasks.")
 	failFast := flag.Bool("fail_fast", false, "Whether to panic immediately on any error.")
+	clear := flag.String("clear", "", "Glob to directories with databases to clear a particular score type from.")
+	clearScore := flag.String("clear_score", "", "Name of score type to clear.")
 	flag.Parse()
 
-	if *details == "" && *calculate == "" && *correlate == "" && *accuracy == "" && *leaderboard == "" && *report == "" {
+	if *details == "" && *calculate == "" && *correlate == "" && *accuracy == "" && *leaderboard == "" && *report == "" && *clear == "" {
 		flag.Usage()
 		os.Exit(1)
 	}
 
 	if err := zimtohrliParameters.Update([]byte(*zimtohrliParametersJSON)); err != nil {
 		log.Panic(err)
+	}
+
+	if *clear != "" {
+		studies, err := data.OpenStudies(*clear)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer studies.Close()
+		for _, study := range studies {
+			if err := study.ClearScore(data.ScoreType(*clearScore)); err != nil {
+				log.Fatal(err)
+			}
+		}
 	}
 
 	if *calculate != "" {
