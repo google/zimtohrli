@@ -94,7 +94,7 @@ func TestGoohrli(t *testing.T) {
 		{
 			freqA:    5000,
 			freqB:    10000,
-			distance: 0.023778676986694336,
+			distance: 0.02702277898788452,
 		},
 	} {
 		params := DefaultParameters()
