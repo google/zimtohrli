@@ -46,7 +46,7 @@ The final distance metric is computed as 1 - NSIM, providing a value between 0 (
 
 ## Performance
 
-For correlation performance with a few datasets see [COMPARISON.md](COMPARISON.md).
+For correlation performance with a few datasets see [CORRELATION.md](CORRELATION.md).
 
 Most of those datasets can be acquired using the tools [coresvnet](go/bin/coresvnet),
 [perceptual_audio](go/bin/perceptual_audio), [sebass_db](go/bin/sebass_db),
@@ -54,6 +54,38 @@ Most of those datasets can be acquired using the tools [coresvnet](go/bin/coresv
 A couple of them are unpublished and can't be downloaded.
 
 Zimtohrli can compare ~70 seconds of audio per second on a single 2.5GHz core.
+
+## Correlation Testing
+
+Zimtohrli includes a comprehensive correlation testing framework to validate how well audio quality metrics correlate with human perception. The system evaluates metrics against multiple listening test datasets containing either Mean Opinion Scores (MOS) or Just Noticeable Difference (JND) ratings.
+
+### How Correlation Scoring Works
+
+The system uses two different evaluation methods depending on the dataset type:
+
+- **For MOS datasets**: Calculates Spearman rank correlation coefficient between predicted scores and human ratings. Higher correlation values (closer to 1.0) indicate better alignment with human perception.
+- **For JND datasets**: Determines classification accuracy by finding an optimal threshold that maximizes correct predictions of whether differences are audible. The score represents the percentage of correct classifications.
+
+### Running Correlation Tests
+
+1. **Install external metrics** (optional):
+   ```bash
+   ./install_external_metrics.sh /path/to/destination
+   ```
+
+2. **Acquire datasets** using the provided tools in `go/bin/`
+
+3. **Calculate metrics**:
+   ```bash
+   go run go/bin/score/score.go -calculate "/path/to/datasets/*" -calculate_zimtohrli -calculate_visqol
+   ```
+
+4. **Generate correlation report**:
+   ```bash
+   go run go/bin/score/score.go -report "/path/to/datasets/*" > correlation_report.md
+   ```
+
+The report includes correlation tables for each dataset and a global leaderboard showing mean squared error across all studies, where lower values indicate better overall performance.
 
 ## Compatibility
 
