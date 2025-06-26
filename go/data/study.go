@@ -122,9 +122,12 @@ func (r *ReferenceBundle) IsJND() bool {
 func (r *ReferenceBundle) SortedTypes() ScoreTypes {
 	sorted := ScoreTypes{}
 	for scoreType := range r.ScoreTypes {
-		sorted = append(sorted, scoreType)
+		if scoreType != MOS {
+			sorted = append(sorted, scoreType)
+		}
 	}
 	sort.Sort(sorted)
+	sorted = append(ScoreTypes{MOS}, sorted...)
 	return sorted
 }
 
