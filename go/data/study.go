@@ -510,9 +510,9 @@ Created at %s
 		}
 	}
 
-	fmt.Fprintf(res, "## Global leaderboard across all studies\n\n")
+	fmt.Fprintf(res, "## Global leaderboard across all studies\n\nContains only scores present in all studies.\n\n")
 
-	board, err := r.Leaderboard(2)
+	board, err := r.Leaderboard(15)
 	if err != nil {
 		return "", err
 	}
