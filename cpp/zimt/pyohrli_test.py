@@ -34,6 +34,12 @@ def parameterize(*kwargs):
 
 class PyohrliTest(unittest.TestCase):
 
+    def test_num_rotators(self):
+      self.assertEqual(128, pyohrli.Pyohrli().num_rotators)
+
+    def test_sample_rate(self):
+      self.assertEqual(48000, pyohrli.Pyohrli().sample_rate)
+
     @parameterize(
         dict(
             a_hz=5000.0,
