@@ -20,84 +20,85 @@ import _pyohrli
 
 
 def mos_from_zimtohrli(zimtohrli_distance: float) -> float:
-    """Returns an approximate mean opinion score based on the provided Zimtohrli distance."""
-    return _pyohrli.MOSFromZimtohrli(zimtohrli_distance)
+  """Returns an approximate mean opinion score based on the provided Zimtohrli distance."""
+  return _pyohrli.MOSFromZimtohrli(zimtohrli_distance)
 
 
 class Spectrogram:
-    """Wrapper around C++ zimtohrli::Spectrogram."""
+  """Wrapper around C++ zimtohrli::Spectrogram."""
 
-    _cc_analysis: _pyohrli.Spectrogram
+  _cc_analysis: _pyohrli.Spectrogram
 
 
 class Pyohrli:
-    """Wrapper around C++ zimtohrli::Zimtohrli."""
+  """Wrapper around C++ zimtohrli::Zimtohrli."""
 
-    _cc_pyohrli: _pyohrli.Pyohrli
+  _cc_pyohrli: _pyohrli.Pyohrli
 
-    def __init__(self):
-        """Initializes the instance."""
-        self._cc_pyohrli = _pyohrli.Pyohrli()
+  def __init__(self):
+    """Initializes the instance."""
+    self._cc_pyohrli = _pyohrli.Pyohrli()
 
-    def distance(self, signal_a: npt.ArrayLike, signal_b: npt.ArrayLike) -> float:
-        """Computes the distance between two signals.
+  def distance(self, signal_a: npt.ArrayLike, signal_b: npt.ArrayLike) -> float:
+    """Computes the distance between two signals.
 
-        The signals must be (num_samples,)-shaped 48kHz [-1, 1] float arrays.
+    The signals must be (num_samples,)-shaped 48kHz [-1, 1] float arrays.
 
-        Args:
-          signal_a: A signal to compare.
-          signal_b: Another signal to compare with.
+    Args:
+      signal_a: A signal to compare.
+      signal_b: Another signal to compare with.
 
-        Returns:
-          The Zimtohrli distance between the signals.
-        """
-        return self._cc_pyohrli.distance(
-            np.asarray(signal_a).astype(np.float32).ravel().data,
-            np.asarray(signal_b).astype(np.float32).ravel().data,
-        )
+    Returns:
+      The Zimtohrli distance between the signals.
+    """
+    return self._cc_pyohrli.distance(
+        np.asarray(signal_a).astype(np.float32).ravel().data,
+        np.asarray(signal_b).astype(np.float32).ravel().data,
+    )
 
-    def analyze(self, signal: npt.ArrayLike) -> np.array:
-        """Computes the Zimtohrli spectrogram of a signal.compile
+  def analyze(self, signal: npt.ArrayLike) -> npt.ArrayLike:
+    """Computes the Zimtohrli spectrogram of a signal.compile.
 
-        Args:
-          signal: A (num_samples,)-shaped 48kHz [-1, 1] float array.
-        Returns:
-          A (num_steps, num_dims)-shaped float array with the Zimtohrli
-          spectrogram of the signal.
-        """
-        bytes = self._cc_pyohrli.analyze(
-            np.asarray(signal).astype(np.float32).ravel().data
-        )
-        result = np.frombuffer(bytes, dtype=np.float32)
-        num_rotators = self._cc_pyohrli.num_rotators()
-        return result.reshape((result.shape[0] // num_rotators, num_rotators))
+    Args:
+      signal: A (num_samples,)-shaped 48kHz [-1, 1] float array.
 
-    @property
-    def full_scale_sine_db(self) -> float:
-        """Reference intensity for an amplitude 1.0 sine wave at 1kHz.
+    Returns:
+      A (num_steps, num_dims)-shaped float array with the Zimtohrli
+      spectrogram of the signal.
+    """
+    bts = self._cc_pyohrli.analyze(
+        np.asarray(signal).astype(np.float32).ravel().data
+    )
+    result = np.frombuffer(bts, dtype=np.float32)
+    num_rotators = self._cc_pyohrli.num_rotators()
+    return result.reshape((result.shape[0] // num_rotators, num_rotators))
 
-        Defaults to 80dB SPL.
-        """
-        return self._cc_pyohrli.get_full_scale_sine_db()
+  @property
+  def full_scale_sine_db(self) -> float:
+    """Reference intensity for an amplitude 1.0 sine wave at 1kHz.
 
-    @full_scale_sine_db.setter
-    def full_scale_sine_db(self, value: float):
-        self._cc_pyohrli.set_full_scale_sine_db(value)
+    Defaults to 80dB SPL.
+    """
+    return self._cc_pyohrli.get_full_scale_sine_db()
 
-    @property
-    def nsim_step_window(self) -> float:
-        """Order of the window in perceptual_sample_rate time steps when compting the NSIM."""
-        return self._cc_pyohrli.get_nsim_step_window()
+  @full_scale_sine_db.setter
+  def full_scale_sine_db(self, value: float):
+    self._cc_pyohrli.set_full_scale_sine_db(value)
 
-    @nsim_step_window.setter
-    def nsim_step_window(self, value: float):
-        self._cc_pyohrli.set_nsim_step_window(value)
+  @property
+  def nsim_step_window(self) -> float:
+    """Order of the window in perceptual_sample_rate time steps when compting the NSIM."""
+    return self._cc_pyohrli.get_nsim_step_window()
 
-    @property
-    def nsim_channel_window(self) -> float:
-        """Order of the window in channels when computing the NSIM."""
-        return self._cc_pyohrli.get_nsim_channel_window()
+  @nsim_step_window.setter
+  def nsim_step_window(self, value: float):
+    self._cc_pyohrli.set_nsim_step_window(value)
 
-    @nsim_channel_window.setter
-    def nsim_channel_window(self, value: float):
-        self._cc_pyohrli.set_nsim_channel_window(value)
+  @property
+  def nsim_channel_window(self) -> float:
+    """Order of the window in channels when computing the NSIM."""
+    return self._cc_pyohrli.get_nsim_channel_window()
+
+  @nsim_channel_window.setter
+  def nsim_channel_window(self, value: float):
+    self._cc_pyohrli.set_nsim_channel_window(value)

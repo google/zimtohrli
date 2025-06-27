@@ -19,8 +19,7 @@
 #include <cmath>
 #include <cstring>
 #include <memory>
-#include <optional>
-#include <stdexcept>
+#include <iostream>
 #include <vector>
 
 namespace zimtohrli {
@@ -39,7 +38,7 @@ struct Span {
                   "Cannot construct Span from vector of incompatible type.");
   }
   template <typename U>
-  Span(const Span<U>& other) noexcept : data(other.data), size(other.size) {
+  Span(const Span<U>& other) noexcept : size(other.size), data(other.data) {
     static_assert(std::is_convertible_v<U(*)[], T(*)[]>,
                   "Cannot construct Span from Span of incompatible type.");
   }
@@ -55,10 +54,10 @@ namespace {
 #define assert_eq(a, b)                                                        \
   do {                                                                         \
     if ((a) != (b)) {                                                          \
-      throw std::runtime_error(std::string("Assertion failed: ") + #a + " (" + \
-                               std::to_string(a) + ") == " #b + " (" +         \
-                               std::to_string(b) + ") at " + __FILE__ + ":" +  \
-                               std::to_string(__LINE__));                      \
+      std::cerr << "Assertion failed: " << #a << " (" << std::to_string(a)     \
+                << ") == " << #b << " (" << std::to_string(b) << ") at "       \
+                << __FILE__ << ":" << std::to_string(__LINE__) << "\n";        \
+      std::abort();                                                            \
     }                                                                          \
   } while (0)
 
@@ -161,7 +160,7 @@ class Rotators {
   // [0..1] is for real and imag of 1st leaking accumulation
   // [2..3] is for real and imag of 2nd leaking accumulation
   // [4..5] is for real and imag of 3rd leaking accumulation
-  float accu[6][kNumRotators] = {0};
+  float accu[6][kNumRotators] = {{0}};
   float window[kNumRotators];
   float gain[kNumRotators];
 
@@ -323,7 +322,7 @@ struct Spectrogram {
     return Span<const float>(values.get() + n * num_dims, num_dims);
   }
   Span<float> operator[](size_t n) {
-    return Span(values.get() + n * num_dims, num_dims);
+    return Span<float>(values.get() + n * num_dims, num_dims);
   }
   // Returns the maximum absolute value across all spectrogram values.
   float max() const {
