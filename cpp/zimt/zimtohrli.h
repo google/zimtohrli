@@ -17,9 +17,14 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
+#include <cstdint>
 #include <cstring>
 #include <memory>
 #include <iostream>
+#include <limits>
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace zimtohrli {
@@ -554,7 +559,7 @@ float NSIM(const Spectrogram& a, const Spectrogram& b,
 // A simple buffer of double cost values describing the time warp costs between
 // two spectrograms.
 struct CostMatrix {
-  const double get(size_t step_a, size_t step_b) {
+  double get(size_t step_a, size_t step_b) const {
     return values[step_a * steps_b + step_b];
   }
   void set(size_t step_a, size_t step_b, double value) {

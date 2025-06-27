@@ -90,6 +90,7 @@ type Study struct {
 	db  *sql.DB
 }
 
+// ClearScore deletes the named score type from all distortions in the study.
 func (s *Study) ClearScore(name ScoreType) error {
 	newRefs := []*Reference{}
 	s.ViewEachReference(func(r *Reference) error {
