@@ -93,6 +93,7 @@ type Parameters struct {
 
 var durationType = reflect.TypeOf(time.Second)
 
+// SampleRate returns the expected sample rate of analyzed audio.
 func SampleRate() float64 {
 	return float64(C.SampleRate())
 }
@@ -228,7 +229,7 @@ func toC(pinner *runtime.Pinner, signal []float32) *C.GoSpan {
 	}
 }
 
-// Spectrogram returns a spectrogram of the signal.
+// Analyze returns a spectrogram of the signal.
 func (g *Goohrli) Analyze(signal []float32) *Spec {
 	steps := int(C.SpectrogramSteps(g.zimtohrli, C.int(len(signal))))
 	result := &Spec{
