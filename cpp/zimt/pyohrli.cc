@@ -165,6 +165,14 @@ PyObject* Pyohrli_num_rotators(PyohrliObject* self, PyObject* const* args,
   return PyLong_FromLong(zimtohrli::kNumRotators);
 }
 
+PyObject* Pyohrli_sample_rate(PyohrliObject* self, PyObject* const* args,
+                              Py_ssize_t nargs) {
+  if (nargs != 0) {
+    return BadArgument("not exactly 0 arguments provided");
+  }
+  return PyLong_FromLong(zimtohrli::kSampleRate);
+}
+
 PyMethodDef Pyohrli_methods[] = {
     {"num_rotators", (PyCFunction)Pyohrli_num_rotators, METH_FASTCALL,
      "Returns the number of rotators, i.e. the number of dimensions in a "
@@ -173,6 +181,8 @@ PyMethodDef Pyohrli_methods[] = {
      "Returns a spectrogram of the provided signal."},
     {"distance", (PyCFunction)Pyohrli_distance, METH_FASTCALL,
      "Returns the distance between the two provided signals."},
+    {"sample_rate", (PyCFunction)Pyohrli_sample_rate, METH_FASTCALL,
+     "Returns the expected sample rate for analyzed audio."},
     {nullptr} /* Sentinel */
 };
 

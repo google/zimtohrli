@@ -74,6 +74,16 @@ class Pyohrli:
     return result.reshape((result.shape[0] // num_rotators, num_rotators))
 
   @property
+  def sample_rate(self) -> float:
+    """Expected sample rate of analyzed audio."""
+    return self._cc_pyohrli.sample_rate()
+
+  @property
+  def num_rotators(self) -> int:
+    """Number of rotators (spectrogram dimensions)."""
+    return int(self._cc_pyohrli.num_rotators())
+
+  @property
   def full_scale_sine_db(self) -> float:
     """Reference intensity for an amplitude 1.0 sine wave at 1kHz.
 

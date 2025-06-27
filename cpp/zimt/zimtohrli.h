@@ -51,6 +51,9 @@ struct Span {
 
 namespace {
 
+// Expected signal sample rate.
+constexpr float kSampleRate = 48000;
+
 #define assert_eq(a, b)                                                        \
   do {                                                                         \
     if ((a) != (b)) {                                                          \
@@ -205,7 +208,6 @@ class Rotators {
   void FilterAndDownsample(const float* in, size_t in_size, float* out,
                            size_t out_shape0, size_t out_stride,
                            int downsample) {
-    static const float kSampleRate = 48000.0;
     static const float kHzToRad = 2.0f * M_PI / kSampleRate;
     static const double kWindow = 0.9996028710680265;
     static const double kBandwidthMagic = 0.7328516996032982;
@@ -636,9 +638,6 @@ std::vector<std::pair<size_t, size_t>> DTW(const Spectrogram& spec_a,
   }
   return result;
 }
-
-// Expected signal sample rate.
-constexpr float kSampleRate = 48000;
 
 // Main class for psychoacoustic audio analysis.
 // Converts audio signals to perceptual spectrograms and computes
