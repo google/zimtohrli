@@ -192,6 +192,7 @@ Revision v0.2.1-2-g6c3827d, branch update, origin git@github.com:google/zimtohrl
 |PEAQB      |0.485041600283236 |-3.907657          |
 |PARLAQ     |0.484687555319526 |30.1484909057617   |
 |2f         |0.484687555319526 |-14.168815         |
+|AQUA       |0.484687555319526 |0.01803            |
 
 ## tcd-voip
 
