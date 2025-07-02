@@ -261,25 +261,29 @@ func (r *ReferenceBundle) Correlation(typeA, typeB ScoreType) (float64, error) {
 }
 
 // Correlate returns a table of all scores in the bundle Spearman correlated to each other.
-func (r *ReferenceBundle) Correlate() (CorrelationTable, error) {
+func (r *ReferenceBundle) Correlate(skipMap map[ScoreType]bool) (CorrelationTable, error) {
 	if r.IsJND() {
 		return nil, fmt.Errorf("cannot correlate JND references")
 	}
 	result := CorrelationTable{}
 	for _, typeA := range r.SortedTypes() {
-		row := []CorrelationScore{}
-		for _, typeB := range r.SortedTypes() {
-			corr, err := r.Correlation(typeA, typeB)
-			if err != nil {
-				return nil, err
+		if !skipMap[typeA] {
+			row := []CorrelationScore{}
+			for _, typeB := range r.SortedTypes() {
+				if !skipMap[typeB] {
+					corr, err := r.Correlation(typeA, typeB)
+					if err != nil {
+						return nil, err
+					}
+					row = append(row, CorrelationScore{
+						ScoreTypeA: typeA,
+						ScoreTypeB: typeB,
+						Score:      corr,
+					})
+				}
 			}
-			row = append(row, CorrelationScore{
-				ScoreTypeA: typeA,
-				ScoreTypeB: typeB,
-				Score:      corr,
-			})
+			result = append(result, row)
 		}
-		result = append(result, row)
 	}
 	return result, nil
 }
@@ -390,10 +394,10 @@ func (r *ReferenceBundle) JNDAccuracyAndThreshold(scoreType ScoreType) (float64,
 }
 
 // JNDAccuracy returns the accuracy of each score type when used to predict audible differences.
-func (r *ReferenceBundle) JNDAccuracy() (JNDAccuracyScores, error) {
+func (r *ReferenceBundle) JNDAccuracy(skipMap map[ScoreType]bool) (JNDAccuracyScores, error) {
 	result := JNDAccuracyScores{}
 	for scoreType := range r.ScoreTypes {
-		if scoreType != JND {
+		if scoreType != JND && !skipMap[scoreType] {
 			accuracy, threshold, err := r.JNDAccuracyAndThreshold(scoreType)
 			if err != nil {
 				return nil, err
@@ -483,7 +487,7 @@ func gitIdentity() (*string, error) {
 }
 
 // Report returns a Markdown report based on the bundles.
-func (r ReferenceBundles) Report() (string, error) {
+func (r ReferenceBundles) Report(skipMap map[ScoreType]bool) (string, error) {
 	res := &bytes.Buffer{}
 	fmt.Fprintf(res, `# Zimtohrli correlation report
 
@@ -500,13 +504,13 @@ Created at %s
 	for _, bundle := range r {
 		fmt.Fprintf(res, "## %s\n\n", filepath.Base(bundle.Dir))
 		if bundle.IsJND() {
-			accuracy, err := bundle.JNDAccuracy()
+			accuracy, err := bundle.JNDAccuracy(skipMap)
 			if err != nil {
 				return "", err
 			}
 			fmt.Fprintln(res, accuracy)
 		} else {
-			corrTable, err := bundle.Correlate()
+			corrTable, err := bundle.Correlate(skipMap)
 			if err != nil {
 				return "", err
 			}
@@ -516,7 +520,7 @@ Created at %s
 
 	fmt.Fprintf(res, "## Global leaderboard across all studies\n\nContains only scores present in all studies.\n\n")
 
-	board, err := r.Leaderboard(15)
+	board, err := r.Leaderboard(15, skipMap)
 	if err != nil {
 		return "", err
 	}
@@ -559,12 +563,12 @@ func (m MSEScores) Swap(i, j int) {
 }
 
 // Leaderboard returns the sorted mean squared errors for each score type that is represented in all bundles.
-func (r ReferenceBundles) Leaderboard(decimals int) (MSEScores, error) {
+func (r ReferenceBundles) Leaderboard(decimals int, skipMap map[ScoreType]bool) (MSEScores, error) {
 	representedScoreTypes := map[ScoreType]int{}
 	for index, bundle := range r {
 		if index == 0 {
 			for scoreType, count := range bundle.ScoreTypes {
-				if scoreType != MOS && scoreType != JND {
+				if scoreType != MOS && scoreType != JND && !skipMap[scoreType] {
 					representedScoreTypes[scoreType] = count
 				}
 			}
@@ -572,7 +576,7 @@ func (r ReferenceBundles) Leaderboard(decimals int) (MSEScores, error) {
 			for previouslyFoundScoreType := range representedScoreTypes {
 				if count, found := bundle.ScoreTypes[previouslyFoundScoreType]; !found {
 					delete(representedScoreTypes, previouslyFoundScoreType)
-				} else if previouslyFoundScoreType != MOS && previouslyFoundScoreType != JND {
+				} else if previouslyFoundScoreType != MOS && previouslyFoundScoreType != JND && !skipMap[previouslyFoundScoreType] {
 					representedScoreTypes[previouslyFoundScoreType] += count
 				}
 			}
@@ -597,7 +601,7 @@ func (r ReferenceBundles) Leaderboard(decimals int) (MSEScores, error) {
 	}
 	for _, bundle := range r {
 		if bundle.IsJND() {
-			accuracies, err := bundle.JNDAccuracy()
+			accuracies, err := bundle.JNDAccuracy(skipMap)
 			if err != nil {
 				return nil, err
 			}
@@ -607,7 +611,7 @@ func (r ReferenceBundles) Leaderboard(decimals int) (MSEScores, error) {
 				}
 			}
 		} else {
-			correlations, err := bundle.Correlate()
+			correlations, err := bundle.Correlate(skipMap)
 			if err != nil {
 				return nil, err
 			}
