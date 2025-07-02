@@ -18,22 +18,45 @@ models.
 
 ## Design
 
-Zimtohrli implements a perceptually-motivated audio similarity metric that models the human auditory system through a multi-stage signal processing pipeline. The metric operates on audio signals sampled at 48 kHz and produces a scalar distance value that correlates with human perception of audio quality differences.
+Zimtohrli implements a perceptually-motivated audio similarity metric that
+models the human auditory system through a multi-stage signal processing
+pipeline. The metric operates on audio signals sampled at 48 kHz and produces a
+scalar distance value that correlates with human perception of audio quality
+differences.
 
 ### Signal Processing Pipeline
 
 The algorithm consists of four main stages:
 
-1. **Auditory Filterbank Analysis**: The input signal is processed through a bank of 128 filters with center frequencies logarithmically spaced from 17.858 Hz to 20,352.7 Hz. These filters are implemented using a computationally efficient rotating phasor algorithm that computes spectral energy at each frequency band. The filterbank incorporates bandwidth-dependent exponential windowing to model frequency selectivity of the basilar membrane.
+1. **Auditory Filterbank Analysis**: The input signal is processed through a
+   bank of 128 filters with center frequencies logarithmically spaced from
+   17.858 Hz to 20,352.7 Hz. These filters are implemented using a
+   computationally efficient rotating phasor algorithm that computes spectral
+   energy at each frequency band. The filterbank incorporates
+   bandwidth-dependent exponential windowing to model frequency selectivity of
+   the basilar membrane.
 
-2. **Physiological Modeling**: The filtered signals undergo several transformations inspired by auditory physiology:
-   - A resonator model simulating the mechanical response of the ear drum and middle ear structures, implemented as a second-order IIR filter with physiologically-motivated coefficients
-   - Energy computation through a cascade of three leaky integrators, modeling temporal integration in the auditory system
-   - Loudness transformation using a logarithmic function with frequency-dependent gains calibrated to equal-loudness contours
+2. **Physiological Modeling**: The filtered signals undergo several transformations 
+   inspired by auditory physiology:
+   - A resonator model simulating the mechanical response of the ear drum and
+     middle ear structures, implemented as a second-order IIR filter with
+     physiologically-motivated coefficients
+   - Energy computation through a cascade of three leaky integrators, modeling
+     temporal integration in the auditory system
+   - Loudness transformation using a logarithmic function with
+     frequency-dependent gains calibrated to equal-loudness contours
 
-3. **Temporal Alignment**: To handle temporal misalignments between reference and test signals, the algorithm employs Dynamic Time Warping (DTW) with a perceptually-motivated cost function. The warping path minimizes a weighted combination of spectral distance (raised to power 0.233) and temporal distortion penalties.
+3. **Temporal Alignment**: To handle temporal misalignments between reference
+   and test signals, the algorithm employs Dynamic Time Warping (DTW) with a
+   perceptually-motivated cost function. The warping path minimizes a weighted
+   combination of spectral distance (raised to power 0.233) and temporal
+   distortion penalties.
 
-4. **Perceptual Similarity Computation**: The aligned spectrograms are compared using a modified Neurogram Similarity Index Measure (NSIM). This metric computes windowed statistics (mean, variance, covariance) over 6 temporal frames and 5 frequency channels, combining intensity and structure components through empirically-optimized non-linear functions inspired by SSIM.
+4. **Perceptual Similarity Computation**: The aligned spectrograms are compared
+   using a modified Neurogram Similarity Index Measure (NSIM). This metric
+   computes windowed statistics (mean, variance, covariance) over 6 temporal
+   frames and 5 frequency channels, combining intensity and structure components
+   through empirically-optimized non-linear functions inspired by SSIM.
 
 ### Key Parameters
 
@@ -42,29 +65,37 @@ The algorithm consists of four main stages:
 - **NSIM frequency window**: 5 channels
 - **Reference level**: 78.3 dB SPL for unity amplitude sine wave
 
-The final distance metric is computed as 1 - NSIM, providing a value between 0 (identical) and 1 (maximally different) that correlates with subjective quality assessments.
+The final distance metric is computed as 1 - NSIM, providing a value between 0
+(identical) and 1 (maximally different) that correlates with subjective quality
+assessments.
 
 ## Performance
 
 For correlation performance with a few datasets see [CORRELATION.md](CORRELATION.md).
 
-Most of those datasets can be acquired using the tools [coresvnet](go/bin/coresvnet),
+The datasets can be acquired using the tools [coresvnet](go/bin/coresvnet),
 [perceptual_audio](go/bin/perceptual_audio), [sebass_db](go/bin/sebass_db),
 [odaq](go/bin/odaq), and [tcd_voip](go/bin/tcd_voip).
-A couple of them are unpublished and can't be downloaded.
 
 Zimtohrli can compare ~70 seconds of audio per second on a single 2.5GHz core.
 
 ## Correlation Testing
 
-Zimtohrli includes a comprehensive correlation testing framework to validate how well audio quality metrics correlate with human perception. The system evaluates metrics against multiple listening test datasets containing either Mean Opinion Scores (MOS) or Just Noticeable Difference (JND) ratings.
+Zimtohrli includes a comprehensive correlation testing framework to validate how
+well audio quality metrics correlate with human perception. The system evaluates
+metrics against multiple listening test datasets containing either Mean Opinion
+Scores (MOS) or Just Noticeable Difference (JND) ratings.
 
 ### How Correlation Scoring Works
 
 The system uses two different evaluation methods depending on the dataset type:
 
-- **For MOS datasets**: Calculates Spearman rank correlation coefficient between predicted scores and human ratings. Higher correlation values (closer to 1.0) indicate better alignment with human perception.
-- **For JND datasets**: Determines classification accuracy by finding an optimal threshold that maximizes correct predictions of whether differences are audible. The score represents the percentage of correct classifications.
+- **For MOS datasets**: Calculates Spearman rank correlation coefficient between
+  predicted scores and human ratings. Higher correlation values (closer to 1.0)
+  indicate better alignment with human perception.
+- **For JND datasets**: Determines classification accuracy by finding an optimal
+  threshold that maximizes correct predictions of whether differences are
+  audible. The score represents the percentage of correct classifications.
 
 ### Running Correlation Tests
 
@@ -85,7 +116,9 @@ The system uses two different evaluation methods depending on the dataset type:
    go run go/bin/score/score.go -report "/path/to/datasets/*" > correlation_report.md
    ```
 
-The report includes correlation tables for each dataset and a global leaderboard showing mean squared error across all studies, where lower values indicate better overall performance.
+The report includes correlation tables for each dataset and a global leaderboard
+showing mean squared error across all studies, where lower values indicate
+better overall performance.
 
 ## Compatibility
 
