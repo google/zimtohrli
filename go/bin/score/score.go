@@ -24,6 +24,7 @@ import (
 	"reflect"
 	"runtime"
 	"sort"
+	"strings"
 
 	"github.com/google/zimtohrli/go/data"
 	"github.com/google/zimtohrli/go/goohrli"
@@ -49,6 +50,7 @@ func main() {
 	correlate := flag.String("correlate", "", "Glob to directories with databases to correlate scores for.")
 	leaderboard := flag.String("leaderboard", "", "Glob to directories with databases to compute leaderboard for.")
 	report := flag.String("report", "", "Glob to directories with databases to generate a report for.")
+	skipMetrics := flag.String("skip_metrics", "", "Comma separated list of metrics to exclude from the output.")
 	accuracy := flag.String("accuracy", "", "Glob to directories with databases to provide JND accuracy for.")
 	workers := flag.Int("workers", runtime.NumCPU(), "Number of concurrent workers for tasks.")
 	failFast := flag.Bool("fail_fast", false, "Whether to panic immediately on any error.")
@@ -63,6 +65,11 @@ func main() {
 
 	if err := zimtohrliParameters.Update([]byte(*zimtohrliParametersJSON)); err != nil {
 		log.Panic(err)
+	}
+
+	skipMap := map[data.ScoreType]bool{}
+	for _, skip := range strings.Split(*skipMetrics, ",") {
+		skipMap[data.ScoreType(skip)] = true
 	}
 
 	if *clear != "" {
@@ -145,7 +152,7 @@ func main() {
 			if bundle.IsJND() {
 				fmt.Printf("Not computing correlation for JND dataset %q\n\n", bundle.Dir)
 			} else {
-				corrTable, err := bundle.Correlate()
+				corrTable, err := bundle.Correlate(skipMap)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -162,7 +169,7 @@ func main() {
 		}
 		for _, bundle := range bundles {
 			if bundle.IsJND() {
-				accuracy, err := bundle.JNDAccuracy()
+				accuracy, err := bundle.JNDAccuracy(skipMap)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -179,7 +186,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		report, err := bundles.Report()
+		report, err := bundles.Report(skipMap)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -191,7 +198,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		board, err := bundles.Leaderboard(15)
+		board, err := bundles.Leaderboard(15, skipMap)
 		if err != nil {
 			log.Fatal(err)
 		}
