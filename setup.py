@@ -8,6 +8,9 @@ setup(
     description='Psychoacoustic perceptual metric that quantifies the human observable difference in two audio signals in the proximity of just-noticeable-differences',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
+    install_requires=[
+        'numpy>=1.20.0',
+    ],
     package_dir={'': 'cpp/zimt'},
     packages=find_packages(where='cpp/zimt'),
     py_modules=['pyohrli'],
