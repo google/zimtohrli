@@ -18,7 +18,6 @@
 
 #include <optional>
 
-#include "absl/log/check.h"
 #include "structmember.h"  // NOLINT // For PyMemberDef
 #include "zimt/mos.h"
 #include "zimt/zimtohrli.h"
