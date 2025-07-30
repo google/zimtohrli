@@ -50,7 +50,9 @@ inline constexpr soxr_datatype_t SoxrType() {
   } else if constexpr (std::is_same_v<T, double>) {
     return SOXR_FLOAT64_I;
   } else {
-    static_assert(false, "Unsupported type for resampling");
+    // This can't be `static_assert(false)`, as explained here:
+    // https://devblogs.microsoft.com/oldnewthing/20200311-00/?p=103553
+    static_assert(sizeof(T) < 0, "Unsupported type for resampling");
   }
 }
 
