@@ -24,6 +24,7 @@ jobs:
         uses: pypa/cibuildwheel@v3.1.2
         env:
           CIBW_ARCHS_LINUX: ${{runner.arch == 'X64' && 'auto ppc64le s390x' || 'auto'}}
+          MACOSX_DEPLOYMENT_TARGET: 10.13
 
       - uses: actions/upload-artifact@v4
         with:

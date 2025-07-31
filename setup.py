@@ -1,20 +1,17 @@
 from setuptools import setup, find_packages, Extension
 from setuptools.command.build_ext import build_ext
-import sys
 
 class PyohrliBuildExt(build_ext):
     def build_extensions(self):
         if self.compiler.compiler_type == 'msvc':
             # MSVC is strict about designated initializers (and requires special
             # flag syntax anyway).
-            cxx_flags = ['/std:c++20']
+            cpp_standard_flag = '/std:c++20'
         else:
-            cxx_flags = ['-std=c++17']
-        if sys.platform == 'darwin':
-            cxx_flags.append('-mmacosx-version-min=10.13')
+            cpp_standard_flag = '-std=c++17'
 
         for ext in self.extensions:
-            ext.extra_compile_args.extend(cxx_flags)
+            ext.extra_compile_args.append(cpp_standard_flag)
 
         super().build_extensions()
 
