@@ -4,8 +4,14 @@ from setuptools.command.build_ext import build_ext
 class PyohrliBuildExt(build_ext):
     def build_extensions(self):
         if self.compiler.compiler_type == 'msvc':
-            for ext in self.extensions:
-                ext.extra_compile_args.append('/std:c++20')
+            # MSVC is strict about designated initializers (and requires special
+            # flag syntax anyway).
+            cpp_standard_flag = '/std:c++20'
+        else:
+            cpp_standard_flag = '-std=c++17'
+
+        for ext in self.extensions:
+            ext.extra_compile_args.append(cpp_standard_flag)
 
         super().build_extensions()
 
