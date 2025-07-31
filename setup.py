@@ -1,4 +1,19 @@
 from setuptools import setup, find_packages, Extension
+from setuptools.command.build_ext import build_ext
+
+class PyohrliBuildExt(build_ext):
+    def build_extensions(self):
+        if self.compiler.compiler_type == 'msvc':
+            # MSVC is strict about designated initializers (and requires special
+            # flag syntax anyway).
+            cpp_standard_flag = '/std:c++20'
+        else:
+            cpp_standard_flag = '-std=c++17'
+
+        for ext in self.extensions:
+            ext.extra_compile_args.append(cpp_standard_flag)
+
+        super().build_extensions()
 
 setup(
     name='pyohrli',
@@ -21,6 +36,7 @@ setup(
             include_dirs=['cpp'],
         ),
     ],
+    cmdclass={'build_ext': PyohrliBuildExt},
     zip_safe=False,
-    python_requires='>=3.8',
+    python_requires='>=3.10',
 )

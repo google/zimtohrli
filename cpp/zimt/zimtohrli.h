@@ -16,7 +16,8 @@
 #define CPP_ZIMT_ZIMTOHRLI_H_
 
 #include <algorithm>
-#include <cmath>
+#define _USE_MATH_DEFINES
+#include <math.h>
 #include <cstdlib>
 #include <cstdint>
 #include <cstring>
