@@ -39,7 +39,7 @@ set_target_properties(zimtohrli_pyohrli PROPERTIES
    OUTPUT_NAME _pyohrli.so
    SUFFIX ""
 )
-target_link_libraries(zimtohrli_pyohrli Python3::Python absl::check)
+target_link_libraries(zimtohrli_pyohrli Python3::Python)
 
 add_library(zimtohrli_goohrli_glue STATIC
     cpp/zimt/goohrli.cc
