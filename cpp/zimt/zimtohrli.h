@@ -77,8 +77,8 @@ constexpr int64_t kNumRotators = 128;
 // Applies frequency-dependent gain correction and logarithmic scaling.
 inline void LoudnessDb(float* channels) {
   static const float kMul[128] = {
-      0.69022, 0.68908, 0.69206, 0.68780, 0.68780, 0.68780, 0.68780, 0.68780,
-      0.68780, 0.68780, 0.68780, 0.68913, 0.69045, 0.69310, 0.69575, 0.69565,
+      0.69111, 0.68478, 0.68763, 0.68845, 0.68595, 0.68576, 0.68883, 0.68932,
+      0.68713, 0.69239, 0.68762, 0.68928, 0.68449, 0.69143, 0.69494, 0.69796,
       0.69697, 0.70122, 0.72878, 0.79911, 0.85713, 0.88063, 0.88563, 0.87561,
       0.81948, 0.70435, 0.63479, 0.58382, 0.52065, 0.48390, 0.46452, 0.47952,
       0.52686, 0.63677, 0.75972, 0.89449, 0.97411, 1.01874, 1.01105, 0.99306,
@@ -91,12 +91,15 @@ inline void LoudnessDb(float* channels) {
       1.58735, 1.65199, 1.69488, 1.70748, 1.74525, 1.68760, 1.66818, 1.63401,
       1.55136, 1.49170, 1.42649, 1.33453, 1.28618, 1.26523, 1.24900, 1.24898,
       1.27864, 1.28723, 1.28455, 1.29777, 1.29637, 1.29687, 1.29853, 1.30319,
-      1.30207, 1.26835, 1.25100, 1.24664, 1.24041, 1.24297, 1.07569, 0.97131,
-      0.95906, 1.21035, 0.85762, 0.77298, 1.12289, 0.74092, 0.99662, 1.11603,
+      1.29103, 1.21191, 1.23192, 1.19913, 1.25952, 1.31635, 1.11503, 0.89542,
+      0.89358, 1.10079, 0.78822, 0.78116, 1.12594, 0.67416, 1.00430, 1.13414,
   };
-  static const float kBaseNoise = 886018.44434708043;
+  static const float kBaseNoise = 889363.43581620906;
+  static const float kBaseNoiseSlope = -43.829092486962779;
+  float noise = kBaseNoise - 64 * kBaseNoiseSlope;
   for (int k = 0; k < kNumRotators; ++k) {
-    channels[k] = log(channels[k] + kBaseNoise) * kMul[k];
+    channels[k] = log(channels[k] + noise) * kMul[k];
+    noise += kBaseNoiseSlope;
   }
 }
 
@@ -108,8 +111,8 @@ struct Resonator {
   float acc1 = 0;
   float Update(float signal) {  // Resonate and attenuate.
     // These parameters relate to a population of ear drums.
-    static const float kMul0 = 0.93913835617233998;
-    static const float kMul1 = -0.040539506065308289;
+    static const float kMul0 = 0.97422291826335461;
+    static const float kMul1 = -0.022465495428509098;
     acc0 = kMul0 * acc0 + kMul1 * acc1 + signal;
     acc1 += acc0;
     return acc0;
@@ -178,7 +181,7 @@ class Rotators {
   void OccasionallyRenormalize() {
     for (int i = 0; i < kNumRotators; ++i) {
       float norm =
-          gain[i] / sqrt(rot[2][i] * rot[2][i] + rot[3][i] * rot[3][i]);
+	gain[i] / sqrt(rot[2][i] * rot[2][i] + rot[3][i] * rot[3][i]);
       rot[2][i] *= norm;
       rot[3][i] *= norm;
     }
@@ -215,10 +218,11 @@ class Rotators {
                            size_t out_shape0, size_t out_stride,
                            int downsample) {
     static const float kHzToRad = 2.0f * M_PI / kSampleRate;
-    static const double kWindow = 0.9996028710680265;
-    static const double kBandwidthMagic = 0.7328516996032982;
-    // A big value for normalization. Ideally 1.0, but this works better.
-    static const double kScale = 929900594411.23657;
+    static const double kWindow = 0.99960268449950451;
+    static const double kBandwidthMagic = 0.73271438292488311;
+    // A big value for normalization. Ideally 1.0, but this works better
+    // for an unknown reason even if the base noise level is adapted similarly. 
+    static const double kScale = 932643060926.91492;
     const float gainer = sqrt(kScale / downsample);
     for (int i = 0; i < kNumRotators; ++i) {
       float bandwidth = CalculateBandwidthInHz(i);  // bandwidth per bucket.
@@ -239,30 +243,30 @@ class Rotators {
     std::vector<float> downsample_window(downsample);
     for (int i = 0; i < downsample; ++i) {
       downsample_window[i] =
-          1.0 / (1.0 + exp(7.9446 * ((2.0 / downsample) * (i + 0.5) - 1)));
+          1.0 / (1.0 + exp(8.0246040186567118 * ((2.0 / downsample) * (i + 0.5) - 1)));
     }
     Resonator resonator;
     size_t out_ix = 0;
     constexpr size_t kKernelSize = 32;
     static const float reso_kernel[kKernelSize] = {
-      -0.0075642284403770708, 0.0041328270786934662, -7.6269851290751061e-06, 0.0061764514689768733,
-      -0.0028376753880472038, -1.1759452250705732e-05, -0.0065499115361845562, -0.0069727090984949783,
-      0.0034584201864033401, 0.003329316161974918, -0.0029971240720728575, 0.0034898641766847685,
-      0.0017717742743446263, -0.0015229487607625498, 0.0039309982613565655, 0.001278227701047937,
-      -0.0116877416785343, -0.00039070521292690666, -0.0015923522740827827, -0.0082269584153230185,
-      -0.0063814620315990021, -0.0008796390298788419, -0.0071855544224704287, 0.0034822736952680863,
-      -0.00041538926556568181, 0.0001753900488857857, -0.0011326124605282573, 0.00095353008231245965,
-      0.0073567454219722467, -0.0016601446765057634, -0.0069136302438569507, 0.010715105623693549,
+      -0.007499980212903724, 0.0039009709419962901, -2.489022467748841e-05, 0.0067880557347934738,
+      -0.0027991468703018924, 4.4244580765837702e-05, -0.0066250590576615665, -0.0069139964559654966,
+      0.0034883461338470079, 0.0033495813234016487, -0.0029216982015809467, 0.0036471043402955964,
+      0.0018209027555975629, -0.0014832063326538792, 0.0036365220530974272, 0.0013971376708918396,
+      -0.012506347682967453, -0.00044481397194057193, -0.0015292935216167636, -0.0082146628338326255,
+      -0.0065218365898859869, -0.00093382479087392731, -0.0073731443031351714, 0.0034263253395628661,
+      -0.00053540823876562524, 0.00014728524208237775, -0.0010866821451316088, 0.00089869503376126562,
+      0.007088984762017185, -0.0016173055521634175, -0.0069505003708997381, 0.01127655137518086,
     };
     static const float linear_kernel[kKernelSize] = {
-      -0.30960591444509439, -0.079455203026254709, -0.14108618014504098, 0.070751037303552131,
-      0.14104891038659864, -0.17036477880916376, 0.014288229833457814, 0.27147357420390988,
-      0.17978692186268302, 0.065653189749429991, 0.014169704877201516, 0.18257259370291729,
-      0.0021021318985668257, 0.065359875882277235, -0.015544998395038102, -0.049398120278478827,
-      -0.064034911106614606, -0.57876116795333099, 0.57561220696398696, 0.40135227167310927,
-      -0.33118848897270026, 0.17695279679195522, 1.0491938729586434, -0.58835602045486513,
-      -1.4541325309560014, 0.071462019783188307, 0.72056751090553661, 1.2265425406909325,
-      -0.72083484154250099, 0.84200784192262634, -0.10112736611558046, -0.44049413285605787,
+      -0.34169169377707626, -0.083417033452092101, -0.14409411197063493, 0.044024293496696523,
+      0.15363870917154687, -0.1784301354427032, 0.0076421116619930429, 0.26787558073073808,
+      0.19245244103286924, 0.056734970145904826, -0.028481927300806602, 0.095328044621225377,
+      -0.032349124910003517, 0.085913483789197997, -0.025778801188819714, -0.042713435429024366,
+      -0.12099353910364175, -0.31499669175078771, 0.74015462148551114 , 0.55061875676849525,
+      -0.25723386123114644, 0.21048072931534711, 0.98922834462978915, -0.55920899731229312,
+      -1.4911657017300379, -0.17888788322905955, 0.59490431935132093, 1.2362308220764713,
+      -0.73734396646248135, 0.9398583662923895, -0.016332604170250502, -0.41248275071037022,
     };
     for (size_t in_ix = 0, dix = 0; in_ix + kKernelSize < in_size; ++in_ix) {
       const float weight = downsample_window[dix];
@@ -516,16 +520,16 @@ float NSIM(const Spectrogram& a, const Spectrogram& b,
   //
   // These changes were measured to be small improvements on a multi-corpus
   // test.
-  static const float C1 = 28.341082593304403;
-  static const float C3 = 1.6705576583956854;
-  static const float C4 = 5.5778917823818053e-05;
-  static const float C5 = 2.5568733818058373e-07;
-  static const float C6 = 3.510912492638396e-08;
-  static const float C7 = 2.4720299934548813e-07;
-  static const float C8 = 0.54045365472095119;
-  static const float P0 = 0.84013864788155035;
-  static const float P1 = 1.7336006370531516;
-  static const float P2 = 0.19488365206961764;
+  static const float C1 = 28.2546399223789;
+  static const float C3 = 1.697699700351033;
+  static const float C4 = 5.2920063862853639e-05;
+  static const float C5 = 2.4745838710843112e-07;
+  static const float C6 = 3.4996895646075951e-08;
+  static const float C7 = 2.3484424608765743e-07;
+  static const float C8 = 0.56001712694748618;
+  static const float P0 = 0.96610765512996266;
+  static const float P1 = 1.6288508514884512;
+  static const float P2 = 0.17626086776651204;
 
   float nsim_sum = 0.0;
   for (size_t step_index = 0; step_index < num_steps; ++step_index) {
@@ -560,7 +564,7 @@ float NSIM(const Spectrogram& a, const Spectrogram& b,
 // A simple buffer of double cost values describing the time warp costs between
 // two spectrograms.
 struct CostMatrix {
-  double get(size_t step_a, size_t step_b) const {
+  const double get(size_t step_a, size_t step_b) {
     return values[step_a * steps_b + step_b];
   }
   void set(size_t step_a, size_t step_b, double value) {
@@ -579,7 +583,7 @@ struct CostMatrix {
 };
 
 // Computes the perceptual distance between two spectrogram frames.
-// Uses L2 norm with psychoacoustic weighting (power 0.233).
+// Uses p norm with psychoacoustic weighting.
 // Used by DTW to compute frame-to-frame alignment costs.
 double delta_norm(const Spectrogram& a, const Spectrogram& b, size_t step_a,
                   size_t step_b) {
@@ -591,7 +595,7 @@ double delta_norm(const Spectrogram& a, const Spectrogram& b, size_t step_a,
     float delta = dims_a[index] - dims_b[index];
     result += delta * delta;
   }
-  static const float pp = 0.35491343190704761;
+  static const float pp = 0.34018884598221411;
   return std::pow(result, pp);
 }
 
@@ -605,7 +609,9 @@ std::vector<std::pair<size_t, size_t>> DTW(const Spectrogram& spec_a,
   CostMatrix cost_matrix(spec_a.num_steps, spec_b.num_steps);
   // Compute cost as cost as weighted sum of feature dimension norms to each
   // cell.
-  static const double kMul00 = 0.97775949394431627;
+  // kMul00 value below 1.0 reduces the cost of going in sync, advancing
+  // a and b traversal both by 1.
+  static const double kMul00 = 0.91009136450401973;
   for (size_t spec_a_index = 1; spec_a_index < spec_a.num_steps;
        ++spec_a_index) {
     for (size_t spec_b_index = 1; spec_b_index < spec_b.num_steps;
@@ -687,8 +693,15 @@ struct Zimtohrli {
     const double max_a = spectrogram_a.max();
     const double max_b = spectrogram_b.max();
     if (max_a != max_b) {
-      float cora = 0.48234235170721046;
-      float corb = 0.43404193485438936;
+      // For full correction cora + corb would be 1.0.
+      // It is very much unclear why optimization prefers
+      // to have overcorrection for distance. Perhaps it
+      // softens the error vallay and in combination with the 
+      // preference of going straight in the path-finding good
+      // things happens. (This is pure speculation without trying
+      // to obtain evidence about this).
+      float cora = 0.58785859934985596;
+      float corb = 0.62510345023967473;
       if (max_a > max_b) {
 	std::swap(cora, corb);
       }
@@ -706,7 +719,7 @@ struct Zimtohrli {
   // The window in channels when computing the NSIM.
   size_t nsim_channel_window = 5;
   // The clock frequency of the brain?!
-  float high_gamma_band = 84.0;
+  float high_gamma_band = 85.0;
   int samples_per_perceptual_block = int(kSampleRate / high_gamma_band);
   // Sample rate corresponding to the human hearing sensitivity to timing
   // differences.
