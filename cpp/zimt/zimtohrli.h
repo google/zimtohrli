@@ -91,11 +91,11 @@ inline void LoudnessDb(float* channels) {
       1.58735, 1.65199, 1.69488, 1.70748, 1.74525, 1.68760, 1.66818, 1.63401,
       1.55136, 1.49170, 1.42649, 1.33453, 1.28618, 1.26523, 1.24900, 1.24898,
       1.27864, 1.28723, 1.28455, 1.29777, 1.29637, 1.29687, 1.29853, 1.30319,
-      1.29103, 1.21191, 1.23192, 1.19913, 1.25952, 1.31635, 1.11503, 0.89542,
-      0.89358, 1.10079, 0.78822, 0.78116, 1.12594, 0.67416, 1.00430, 1.13414,
+      1.29463, 1.21300, 1.22549, 1.20423, 1.26226, 1.33737, 1.11493, 0.89999,
+      0.89264, 1.08696, 0.78787, 0.78445, 1.12917, 0.65317, 1.02086, 1.11196,
   };
-  static const float kBaseNoise = 889363.43581620906;
-  static const float kBaseNoiseSlope = -43.829092486962779;
+  static const float kBaseNoise = 889417.96375197638;
+  static const float kBaseNoiseSlope = -55.573307392224514;
   float noise = kBaseNoise - 64 * kBaseNoiseSlope;
   for (int k = 0; k < kNumRotators; ++k) {
     channels[k] = log(channels[k] + noise) * kMul[k];
@@ -111,8 +111,8 @@ struct Resonator {
   float acc1 = 0;
   float Update(float signal) {  // Resonate and attenuate.
     // These parameters relate to a population of ear drums.
-    static const float kMul0 = 0.97422291826335461;
-    static const float kMul1 = -0.022465495428509098;
+    static const float kMul0 = 0.97477359375329442;
+    static const float kMul1 = -0.022581039074946352;
     acc0 = kMul0 * acc0 + kMul1 * acc1 + signal;
     acc1 += acc0;
     return acc0;
@@ -161,8 +161,9 @@ double CalculateBandwidthInHz(int i) {
   return std::sqrt(Freq(i + 1) * Freq(i)) - std::sqrt(Freq(i - 1) * Freq(i));
 }
 
-// Core signal processing engine using rotating phasors (Goertzel-like algorithm)
-// for efficient frequency analysis. Implements the Tabuli filterbank.
+// Core signal processing engine using rotating phasors (Goertzel-like
+// algorithm) for efficient frequency analysis. Implements the Zimtohrli/Tabuli
+// filterbank.
 class Rotators {
  private:
   // Four arrays of rotators, with memory layout for up to 128-way
@@ -181,7 +182,7 @@ class Rotators {
   void OccasionallyRenormalize() {
     for (int i = 0; i < kNumRotators; ++i) {
       float norm =
-	gain[i] / sqrt(rot[2][i] * rot[2][i] + rot[3][i] * rot[3][i]);
+          gain[i] / sqrt(rot[2][i] * rot[2][i] + rot[3][i] * rot[3][i]);
       rot[2][i] *= norm;
       rot[3][i] *= norm;
     }
@@ -217,12 +218,13 @@ class Rotators {
   void FilterAndDownsample(const float* in, size_t in_size, float* out,
                            size_t out_shape0, size_t out_stride,
                            int downsample) {
+    static const float kSampleRate = 48000.0;
     static const float kHzToRad = 2.0f * M_PI / kSampleRate;
     static const double kWindow = 0.99960268449950451;
     static const double kBandwidthMagic = 0.73271438292488311;
     // A big value for normalization. Ideally 1.0, but this works better
     // for an unknown reason even if the base noise level is adapted similarly. 
-    static const double kScale = 932643060926.91492;
+    static const double kScale = 932673991876.24231;
     const float gainer = sqrt(kScale / downsample);
     for (int i = 0; i < kNumRotators; ++i) {
       float bandwidth = CalculateBandwidthInHz(i);  // bandwidth per bucket.
@@ -520,16 +522,16 @@ float NSIM(const Spectrogram& a, const Spectrogram& b,
   //
   // These changes were measured to be small improvements on a multi-corpus
   // test.
-  static const float C1 = 28.2546399223789;
-  static const float C3 = 1.697699700351033;
-  static const float C4 = 5.2920063862853639e-05;
-  static const float C5 = 2.4745838710843112e-07;
-  static const float C6 = 3.4996895646075951e-08;
-  static const float C7 = 2.3484424608765743e-07;
-  static const float C8 = 0.56001712694748618;
-  static const float P0 = 0.96610765512996266;
-  static const float P1 = 1.6288508514884512;
-  static const float P2 = 0.17626086776651204;
+  static const float C1 = 28.275234192168185;
+  static const float C3 = 1.6952355700594066;
+  static const float C4 = 5.2557441110315658e-05;
+  static const float C5 = 2.4851305619405479e-07;
+  static const float C6 = 3.4861311808819519e-08;
+  static const float C7 = 2.408090697035227e-07;
+  static const float C8 = 0.56030878218209057;
+  static const float P0 = 0.96772815871412121;
+  static const float P1 = 1.6282025516776146;
+  static const float P2 = 0.17626028102851929;
 
   float nsim_sum = 0.0;
   for (size_t step_index = 0; step_index < num_steps; ++step_index) {
@@ -595,7 +597,7 @@ double delta_norm(const Spectrogram& a, const Spectrogram& b, size_t step_a,
     float delta = dims_a[index] - dims_b[index];
     result += delta * delta;
   }
-  static const float pp = 0.34018884598221411;
+  static const float pp = 0.3418867534212976;
   return std::pow(result, pp);
 }
 
@@ -610,8 +612,10 @@ std::vector<std::pair<size_t, size_t>> DTW(const Spectrogram& spec_a,
   // Compute cost as cost as weighted sum of feature dimension norms to each
   // cell.
   // kMul00 value below 1.0 reduces the cost of going in sync, advancing
-  // a and b traversal both by 1.
-  static const double kMul00 = 0.91009136450401973;
+  // a and b traversal separately is a distance of 1. Purely geometrically
+  // sqrt(2) might be a good value, but this works better for an unknown
+  // reason (favoring a and b traversing together).
+  static const double kMul00 = 0.90354403678418749;
   for (size_t spec_a_index = 1; spec_a_index < spec_a.num_steps;
        ++spec_a_index) {
     for (size_t spec_b_index = 1; spec_b_index < spec_b.num_steps;
