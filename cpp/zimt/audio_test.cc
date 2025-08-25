@@ -29,7 +29,8 @@ namespace {
 TEST(AudioFile, LoadAudioFileTest) {
   const std::filesystem::path test_wav_path =
       GetTestFilePath("cpp/zimt/test.wav");
-  absl::StatusOr<AudioFile> audio_file = AudioFile::Load(test_wav_path);
+  absl::StatusOr<AudioFile> audio_file =
+      AudioFile::Load(test_wav_path.string());
   CHECK_OK(audio_file.status());
   EXPECT_EQ(audio_file->Info().channels, 2);
   EXPECT_EQ(audio_file->Info().frames, 10);

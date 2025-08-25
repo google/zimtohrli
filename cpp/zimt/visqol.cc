@@ -29,6 +29,10 @@
 #include "zimt/visqol_model.h"
 #include "zimt/zimtohrli.h"
 
+#ifdef _WIN32
+#include <io.h>
+#endif
+
 constexpr size_t SAMPLE_RATE = 48000;
 
 namespace zimtohrli {
@@ -42,7 +46,11 @@ ViSQOL::ViSQOL() {
   populated_path_template.push_back('\0');
   const int model_path_file = mkstemp(populated_path_template.data());
   CHECK_GT(model_path_file, 0) << strerror(errno);
+#ifdef _WIN32
+  CHECK_EQ(_close(model_path_file), 0);
+#else
   CHECK_EQ(close(model_path_file), 0);
+#endif
   model_path_ = std::filesystem::path(std::string(
       populated_path_template.data(), populated_path_template.size()));
   std::ofstream output_stream(model_path_);
@@ -65,7 +73,7 @@ absl::StatusOr<float> ViSQOL::MOS(Span<const float> reference,
       Resample<double>(degraded, sample_rate, SAMPLE_RATE);
 
   Visqol::VisqolConfig config;
-  config.mutable_options()->set_svr_model_path(model_path_);
+  config.mutable_options()->set_svr_model_path(model_path_.string());
   config.mutable_audio()->set_sample_rate(SAMPLE_RATE);
 
   // When running in audio mode, sample rates of 48k is recommended for
