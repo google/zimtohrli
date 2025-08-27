@@ -18,6 +18,11 @@ import numpy.typing as npt
 
 import _pyohrli
 
+def zimtohrli(signal_a: npt.ArrayLike, signal_b: npt.ArrayLike) -> float:
+    """Returns the Mean Opinion Score (MOS) between two audio signals using Zimtohrli"""
+    distance = Pyohrli().distance(signal_a, signal_b)
+    mos = mos_from_zimtohrli(distance)
+    return mos
 
 def mos_from_zimtohrli(zimtohrli_distance: float) -> float:
   """Returns an approximate mean opinion score based on the provided Zimtohrli distance."""
