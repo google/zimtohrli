@@ -94,12 +94,12 @@ inline void LoudnessDb(float* channels) {
       1.34995, 1.20201, 1.17218, 1.19284, 1.23571, 1.34281, 1.16209, 0.89999,
       0.89264, 1.08696, 0.78787, 0.78445, 1.12917, 0.65317, 1.02086, 1.11196,
   };
-  static const float kBaseNoise = 860304.4583509;
+  static const float kBaseNoise = 859409.21247672953;
   static const float kBaseNoiseSlope[16] = {
-    -402.2400981560, -361.1439485301, -203.4711031836, -162.605908572,
-    -301.845976780, -305.6351451946, -283.4426555667, -232.9231241362,
-    -105.9813705080, -66.04785874043, -46.85992769881, 15.52871340979,
-    -51.04101380368, -83.36241387079, -115.4021843026, -188.5758449578,
+    -400.28844669212793, -338.46329292037319, -208.94388005042998, -174.32139794972016,
+    -319.33331347667638, -305.79637274909288, -278.83116896041639, -231.61466254514681,
+    -78.616379579955591, -35.794562573363095, -43.907637866881196, 10.202154668430785,
+    -54.314260970113594, -78.378388998397654, -119.51584147142216, -183.32340507417203,
   };
   float noise = kBaseNoise;
   for (int k = 0; k < kNumRotators; ++k) {
@@ -256,24 +256,24 @@ class Rotators {
     size_t out_ix = 0;
     constexpr size_t kKernelSize = 32;
     static const float reso_kernel[kKernelSize] = {
-      -0.007499980212903724, 0.0039009709419962901, -2.489022467748841e-05, 0.0067880557347934738,
-      -0.0027991468703018924, 4.4244580765837702e-05, -0.0066250590576615665, -0.0069139964559654966,
-      0.0034883461338470079, 0.0033495813234016487, -0.0029216982015809467, 0.0036471043402955964,
-      0.0018209027555975629, -0.0014832063326538792, 0.0036365220530974272, 0.0013971376708918396,
-      -0.012506347682967453, -0.00044481397194057193, -0.0015292935216167636, -0.0082146628338326255,
-      -0.0065218365898859869, -0.00093382479087392731, -0.0073731443031351714, 0.0034263253395628661,
-      -0.00053540823876562524, 0.00014728524208237775, -0.0010866821451316088, 0.00089869503376126562,
-      0.007088984762017185, -0.0016173055521634175, -0.0069505003708997381, 0.01127655137518086,
+      -0.0076247065632976318, 0.0039104155534537069, 0.0006684663662401936, 0.0071559704794996589,
+      -0.0027931528839390098, 0.0001368658992949717, -0.0065802540559526824, -0.006574266432654235,
+      0.0034740030608061525, 0.0030263702264320012, -0.0029378401470635364, 0.0034368516858611412,
+      0.0020915727560313845, -0.001541122014895714, 0.0033152434154573407, 0.0015489639154823477,
+      -0.012691890416423556, -0.00027840484849307723, -0.0010427818083574192, -0.0087889956707155811,
+      -0.0066266333272295289, -0.00080043637110705163, -0.0072998536521213225, 0.0036816757141278035,
+      -0.00031555808271841742, 0.00099264355318687508, -0.0012897138783731826, 0.0013771982014390573,
+      0.0070121198631592861, -0.0016488166452599629, -0.00727301918260589, 0.010964231292090421,
     };
     static const float linear_kernel[kKernelSize] = {
-      -0.34169169377707626, -0.083417033452092101, -0.14409411197063493, 0.044024293496696523,
-      0.15363870917154687, -0.1784301354427032, 0.0076421116619930429, 0.26787558073073808,
-      0.19245244103286924, 0.056734970145904826, -0.028481927300806602, 0.095328044621225377,
-      -0.032349124910003517, 0.085913483789197997, -0.025778801188819714, -0.042713435429024366,
-      -0.12099353910364175, -0.31499669175078771, 0.74015462148551114 , 0.55061875676849525,
-      -0.25723386123114644, 0.21048072931534711, 0.98922834462978915, -0.55920899731229312,
-      -1.4911657017300379, -0.17888788322905955, 0.59490431935132093, 1.2362308220764713,
-      -0.73734396646248135, 0.9398583662923895, -0.016332604170250502, -0.41254396819593336,
+      -0.19947158175459692, 0.020092596724127186, -0.065549345816240306, 0.059315467827374985,
+      0.24679907672434401, -0.14582584331716622, -0.083626881941168935, 0.31874018187263292,
+      0.22397287387339976, 0.036279108994617872, -0.13919343535956649, 0.04950990842192754,
+      -0.027271514202057801, -0.00099846257278084238, -0.10798654028268029, -0.10489917207275569,
+      -0.095906755569884164, -0.21168952706515187, 0.83249555081867532 , 0.58484205043268755,
+      -0.21828800943250842, 0.080106893472851701, 0.93016317182367492, -0.49663918345960828,
+      -1.6197347842868257, -0.18383066061195377, 0.6236802270978099, 1.1976849288800944,
+      -0.70212522492743401, 0.90598962344860279, -0.0018858573753579057, -0.41452533138089309,
     };
     for (size_t in_ix = 0, dix = 0; in_ix + kKernelSize < in_size; ++in_ix) {
       const float weight = downsample_window[dix];
@@ -523,23 +523,19 @@ float NSIM(const Spectrogram& a, const Spectrogram& b,
   // main changes:
   // The aggregation tries to be more L1 than L2
   // Clamping of structure value
-  // Adding a small amount of a-b L1 diff
   //
   // These changes were measured to be small improvements on a multi-corpus
   // test.
-  static const float C1 = 28.275234192168185;
-  static const float C3 = 1.6952355700594066;
-  static const float C4 = 5.2557441110315658e-05;
-  static const float C5 = 2.4851305619405479e-07;
-  static const float C6 = 3.4861311808819519e-08;
-  static const float C7 = 2.408090697035227e-07;
-  static const float C8 = 0.56030878218209057;
-  static const float P0 = 0.96772815871412121;
-  static const float P1 = 1.6282025516776146;
-  static const float P2 = 0.17626028102851929;
+  static const float C1 = 26.426389124321354;
+  static const float C3 = 1.9522719384622791;
+  static const float C4 = 0.0; // 4.8287457761466604e-05;
+  static const float C8 = 0.6325126087671703;
+  static const float P0 = 1.0500187278772866;
+  static const float P1 = 0.25808223975919764;
 
-  float nsim_sum = 0.0;
+  double nsim_sum = 0.0;
   for (size_t step_index = 0; step_index < num_steps; ++step_index) {
+    double nsim_accu = 0.0;
     for (size_t channel_index = 0; channel_index < num_channels;
          ++channel_index) {
       const float mean_a_vec = mean_a[step_index][channel_index];
@@ -553,16 +549,11 @@ float NSIM(const Spectrogram& a, const Spectrogram& b,
       const float structure_base =
           (cov_vec + C3) / (std_a_vec * std_b_vec + C3);
       const float structure_clamped = structure_base < C8 ? C8 : structure_base;
-      const float structure =
-	std::pow(std::pow(structure_clamped + C4, P1) + C5, P2) + C6;
+      const float structure = std::pow(structure_clamped, P1);
       const float nsim = intensity * structure;
-      const float aval = a[time_pairs[step_index].first][channel_index];
-      const float bval = b[time_pairs[step_index].second][channel_index];
-      const float diff = aval - bval;
-      const float sqrdiff = C7 * std::abs(diff);
-      const float nsim2 = nsim + sqrdiff;
-      nsim_sum += nsim2;
+      nsim_accu += nsim;
     }
+    nsim_sum += nsim_accu;
   }
   return std::clamp<float>(
       nsim_sum / static_cast<float>(num_steps * num_channels), 0.0, 1.0);
@@ -602,7 +593,7 @@ double delta_norm(const Spectrogram& a, const Spectrogram& b, size_t step_a,
     float delta = dims_a[index] - dims_b[index];
     result += delta * delta;
   }
-  static const float pp = 0.3418867534212976;
+  static const float pp = 0.32264042946823823;
   return std::pow(result, pp);
 }
 
@@ -709,8 +700,8 @@ struct Zimtohrli {
       // preference of going straight in the path-finding good
       // things happens. (This is pure speculation without trying
       // to obtain evidence about this).
-      float cora = 0.58785859934985596;
-      float corb = 0.62510345023967473;
+      float cora = 0.5828284197882053;
+      float corb = 0.6310239126768997;
       if (max_a > max_b) {
 	std::swap(cora, corb);
       }
@@ -724,7 +715,7 @@ struct Zimtohrli {
   }
 
   // The window in perceptual_sample_rate time steps when compting the NSIM.
-  size_t nsim_step_window = 6;
+  size_t nsim_step_window = 8;
   // The window in channels when computing the NSIM.
   size_t nsim_channel_window = 5;
   // The clock frequency of the brain?!
