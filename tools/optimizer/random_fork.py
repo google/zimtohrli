@@ -221,7 +221,7 @@ def InitialSimplex(vec, dim, amount, biases):
       if k < g_offset:
         best[k + 1] = 0.0
       if rangelimit:
-        rangevals = dim - g_offset - 5
+        rangevals = max(0, dim - g_offset - 5)
         temp_offset = random.randint(g_offset, g_offset + rangevals)
         if k < temp_offset or k >= temp_offset + 5:
           best[k + 1] = bestcopy[k + 1]
