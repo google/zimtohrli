@@ -94,17 +94,21 @@ inline void LoudnessDb(float* channels) {
       1.34995, 1.20201, 1.17218, 1.19284, 1.23571, 1.34281, 1.16209, 0.89999,
       0.89264, 1.08696, 0.78787, 0.78445, 1.12917, 0.65317, 1.02086, 1.11196,
   };
-  static const float kBaseNoise = 859409.21247672953;
-  static const float kBaseNoiseSlope[16] = {
-    -400.28844669212793, -338.46329292037319, -208.94388005042998, -174.32139794972016,
-    -319.33331347667638, -305.79637274909288, -278.83116896041639, -231.61466254514681,
-    -78.616379579955591, -35.794562573363095, -43.907637866881196, 10.202154668430785,
-    -54.314260970113594, -78.378388998397654, -119.51584147142216, -183.32340507417203,
+  static const float kBaseNoise = 766068.03396368888;
+  static const float kBaseNoiseSlope[32] = {
+    -427.1872751241109, -370.2893289163535, -357.01506023770378, -301.28879097655118,
+    -216.78500670398833, -168.07806679629724, -168.71805754864141, -159.53956835871321,
+    -268.72445005379404, -311.16419962879075, -277.03504398276948, -288.39213525341091,
+    -305.32237068568082, -258.6335011904703, -254.78634459132866, -181.46038594163568,
+    -93.950223670617163, -88.818104801961908, -26.156023442931389, -38.752447643769138,
+    -47.906764099227942, -21.676071849485375, 10.884646488419072, 21.595865980708961,
+    -52.559415237056015, -57.62886752507012, -80.132855392693315, -84.248190048411175,
+    -87.193989053900296, -134.86546270102167, -146.23587896776439, -211.30970199319108,
   };
   float noise = kBaseNoise;
   for (int k = 0; k < kNumRotators; ++k) {
     channels[k] = log(channels[k] + noise) * kMul[k];
-    noise += kBaseNoiseSlope[k >> 3];
+    noise += kBaseNoiseSlope[k >> 2];
   }
 }
 
@@ -116,8 +120,8 @@ struct Resonator {
   float acc1 = 0;
   float Update(float signal) {  // Resonate and attenuate.
     // These parameters relate to a population of ear drums.
-    static const float kMul0 = 0.97023922125016249;
-    static const float kMul1 = -0.02204860932543919;
+    static const float kMul0 = 0.97018703367139569;
+    static const float kMul1 = -0.02209312182872265;
     acc0 = kMul0 * acc0 + kMul1 * acc1 + signal;
     acc1 += acc0;
     return acc0;
@@ -225,11 +229,11 @@ class Rotators {
                            int downsample) {
     static const float kSampleRate = 48000.0;
     static const float kHzToRad = 2.0f * M_PI / kSampleRate;
-    static const double kWindow = 0.99960268449950451;
-    static const double kBandwidthMagic = 0.73271390286880889;
+    static const double kWindow = 0.9996073584827937;
+    static const double kBandwidthMagic = 0.73227703638356523;
     // A big value for normalization. Ideally 1.0, but this works better
     // for an unknown reason even if the base noise level is adapted similarly. 
-    static const double kScale = 932673991876.24231;
+    static const double kScale = 931912404783.44507;
     const float gainer = sqrt(kScale / downsample);
     for (int i = 0; i < kNumRotators; ++i) {
       float bandwidth = CalculateBandwidthInHz(i);  // bandwidth per bucket.
@@ -528,7 +532,6 @@ float NSIM(const Spectrogram& a, const Spectrogram& b,
   // test.
   static const float C1 = 26.426389124321354;
   static const float C3 = 1.9522719384622791;
-  static const float C4 = 0.0; // 4.8287457761466604e-05;
   static const float C8 = 0.6325126087671703;
   static const float P0 = 1.0500187278772866;
   static const float P1 = 0.25808223975919764;
@@ -611,7 +614,8 @@ std::vector<std::pair<size_t, size_t>> DTW(const Spectrogram& spec_a,
   // a and b traversal separately is a distance of 1. Purely geometrically
   // sqrt(2) might be a good value, but this works better for an unknown
   // reason (favoring a and b traversing together).
-  static const double kMul00 = 0.90354403678418749;
+  static const double kMul00 = 0.90394786214451761;
+
   for (size_t spec_a_index = 1; spec_a_index < spec_a.num_steps;
        ++spec_a_index) {
     for (size_t spec_b_index = 1; spec_b_index < spec_b.num_steps;
