@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 CLANG_OPTS=""
 if [ -n "${CLANG_PREFIX}" ]; then
