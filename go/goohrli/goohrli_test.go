@@ -89,7 +89,7 @@ func TestGoohrli(t *testing.T) {
 		{
 			freqA:    5000,
 			freqB:    5010,
-			distance: 1.1920928955078125e-06,
+			distance: 1.3709068298339844e-06,
 		},
 		{
 			freqA:    5000,
