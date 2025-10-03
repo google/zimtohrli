@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #define _USE_MATH_DEFINES
+#include <cmath>
 #include <math.h>
 #include <cstdlib>
 #include <cstdint>
@@ -191,7 +192,7 @@ class Rotators {
   void OccasionallyRenormalize() {
     for (int i = 0; i < kNumRotators; ++i) {
       float norm =
-          gain[i] / sqrt(rot[2][i] * rot[2][i] + rot[3][i] * rot[3][i]);
+          gain[i] / std::sqrt(rot[2][i] * rot[2][i] + rot[3][i] * rot[3][i]);
       rot[2][i] *= norm;
       rot[3][i] *= norm;
     }
@@ -234,7 +235,7 @@ class Rotators {
     // A big value for normalization. Ideally 1.0, but this works better
     // for an unknown reason even if the base noise level is adapted similarly. 
     static const double kScale = 931912404783.44507;
-    const float gainer = sqrt(kScale / downsample);
+    const float gainer = std::sqrt(kScale / downsample);
     for (int i = 0; i < kNumRotators; ++i) {
       float bandwidth = CalculateBandwidthInHz(i);  // bandwidth per bucket.
       window[i] = std::pow(kWindow, bandwidth * kBandwidthMagic);
