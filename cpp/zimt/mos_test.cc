@@ -27,11 +27,11 @@ TEST(MOS, MOSFromZimtohrli) {
   const std::vector<float> zimt_scores = {0, 0.001, 0.01, 0.02, 0.03, 0.04};
   const std::vector<float> mos = {
       5.0,
-      4.8008866310119629,
-      3.4005415439605713,
-      2.4406499862670898,
-      1.8645849227905273,
-      1.5188679695129395,
+      4.7487573623657227,
+      3.0908994674682617,
+      2.0929651260375977,
+      1.5713200569152832,
+      1.2986432313919067,
   };
   for (size_t index = 0; index < zimt_scores.size(); ++index) {
     ASSERT_NEAR(MOSFromZimtohrli(zimt_scores[index]), mos[index], 1e-2);

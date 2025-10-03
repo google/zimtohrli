@@ -34,23 +34,11 @@ func TestMOSFromZimtohrli(t *testing.T) {
 		},
 		{
 			zimtDistance: 0.001,
-			wantMOS:      4.8008866310119629,
-		},
-		{
-			zimtDistance: 0.01,
-			wantMOS:      3.4005415439605713,
-		},
-		{
-			zimtDistance: 0.02,
-			wantMOS:      2.4406499862670898,
-		},
-		{
-			zimtDistance: 0.03,
-			wantMOS:      1.8645849227905273,
+			wantMOS:      4.748757362365723,
 		},
 		{
 			zimtDistance: 0.04,
-			wantMOS:      1.5188679695129395,
+			wantMOS:      1.2986432313919067,
 		},
 	} {
 		if mos := MOSFromZimtohrli(tc.zimtDistance); math.Abs(mos-tc.wantMOS) > 1e-2 {
