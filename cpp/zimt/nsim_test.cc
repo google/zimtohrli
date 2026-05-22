@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <cmath>
 #include <cstddef>
 #include <utility>
 #include <vector>
@@ -57,6 +58,146 @@ TEST(NSIM, NSIMTest) {
   EXPECT_THAT(
       NSIM(spec_a, spec_c, {{0, 0}, {1, 1}, {2, 2}, {3, 3}, {4, 4}}, 3, 3),
       1.0);
+}
+
+TEST(Zimtohrli, DistanceWithoutDtwReturnsZeroForIdenticalSpectrograms) {
+  Spectrogram spec_a(10, 5);
+  for (size_t step = 0; step < 10; ++step) {
+    for (size_t dim = 0; dim < 5; ++dim) {
+      spec_a[step][dim] = static_cast<float>(step * 5 + dim);
+    }
+  }
+  Zimtohrli z;
+  EXPECT_NEAR(z.DistanceWithoutDtw(spec_a, spec_a), 0.0f, 1e-5);
+}
+
+TEST(Zimtohrli, DistanceWithoutDtwReturnsPositiveForDifferentSpectrograms) {
+  Spectrogram spec_a(10, 5);
+  Spectrogram spec_b(10, 5);
+  for (size_t step = 0; step < 10; ++step) {
+    for (size_t dim = 0; dim < 5; ++dim) {
+      spec_a[step][dim] = static_cast<float>(step * 5 + dim);
+      spec_b[step][dim] = static_cast<float>(step * 5 + dim + 1);
+    }
+  }
+  Zimtohrli z;
+  EXPECT_GT(z.DistanceWithoutDtw(spec_a, spec_b), 0.0f);
+}
+
+TEST(Zimtohrli,
+     DistanceWithoutDtwReturnsDistanceWithinBoundsForScaledSpectrograms) {
+  Spectrogram spec_a(10, 5);
+  Spectrogram spec_b(10, 5);
+  for (size_t step = 0; step < 10; ++step) {
+    for (size_t dim = 0; dim < 5; ++dim) {
+      spec_a[step][dim] = static_cast<float>(step * 5 + dim);
+      spec_b[step][dim] = static_cast<float>(step * 5 + dim) * 2.0f;
+    }
+  }
+  Zimtohrli z;
+  float dist = z.DistanceWithoutDtw(spec_a, spec_b);
+  EXPECT_NEAR(dist, 0.000929296f, 1e-7);
+}
+
+TEST(Zimtohrli, DistanceWithoutDtwRespectsCustomStepWindow) {
+  Spectrogram spec_a(10, 5);
+  for (size_t step = 0; step < 10; ++step) {
+    for (size_t dim = 0; dim < 5; ++dim) {
+      spec_a[step][dim] = static_cast<float>(step * 5 + dim);
+    }
+  }
+  Zimtohrli z;
+  EXPECT_NEAR(z.DistanceWithoutDtw(spec_a, spec_a, 3), 0.0f, 1e-5);
+}
+
+TEST(Zimtohrli, DistanceWithoutDtwMatchesDistanceForAlignedSignals) {
+  Spectrogram spec_a(10, 5);
+  Spectrogram spec_b(10, 5);
+  for (size_t step = 0; step < 10; ++step) {
+    for (size_t dim = 0; dim < 5; ++dim) {
+      spec_a[step][dim] = static_cast<float>(step * 5 + dim);
+      spec_b[step][dim] = static_cast<float>(step * 5 + dim) + 0.1f;
+    }
+  }
+  Zimtohrli z;
+  float dist_dtw = z.Distance(spec_a, spec_b);
+
+  // Re-initialize spec_a and spec_b because they were mutated by z.Distance.
+  for (size_t step = 0; step < 10; ++step) {
+    for (size_t dim = 0; dim < 5; ++dim) {
+      spec_a[step][dim] = static_cast<float>(step * 5 + dim);
+      spec_b[step][dim] = static_cast<float>(step * 5 + dim) + 0.1f;
+    }
+  }
+
+  float dist_aligned = z.DistanceWithoutDtw(spec_a, spec_b);
+  EXPECT_NEAR(dist_dtw, dist_aligned, 1e-5);
+}
+
+TEST(Zimtohrli, DistanceDoesNotCrashOnShortInputs) {
+  Spectrogram spec_a(3, 5);
+  Spectrogram spec_b(3, 5);
+  for (size_t step = 0; step < 3; ++step) {
+    for (size_t dim = 0; dim < 5; ++dim) {
+      spec_a[step][dim] = static_cast<float>(step * 5 + dim);
+      spec_b[step][dim] = static_cast<float>(step * 5 + dim) + 0.1f;
+    }
+  }
+  Zimtohrli z;
+  float dist = z.Distance(spec_a, spec_b);
+  EXPECT_NEAR(dist, 4.22000885e-05f, 1e-9);
+}
+
+TEST(Zimtohrli, DistanceHandlesEmptySpectrogramsSafely) {
+  Spectrogram spec_a(0, 5);
+  Spectrogram spec_b(0, 5);
+  Zimtohrli z;
+  // Empty spectrograms should return maximal distance without crashing
+  float dist = z.DistanceWithoutDtw(spec_a, spec_b);
+  EXPECT_EQ(dist, 1.0f);
+}
+
+TEST(Zimtohrli, DistanceHandlesEmptySpectrogramsSafelyWithDtw) {
+  Spectrogram spec_a(0, 5);
+  Spectrogram spec_b(0, 5);
+  Zimtohrli z;
+  // Verifies that empty spectrograms are handled safely, returning maximal
+  // distance without triggering out-of-bounds writes in the DTW CostMatrix.
+  float dist = z.Distance(spec_a, spec_b);
+  EXPECT_EQ(dist, 1.0f);
+}
+
+TEST(Zimtohrli, DistanceHandlesSilentSpectrogramsSafely) {
+  Spectrogram spec_a(10, 5);
+  Spectrogram spec_b(10, 5);
+  // spec_a is silent (all zeros)
+  for (size_t step = 0; step < 10; ++step) {
+    for (size_t dim = 0; dim < 5; ++dim) {
+      spec_a[step][dim] = 0.0f;
+      spec_b[step][dim] = static_cast<float>(step * 5 + dim) + 1.0f;
+    }
+  }
+  Zimtohrli z;
+  // Verifies that comparing a silent spectrogram with a non-silent one
+  // is handled safely without producing NaNs during energy rescaling.
+  float dist = z.Distance(spec_a, spec_b);
+  EXPECT_FALSE(std::isnan(dist));
+  EXPECT_GT(dist, 0.0f);
+}
+
+TEST(Zimtohrli, DistanceHandlesZeroWindowSizeSafely) {
+  Spectrogram spec_a(10, 5);
+  Spectrogram spec_b(10, 5);
+  for (size_t step = 0; step < 10; ++step) {
+    for (size_t dim = 0; dim < 5; ++dim) {
+      spec_a[step][dim] = static_cast<float>(step * 5 + dim);
+      spec_b[step][dim] = static_cast<float>(step * 5 + dim);
+    }
+  }
+  Zimtohrli z;
+  // Custom window size = 0 should be handled safely without division-by-zero
+  float dist = z.DistanceWithoutDtw(spec_a, spec_b, 0);
+  EXPECT_EQ(dist, 1.0f);
 }
 
 void BM_NSIM(benchmark::State& state) {

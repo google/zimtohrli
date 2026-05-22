@@ -25,8 +25,10 @@
 #include <memory>
 #include <iostream>
 #include <limits>
+#include <optional>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace zimtohrli {
@@ -233,7 +235,7 @@ class Rotators {
     static const double kWindow = 0.9996073584827937;
     static const double kBandwidthMagic = 0.73227703638356523;
     // A big value for normalization. Ideally 1.0, but this works better
-    // for an unknown reason even if the base noise level is adapted similarly. 
+    // for an unknown reason even if the base noise level is adapted similarly.
     static const double kScale = 931912404783.44507;
     const float gainer = std::sqrt(kScale / downsample);
     for (int i = 0; i < kNumRotators; ++i) {
@@ -480,49 +482,94 @@ Spectrogram WindowMean(size_t num_steps, size_t num_channels,
 // each other in time.
 //
 // See https://doi.org/10.1016/j.specom.2011.09.004 for details.
-float NSIM(const Spectrogram& a, const Spectrogram& b,
-           const std::vector<std::pair<size_t, size_t>>& time_pairs,
-           size_t step_window, size_t channel_window) {
+// Sentinel type indicating that the input spectrograms are already perfectly
+// aligned in time, allowing direct frame-by-frame comparison.
+struct PreAligned {};
+
+// Represents how the two spectrograms are aligned in time:
+// - `PreAligned`: The signals are already perfectly aligned (direct
+// comparison).
+// - `const std::vector<...>*`: A pointer to the warp path computed by DTW
+//   that maps matching frame indices between a and b.
+using Alignment =
+    std::variant<PreAligned, const std::vector<std::pair<size_t, size_t>>*>;
+
+// Performs the NSIM similarity computation using the specified alignment.
+// - If `alignment` is `PreAligned`, we assume the signals are already perfectly
+//   aligned and compare them directly frame-by-frame. In this case, both
+//   spectrograms must have the exact same step length.
+// - If `alignment` is `const std::vector<...>*`, it represents the warp path
+//   calculated by DTW, mapping frames between a and b.
+float NSIMImpl(const Spectrogram& a, const Spectrogram& b, Alignment alignment,
+               size_t step_window, size_t channel_window) {
   assert_eq(a.num_dims, b.num_dims);
+
+  const bool is_pre_aligned = std::holds_alternative<PreAligned>(alignment);
+  const auto* time_pairs =
+      is_pre_aligned
+          ? nullptr
+          : std::get<const std::vector<std::pair<size_t, size_t>>*>(alignment);
+
+  if (is_pre_aligned) {
+    assert_eq(a.num_steps, b.num_steps);
+  }
   const size_t num_channels = a.num_dims;
-  const size_t num_steps = time_pairs.size();
+  // The total comparison steps over which we compute similarity.
+  // For aligned runs, this is a.num_steps (matching b.num_steps).
+  // For DTW runs, this is the length of the warp path.
+  const size_t num_steps = is_pre_aligned ? a.num_steps : time_pairs->size();
+
+  if (num_steps == 0 || num_channels == 0 || step_window == 0 ||
+      channel_window == 0) {
+    return 0.0f;
+  }
+
+  step_window = std::min(step_window, num_steps);
+  channel_window = std::min(channel_window, num_channels);
+
+  auto step_a = [&](size_t step) {
+    return is_pre_aligned ? step : (*time_pairs)[step].first;
+  };
+  auto step_b = [&](size_t step) {
+    return is_pre_aligned ? step : (*time_pairs)[step].second;
+  };
 
   const Spectrogram mean_a =
       WindowMean(num_steps, num_channels, step_window, channel_window,
                  [&](size_t step_index, size_t channel_index) {
-                   return a[time_pairs[step_index].first][channel_index];
+                   return a[step_a(step_index)][channel_index];
                  });
   const Spectrogram mean_b =
       WindowMean(num_steps, num_channels, step_window, channel_window,
                  [&](size_t step_index, size_t channel_index) {
-                   return b[time_pairs[step_index].second][channel_index];
+                   return b[step_b(step_index)][channel_index];
                  });
   // NB: This computes (value - mean) using the mean computed for the window
   // at the same position as the value, so that each value gets a different mean
   // subtracted.
-  const Spectrogram var_a = WindowMean(
-      num_steps, num_channels, step_window, channel_window,
-      [&](size_t step_index, size_t channel_index) {
-        const float delta = a[time_pairs[step_index].first][channel_index] -
-                            mean_a[step_index][channel_index];
-        return delta * delta;
-      });
-  const Spectrogram var_b = WindowMean(
-      num_steps, num_channels, step_window, channel_window,
-      [&](size_t step_index, size_t channel_index) {
-        const float delta = b[time_pairs[step_index].second][channel_index] -
-                            mean_b[step_index][channel_index];
-        return delta * delta;
-      });
-  const Spectrogram cov = WindowMean(
-      num_steps, num_channels, step_window, channel_window,
-      [&](size_t step_index, size_t channel_index) {
-        const float delta_a = a[time_pairs[step_index].first][channel_index] -
-                              mean_a[step_index][channel_index];
-        const float delta_b = b[time_pairs[step_index].second][channel_index] -
-                              mean_b[step_index][channel_index];
-        return delta_a * delta_b;
-      });
+  const Spectrogram var_a =
+      WindowMean(num_steps, num_channels, step_window, channel_window,
+                 [&](size_t step_index, size_t channel_index) {
+                   const float delta = a[step_a(step_index)][channel_index] -
+                                       mean_a[step_index][channel_index];
+                   return delta * delta;
+                 });
+  const Spectrogram var_b =
+      WindowMean(num_steps, num_channels, step_window, channel_window,
+                 [&](size_t step_index, size_t channel_index) {
+                   const float delta = b[step_b(step_index)][channel_index] -
+                                       mean_b[step_index][channel_index];
+                   return delta * delta;
+                 });
+  const Spectrogram cov =
+      WindowMean(num_steps, num_channels, step_window, channel_window,
+                 [&](size_t step_index, size_t channel_index) {
+                   const float delta_a = a[step_a(step_index)][channel_index] -
+                                         mean_a[step_index][channel_index];
+                   const float delta_b = b[step_b(step_index)][channel_index] -
+                                         mean_b[step_index][channel_index];
+                   return delta_a * delta_b;
+                 });
 
   // nsim-inspired ad hoc aggregation
   // main changes:
@@ -548,8 +595,9 @@ float NSIM(const Spectrogram& a, const Spectrogram& b,
       const float std_b_vec = std::sqrt(var_b[step_index][channel_index]);
       const float cov_vec = cov[step_index][channel_index];
       const float intensity =
-	pow((2 * std::sqrt(mean_a_vec * mean_b_vec) + C1) /
-	    (std::abs(mean_a_vec) + std::abs(mean_b_vec) + C1), P0);
+          pow((2 * std::sqrt(mean_a_vec * mean_b_vec) + C1) /
+                  (std::abs(mean_a_vec) + std::abs(mean_b_vec) + C1),
+              P0);
       const float structure_base =
           (cov_vec + C3) / (std_a_vec * std_b_vec + C3);
       const float structure_clamped = structure_base < C8 ? C8 : structure_base;
@@ -561,6 +609,18 @@ float NSIM(const Spectrogram& a, const Spectrogram& b,
   }
   return std::clamp<float>(
       nsim_sum / static_cast<float>(num_steps * num_channels), 0.0, 1.0);
+}
+
+float NSIM(const Spectrogram& a, const Spectrogram& b,
+           const std::vector<std::pair<size_t, size_t>>& time_pairs,
+           size_t step_window, size_t channel_window) {
+  return NSIMImpl(a, b, &time_pairs, step_window, channel_window);
+}
+
+// NSIM without the DTW pass.
+float NSIM(const Spectrogram& a, const Spectrogram& b, size_t step_window,
+           size_t channel_window) {
+  return NSIMImpl(a, b, PreAligned{}, step_window, channel_window);
 }
 
 // A simple buffer of double cost values describing the time warp costs between
@@ -688,20 +748,18 @@ struct Zimtohrli {
                                          perceptual_sample_rate / kSampleRate));
   }
 
-  // Computes perceptual distance between two spectrograms.
-  // Uses DTW for time alignment and NSIM for similarity measurement.
-  // Returns: distance in range [0, 1], where 0 = identical, 1 = maximally different
-  // Note: both spectrograms may be rescaled to match energy levels
-  float Distance(Spectrogram& spectrogram_a,
-                 Spectrogram& spectrogram_b) const {
+  // Helper method to rescale energy levels of two spectrograms to match each
+  // other.
+  void RescaleToMatchEnergy(Spectrogram& spectrogram_a,
+                            Spectrogram& spectrogram_b) const {
     assert_eq(spectrogram_a.num_dims, spectrogram_b.num_dims);
     const double max_a = spectrogram_a.max();
     const double max_b = spectrogram_b.max();
-    if (max_a != max_b) {
+    if (max_a != max_b && max_a > 0.0 && max_b > 0.0) {
       // For full correction cora + corb would be 1.0.
       // It is very much unclear why optimization prefers
       // to have overcorrection for distance. Perhaps it
-      // softens the error vallay and in combination with the 
+      // softens the error vallay and in combination with the
       // preference of going straight in the path-finding good
       // things happens. (This is pure speculation without trying
       // to obtain evidence about this).
@@ -713,10 +771,43 @@ struct Zimtohrli {
       spectrogram_b.rescale(pow(max_a / max_b, cora));
       spectrogram_a.rescale(pow(max_b / max_a, corb));
     }
+  }
+
+  // Computes perceptual distance between two spectrograms.
+  // Uses DTW for time alignment and NSIM for similarity measurement.
+  // Returns: distance in range [0, 1], where 0 = identical, 1 = maximally
+  // different.
+  // Note: both spectrograms may be rescaled to match energy levels.
+  float Distance(Spectrogram& spectrogram_a, Spectrogram& spectrogram_b) const {
+    assert_eq(spectrogram_a.num_dims, spectrogram_b.num_dims);
+    if (spectrogram_a.num_steps == 0 || spectrogram_b.num_steps == 0) {
+      return 1.0f;
+    }
+    RescaleToMatchEnergy(spectrogram_a, spectrogram_b);
     std::vector<std::pair<size_t, size_t>> time_pairs;
     time_pairs = DTW(spectrogram_a, spectrogram_b);
     return 1 - NSIM(spectrogram_a, spectrogram_b, time_pairs, nsim_step_window,
                     nsim_channel_window);
+  }
+
+  // Computes perceptual distance between two spectrograms assuming they are
+  // already aligned.
+  // `spectrogram_a` and `spectrogram_b` are the perceptual spectrograms to
+  // compare. `step_window` optionally overrides the default NSIM step window
+  // size.
+  // Returns: distance in range [0, 1], where 0 = identical, 1 = maximally
+  // different.
+  // Note: both spectrograms may be rescaled to match energy levels.
+  float DistanceWithoutDtw(
+      Spectrogram& spectrogram_a, Spectrogram& spectrogram_b,
+      std::optional<size_t> step_window = std::nullopt) const {
+    assert_eq(spectrogram_a.num_dims, spectrogram_b.num_dims);
+    assert_eq(spectrogram_a.num_steps, spectrogram_b.num_steps);
+
+    RescaleToMatchEnergy(spectrogram_a, spectrogram_b);
+
+    size_t sw = step_window.value_or(nsim_step_window);
+    return 1 - NSIM(spectrogram_a, spectrogram_b, sw, nsim_channel_window);
   }
 
   // The window in perceptual_sample_rate time steps when compting the NSIM.
