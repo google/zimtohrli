@@ -13,7 +13,7 @@ include(cmake/protobuf.cmake)
 FetchContent_Declare(libsndfile
     EXCLUDE_FROM_ALL
     GIT_REPOSITORY https://github.com/libsndfile/libsndfile.git
-    GIT_TAG 1.2.2
+    GIT_TAG 52b803f57a1f4d23471f5c5f77e1a21e0721ea0e
 )
 FetchContent_MakeAvailable(libsndfile)
 
