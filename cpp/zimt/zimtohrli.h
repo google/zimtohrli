@@ -16,6 +16,7 @@
 #define CPP_ZIMT_ZIMTOHRLI_H_
 
 #include <algorithm>
+#include <array>
 #define _USE_MATH_DEFINES
 #include <cmath>
 #include <math.h>
@@ -42,7 +43,7 @@ struct Span {
   Span(T* data, size_t size) : size(size), data(data) {}
   template <typename U>
   Span(const std::vector<U>& vec) noexcept
-      : data(vec.data()), size(vec.size()) {
+      : size(vec.size()), data(vec.data()) {
     static_assert(std::is_convertible_v<U(*)[], T(*)[]>,
                   "Cannot construct Span from vector of incompatible type.");
   }
@@ -174,63 +175,13 @@ double CalculateBandwidthInHz(int i) {
 }
 
 // Core signal processing engine using rotating phasors (Goertzel-like
-// algorithm) for efficient frequency analysis. Implements the Zimtohrli/Tabuli
-// filterbank.
+// algorithm) for efficient frequency analysis. Implements the Zimtohrli/
+// Tabuli filterbank with 128 frequency channels.
 class Rotators {
- private:
-  // Four arrays of rotators, with memory layout for up to 128-way
-  // simd-parallel. [0..1] is real and imag for rotation speed [2..3] is real
-  // and image for a frequency rotator of length sqrt(gain[i])
-  float rot[4][kNumRotators];
-  // [0..1] is for real and imag of 1st leaking accumulation
-  // [2..3] is for real and imag of 2nd leaking accumulation
-  // [4..5] is for real and imag of 3rd leaking accumulation
-  float accu[6][kNumRotators] = {{0}};
-  float window[kNumRotators];
-  float gain[kNumRotators];
-
-  // Renormalizes the rotating phasors to prevent numerical drift.
-  // Called periodically during signal processing.
-  void OccasionallyRenormalize() {
-    for (int i = 0; i < kNumRotators; ++i) {
-      float norm =
-          gain[i] / std::sqrt(rot[2][i] * rot[2][i] + rot[3][i] * rot[3][i]);
-      rot[2][i] *= norm;
-      rot[3][i] *= norm;
-    }
-  }
-  // Updates all rotators and accumulators with a new signal sample.
-  // Applies windowing, rotates phasors, and accumulates energy.
-  void IncrementAll(float signal) {
-    for (int i = 0; i < kNumRotators; i++) {  // clang simdifies this.
-      const float w = window[i];
-      for (int k = 0; k < 6; ++k) accu[k][i] *= w;
-      accu[2][i] += accu[0][i];  // For an unknown reason this
-      accu[3][i] += accu[1][i];  // update order works best.
-      accu[4][i] += accu[2][i];  // i.e., 2, 3, 4, 5, and finally 0, 1.
-      accu[5][i] += accu[3][i];
-      accu[0][i] += rot[2][i] * signal;
-      accu[1][i] += rot[3][i] * signal;
-      const float a = rot[2][i], b = rot[3][i];
-      rot[2][i] = rot[0][i] * a - rot[1][i] * b;
-      rot[3][i] = rot[0][i] * b + rot[1][i] * a;
-    }
-  }
-
  public:
-  // Main signal processing function that converts time-domain audio to a
-  // perceptual spectrogram. Applies resonator filtering, frequency analysis
-  // via rotating phasors, and downsampling.
-  // in: input audio samples
-  // in_size: number of input samples
-  // out: output spectrogram buffer
-  // out_shape0: number of time steps in output
-  // out_stride: stride between time steps in output buffer
-  // downsample: downsampling factor
-  void FilterAndDownsample(const float* in, size_t in_size, float* out,
-                           size_t out_shape0, size_t out_stride,
-                           int downsample) {
-    static const float kSampleRate = 48000.0;
+  explicit Rotators(int downsample) {
+    downsample = std::max(1, downsample);
+    static const float kSampleRate = 48000.0f;
     static const float kHzToRad = 2.0f * M_PI / kSampleRate;
     static const double kWindow = 0.9996073584827937;
     static const double kBandwidthMagic = 0.73227703638356523;
@@ -249,65 +200,54 @@ class Rotators {
       rot[2][i] = gain[i];
       rot[3][i] = 0.0f;
     }
-    for (size_t zz = 0; zz < out_shape0; zz++) {
-      for (int k = 0; k < kNumRotators; ++k) {
-        out[zz * out_stride + k] = 0;
-      }
-    }
-    std::vector<float> downsample_window(downsample);
-    for (int i = 0; i < downsample; ++i) {
-      downsample_window[i] =
-          1.0 / (1.0 + exp(8.0246040186567118 * ((2.0 / downsample) * (i + 0.5) - 1)));
-    }
-    Resonator resonator;
-    size_t out_ix = 0;
-    constexpr size_t kKernelSize = 32;
-    static const float reso_kernel[kKernelSize] = {
-      -0.0076247065632976318, 0.0039104155534537069, 0.0006684663662401936, 0.0071559704794996589,
-      -0.0027931528839390098, 0.0001368658992949717, -0.0065802540559526824, -0.006574266432654235,
-      0.0034740030608061525, 0.0030263702264320012, -0.0029378401470635364, 0.0034368516858611412,
-      0.0020915727560313845, -0.001541122014895714, 0.0033152434154573407, 0.0015489639154823477,
-      -0.012691890416423556, -0.00027840484849307723, -0.0010427818083574192, -0.0087889956707155811,
-      -0.0066266333272295289, -0.00080043637110705163, -0.0072998536521213225, 0.0036816757141278035,
-      -0.00031555808271841742, 0.00099264355318687508, -0.0012897138783731826, 0.0013771982014390573,
-      0.0070121198631592861, -0.0016488166452599629, -0.00727301918260589, 0.010964231292090421,
-    };
-    static const float linear_kernel[kKernelSize] = {
-      -0.19947158175459692, 0.020092596724127186, -0.065549345816240306, 0.059315467827374985,
-      0.24679907672434401, -0.14582584331716622, -0.083626881941168935, 0.31874018187263292,
-      0.22397287387339976, 0.036279108994617872, -0.13919343535956649, 0.04950990842192754,
-      -0.027271514202057801, -0.00099846257278084238, -0.10798654028268029, -0.10489917207275569,
-      -0.095906755569884164, -0.21168952706515187, 0.83249555081867532 , 0.58484205043268755,
-      -0.21828800943250842, 0.080106893472851701, 0.93016317182367492, -0.49663918345960828,
-      -1.6197347842868257, -0.18383066061195377, 0.6236802270978099, 1.1976849288800944,
-      -0.70212522492743401, 0.90598962344860279, -0.0018858573753579057, -0.41452533138089309,
-    };
-    for (size_t in_ix = 0, dix = 0; in_ix + kKernelSize < in_size; ++in_ix) {
-      const float weight = downsample_window[dix];
-      IncrementAll(resonator.Update(Dot32(&in[in_ix], &reso_kernel[0])) +
-                   Dot32(&in[in_ix], &linear_kernel[0]));
-      if (out_ix + 1 < out_shape0) {
-        for (int k = 0; k < kNumRotators; ++k) {
-          float energy = accu[4][k] * accu[4][k] + accu[5][k] * accu[5][k];
-          out[(out_ix + 1) * out_stride + k] += (1.0 - weight) * energy;
-          out[out_ix * out_stride + k] += weight * energy;
-        }
-      } else {
-        for (int k = 0; k < kNumRotators; ++k) {
-          float energy = accu[4][k] * accu[4][k] + accu[5][k] * accu[5][k];
-          out[out_ix * out_stride + k] += energy;
-        }
-      }
-      if (++dix == downsample || in_ix + kKernelSize + 1 == in_size) {
-        LoudnessDb(&out[out_stride * out_ix]);
-        if (++out_ix >= out_shape0) {
-          break;
-        }
-        dix = 0;
-        OccasionallyRenormalize();
-      }
+  }
+
+  // Updates all rotators and accumulators with a new signal sample,
+  // and computes the channel output energies (accu[4]^2 + accu[5]^2).
+  void IncrementAll(float signal, float* channel_energies) {
+    for (int i = 0; i < kNumRotators; i++) {
+      const float w = window[i];
+      for (int k = 0; k < 6; ++k) accu[k][i] *= w;
+      accu[2][i] += accu[0][i];
+      accu[3][i] += accu[1][i];
+      accu[4][i] += accu[2][i];
+      accu[5][i] += accu[3][i];
+      accu[0][i] += rot[2][i] * signal;
+      accu[1][i] += rot[3][i] * signal;
+      const float a = rot[2][i], b = rot[3][i];
+      rot[2][i] = rot[0][i] * a - rot[1][i] * b;
+      rot[3][i] = rot[0][i] * b + rot[1][i] * a;
+      channel_energies[i] = accu[4][i] * accu[4][i] + accu[5][i] * accu[5][i];
     }
   }
+
+  // Renormalizes the rotating phasors to prevent numerical drift during
+  // continuous processing.
+  void RenormalizePhasors() {
+    for (int i = 0; i < kNumRotators; ++i) {
+      float norm =
+          gain[i] / std::sqrt(rot[2][i] * rot[2][i] + rot[3][i] * rot[3][i]);
+      rot[2][i] *= norm;
+      rot[3][i] *= norm;
+    }
+  }
+
+ private:
+  // Four arrays of rotators, with memory layout for up to 128-way
+  // simd-parallel. [0..1] is real and imag for rotation speed [2..3] is real
+  // and imag for a frequency rotator of length sqrt(gain[i])
+  float rot[4][kNumRotators] = {{0}};
+  // Six leaky accumulator arrays for the Goertzel-like energy computation:
+  // [0..1] is for real and imag of 1st leaking accumulation
+  // [2..3] is for real and imag of 2nd leaking accumulation
+  // [4..5] is for real and imag of 3rd leaking accumulation
+  // The update order (2,3,4,5,0,1) was empirically determined to produce the
+  // best results.
+  float accu[6][kNumRotators] = {{0}};
+  // Per-channel decay/leakage factor.
+  float window[kNumRotators] = {0};
+  // Per-channel gain normalization factor.
+  float gain[kNumRotators] = {0};
 };
 
 // A simple buffer of float samples describing a spectrogram with a given number
@@ -372,6 +312,229 @@ struct Spectrogram {
   size_t num_steps;
   size_t num_dims;
   std::unique_ptr<float[]> values;
+};
+
+// Stateful engine for streaming audio spectrogram analysis.
+// Processes audio in chunks of arbitrary size without requiring the entire
+// audio signal in memory.
+//
+// There are two equivalent ways to compute a spectrogram. Both run the same
+// DSP and produce bit-for-bit identical output; choose based on how the audio
+// arrives (there is no mode flag):
+//
+//  * Batch (non-chunked): call Zimtohrli::Analyze(signal), which consumes the
+//    whole signal at once. Simplest when the audio fits in memory.
+//
+//  * Streaming (chunked): drive a ChunkedAnalyzer directly, feeding
+//    arbitrary-size chunks via Process() and calling Flush() at end-of-stream:
+//
+//      ChunkedAnalyzer analyzer(zimtohrli.samples_per_perceptual_block);
+//      std::vector<float> frames;
+//      analyzer.Process(chunk, frames);  // repeat as samples arrive
+//      analyzer.Flush(frames);           // finalize the last partial frame
+//      Spectrogram spec(analyzer.num_steps(), kNumRotators, std::move(frames));
+//
+// The downsample argument must equal Zimtohrli::samples_per_perceptual_block so
+// the framing matches Analyze().
+//
+// Thread safety: ChunkedAnalyzer is not thread-safe. It maintains mutable
+// streaming state (sample buffer, accumulators, phasors) modified during
+// processing. Each thread or pipeline must use its own instance.
+class ChunkedAnalyzer {
+ public:
+  // The downsample value must match Zimtohrli::samples_per_perceptual_block
+  // (int(kSampleRate / high_gamma_band) = 564).
+  explicit ChunkedAnalyzer(int downsample)
+      : downsample_(std::max(1, downsample)),
+        downsample_window_(std::max(1, downsample)),
+        rotators_(std::max(1, downsample)),
+        current_frame_energy_(kNumRotators, 0.0f),
+        pending_next_frame_energy_(kNumRotators, 0.0f) {
+    for (int i = 0; i < downsample_; ++i) {
+      downsample_window_[i] =
+          1.0f / (1.0f + std::exp(8.0246040186567118f *
+                                  ((2.0f / downsample_) * (i + 0.5f) - 1.0f)));
+    }
+  }
+
+  // Processes a chunk of audio samples and appends any completed 128-dim
+  // spectrogram frames to output_frames.
+  void Process(Span<const float> chunk, std::vector<float>& output_frames) {
+    // sample_buffer_ is consumed via a read offset (buffer_head_) with periodic
+    // compaction, giving amortized O(1) advancement instead of erasing from the
+    // front on every call. Samples that don't yet complete a 32-sample FIR
+    // window are kept across calls, so any chunk size (even a single sample) is
+    // handled correctly; small chunks just defer processing until 32 samples
+    // have accumulated.
+    if (chunk.size > 0) {
+      sample_buffer_.insert(sample_buffer_.end(), chunk.data,
+                            chunk.data + chunk.size);
+    }
+
+    size_t processed = 0;
+    float channel_energies[kNumRotators];
+
+    // The FIR kernels need kKernelSize (32) contiguous samples per output, so
+    // process only while a full 32-sample window is resident in sample_buffer_.
+    // The + kKernelSize in the bound keeps Dot32 from reading past the end.
+    while (buffer_head_ + processed + kKernelSize <= sample_buffer_.size()) {
+      const float* in = &sample_buffer_[buffer_head_ + processed];
+      const float weight = downsample_window_[dix_];
+
+      // 1. Evaluate FIR filtering (resonator kernel + linear kernel).
+      // 2. Feed output to the 2nd-order IIR Resonator.
+      // 3. Update 128 rotating phasors and leaky accumulators in Rotators.
+      rotators_.IncrementAll(resonator_.Update(Dot32(in, &reso_kernel[0])) +
+                                 Dot32(in, &linear_kernel[0]),
+                             channel_energies);
+
+      // Overlap-add downsampling windowing:
+      // The sigmoid downsampling window weight smoothly partitions the sample's
+      // energy between the current time step (weight) and the subsequent time
+      // step (1 - weight). Because weight + (1 - weight) == 1.0, 100% of the
+      // signal's perceptual energy is preserved without boundary artifacts
+      // across chunks.
+      for (int k = 0; k < kNumRotators; ++k) {
+        current_frame_energy_[k] += weight * channel_energies[k];
+        pending_next_frame_energy_[k] += (1.0f - weight) * channel_energies[k];
+      }
+
+      processed++;
+      dix_++;
+
+      // When the downsampling block is full, finalize the spectrogram frame.
+      if (dix_ == downsample_) {
+        EmitFrame(output_frames);
+
+        // Advance to next frame: the overlap energy that spilled into the next
+        // frame becomes the new current frame. Swap (instead of copy) reuses
+        // the just-emitted buffer as the next pending buffer, avoiding
+        // reallocation.
+        std::swap(current_frame_energy_, pending_next_frame_energy_);
+        std::fill(pending_next_frame_energy_.begin(),
+                  pending_next_frame_energy_.end(), 0.0f);
+        dix_ = 0;
+        rotators_.RenormalizePhasors();
+      }
+    }
+
+    // Advance the read offset past processed samples in O(1).
+    buffer_head_ += processed;
+
+    // Periodic compaction: shift remaining samples to the front when read
+    // offset exceeds kCompactThreshold (4096). Amortized O(1).
+    if (buffer_head_ > kCompactThreshold) {
+      size_t remaining = sample_buffer_.size() - buffer_head_;
+      if (remaining > 0) {
+        std::memmove(sample_buffer_.data(),
+                     sample_buffer_.data() + buffer_head_,
+                     remaining * sizeof(float));
+      }
+      sample_buffer_.resize(remaining);
+      buffer_head_ = 0;
+    }
+  }
+
+  // Flushes remaining buffered samples and emits any partially accumulated
+  // frame. Pads with kKernelSize - 1 (31) zeros to satisfy the 32-tap FIR
+  // window without emitting an extra frame at downsample block boundaries.
+  void Flush(std::vector<float>& output_frames) {
+    // If leftover samples remain in the buffer that couldn't be processed due
+    // to the 32-sample FIR lookahead window, zero-pad the buffer to flush the
+    // remaining samples.
+    if (sample_buffer_.size() > buffer_head_) {
+      // Pad with kKernelSize - 1 (31) zeros so the last real sample gets a full
+      // 32-sample FIR window. This processes exactly N filtered samples,
+      // matching SpectrogramSteps(N) without emitting a spurious extra frame at
+      // downsample block boundaries.
+      std::array<float, kKernelSize - 1> padding{};
+      Process(Span<const float>(padding.data(), padding.size()), output_frames);
+      sample_buffer_.clear();
+      buffer_head_ = 0;  // Reset so later Process() calls index from the front.
+    }
+
+    // If a frame is partially accumulated (dix_ > 0), finalize and emit it.
+    if (dix_ > 0) {
+      for (int k = 0; k < kNumRotators; ++k) {
+        current_frame_energy_[k] += pending_next_frame_energy_[k];
+      }
+      EmitFrame(output_frames);
+
+      std::fill(current_frame_energy_.begin(), current_frame_energy_.end(),
+                0.0f);
+      std::fill(pending_next_frame_energy_.begin(),
+                pending_next_frame_energy_.end(), 0.0f);
+      dix_ = 0;
+    }
+  }
+
+  size_t num_steps() const { return num_steps_; }
+
+ private:
+  void EmitFrame(std::vector<float>& output_frames) {
+    LoudnessDb(current_frame_energy_.data());
+    output_frames.insert(output_frames.end(), current_frame_energy_.begin(),
+                         current_frame_energy_.end());
+    num_steps_++;
+  }
+
+  // Number of taps in the FIR filter kernels; the number of contiguous audio
+  // samples of lookahead required to emit one filtered sample (32-tap FIR
+  // window).
+  static constexpr size_t kKernelSize = 32;
+
+  // FIR filter kernel for the resonator path.
+  // Applied via Dot32 to compute the resonator-filtered sample.
+  static constexpr float reso_kernel[kKernelSize] = {
+      -0.0076247065632976318f,  0.0039104155534537069f,
+      0.0006684663662401936f,   0.0071559704794996589f,
+      -0.0027931528839390098f,  0.0001368658992949717f,
+      -0.0065802540559526824f,  -0.006574266432654235f,
+      0.0034740030608061525f,   0.0030263702264320012f,
+      -0.0029378401470635364f,  0.0034368516858611412f,
+      0.0020915727560313845f,   -0.001541122014895714f,
+      0.0033152434154573407f,   0.0015489639154823477f,
+      -0.012691890416423556f,   -0.00027840484849307723f,
+      -0.0010427818083574192f,  -0.0087889956707155811f,
+      -0.0066266333272295289f,  -0.00080043637110705163f,
+      -0.0072998536521213225f,  0.0036816757141278035f,
+      -0.00031555808271841742f, 0.00099264355318687508f,
+      -0.0012897138783731826f,  0.0013771982014390573f,
+      0.0070121198631592861f,   -0.0016488166452599629f,
+      -0.00727301918260589f,    0.010964231292090421f,
+  };
+
+  // FIR filter kernel for the linear path.
+  // Applied via Dot32 alongside reso_kernel to compute the filtered sample.
+  static constexpr float linear_kernel[kKernelSize] = {
+      -0.19947158175459692f,   0.020092596724127186f,    -0.065549345816240306f,
+      0.059315467827374985f,   0.24679907672434401f,     -0.14582584331716622f,
+      -0.083626881941168935f,  0.31874018187263292f,     0.22397287387339976f,
+      0.036279108994617872f,   -0.13919343535956649f,    0.04950990842192754f,
+      -0.027271514202057801f,  -0.00099846257278084238f, -0.10798654028268029f,
+      -0.10489917207275569f,   -0.095906755569884164f,   -0.21168952706515187f,
+      0.83249555081867532f,    0.58484205043268755f,     -0.21828800943250842f,
+      0.080106893472851701f,   0.93016317182367492f,     -0.49663918345960828f,
+      -1.6197347842868257f,    -0.18383066061195377f,    0.6236802270978099f,
+      1.1976849288800944f,     -0.70212522492743401f,    0.90598962344860279f,
+      -0.0018858573753579057f, -0.41452533138089309f,
+  };
+
+  // Threshold for compacting the sample buffer. When buffer_head_ exceeds
+  // this value, we shift remaining samples to the front to prevent
+  // unbounded memory growth.
+  static constexpr size_t kCompactThreshold = 4096;
+
+  int downsample_ = 1;
+  std::vector<float> downsample_window_;
+  Rotators rotators_;
+  Resonator resonator_;
+  size_t dix_ = 0;
+  size_t num_steps_ = 0;
+  std::vector<float> current_frame_energy_;
+  std::vector<float> pending_next_frame_energy_;
+  std::vector<float> sample_buffer_;
+  size_t buffer_head_ = 0;
 };
 
 // Computes windowed mean values over a 2D spectrogram using efficient
@@ -721,17 +884,6 @@ std::vector<std::pair<size_t, size_t>> DTW(const Spectrogram& spec_a,
 // perceptual distance between audio signals using the Zimtohrli metric.
 // Expected input: 48kHz mono audio with samples in range [-1, 1].
 struct Zimtohrli {
-  // Analyzes an audio signal and fills the provided spectrogram.
-  // signal: input audio samples at 48kHz, range [-1, 1]
-  // spectrogram: pre-allocated output spectrogram to fill
-  void Analyze(Span<const float> signal, Spectrogram& spectrogram) const {
-    assert_eq(spectrogram.num_dims, kNumRotators);
-    Rotators rots;
-    rots.FilterAndDownsample(signal.data, signal.size, spectrogram.values.get(),
-                             spectrogram.num_steps, spectrogram.num_dims,
-                             signal.size / spectrogram.num_steps);
-  }
-
   // Analyzes an audio signal and returns a new spectrogram.
   // signal: input audio samples at 48kHz, range [-1, 1]
   // Returns: perceptual spectrogram representation
@@ -739,6 +891,27 @@ struct Zimtohrli {
     Spectrogram spec(SpectrogramSteps(signal.size), kNumRotators);
     Analyze(signal, spec);
     return spec;
+  }
+
+  // Analyzes an audio signal and fills the provided spectrogram.
+  // Converts time-domain audio to a perceptual spectrogram by applying
+  // resonator filtering, frequency analysis via rotating phasors, and
+  // downsampling. Steps the signal is too short to produce are zero-filled.
+  // signal: input audio samples at 48kHz, range [-1, 1]
+  // spectrogram: pre-allocated output spectrogram to fill
+  void Analyze(Span<const float> signal, Spectrogram& spectrogram) const {
+    assert_eq(spectrogram.num_dims, kNumRotators);
+    ChunkedAnalyzer analyzer(samples_per_perceptual_block);
+    std::vector<float> frames;
+    analyzer.Process(signal, frames);
+    analyzer.Flush(frames);
+    for (size_t step = 0; step < spectrogram.num_steps; ++step) {
+      for (size_t k = 0; k < spectrogram.num_dims; ++k) {
+        spectrogram[step][k] = step < analyzer.num_steps()
+                                   ? frames[step * spectrogram.num_dims + k]
+                                   : 0.0f;
+      }
+    }
   }
 
   // Calculates the number of time steps in the output spectrogram
@@ -803,6 +976,9 @@ struct Zimtohrli {
       std::optional<size_t> step_window = std::nullopt) const {
     assert_eq(spectrogram_a.num_dims, spectrogram_b.num_dims);
     assert_eq(spectrogram_a.num_steps, spectrogram_b.num_steps);
+    // Note: Empty spectrograms (num_steps == 0) are handled by NSIM, which
+    // returns 0.0 for empty inputs, yielding distance = 1.0f.
+    // No explicit guard needed here.
 
     RescaleToMatchEnergy(spectrogram_a, spectrogram_b);
 
