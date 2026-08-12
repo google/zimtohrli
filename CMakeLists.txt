@@ -29,17 +29,21 @@ target_compile_options(zimtohrli_visqol_adapter PRIVATE
     -freciprocal-math -fno-signed-zeros -fno-math-errno)
 
 find_package(Python3 COMPONENTS Interpreter Development)
-add_library(zimtohrli_pyohrli SHARED
-   cpp/zimt/zimtohrli.h
-   cpp/zimt/pyohrli.cc
-)
-target_include_directories(zimtohrli_pyohrli PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cpp)
-set_target_properties(zimtohrli_pyohrli PROPERTIES
-   PREFIX ""
-   OUTPUT_NAME _pyohrli.so
-   SUFFIX ""
-)
-target_link_libraries(zimtohrli_pyohrli Python3::Python)
+if (NOT Python3_FOUND)
+  message(WARNING "Python 3 not found; the Python binding will not be tested.")
+else ()
+  add_library(zimtohrli_pyohrli SHARED
+     cpp/zimt/zimtohrli.h
+     cpp/zimt/pyohrli.cc
+  )
+  target_include_directories(zimtohrli_pyohrli PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cpp)
+  set_target_properties(zimtohrli_pyohrli PROPERTIES
+     PREFIX ""
+     OUTPUT_NAME _pyohrli.so
+     SUFFIX ""
+  )
+  target_link_libraries(zimtohrli_pyohrli Python3::Python)
+endif ()
 
 add_library(zimtohrli_goohrli_glue STATIC
     cpp/zimt/goohrli.cc
