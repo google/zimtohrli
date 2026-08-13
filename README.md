@@ -132,10 +132,6 @@ environment. It's built to work with C++17.
 
 ## Minimal simple usage
 
-The very simplest way to use Zimtohrli is to just include the `zimtohrli.h` header.
-
-This allows you to
-
 ```
 #include "zimtohrli.h"
 

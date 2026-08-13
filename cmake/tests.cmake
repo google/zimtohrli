@@ -9,7 +9,7 @@ add_executable(zimtohrli_test
     cpp/zimt/test_file_paths.cc
 )
 target_include_directories(zimtohrli_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cpp)
-target_link_libraries(zimtohrli_test gtest sndfile gmock_main benchmark absl::statusor absl::check PkgConfig::soxr)
+target_link_libraries(zimtohrli_test zimtohrli_lib gtest sndfile gmock_main benchmark absl::statusor absl::check PkgConfig::soxr)
 target_compile_definitions(zimtohrli_test PRIVATE CMAKE_CURRENT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR})
 gtest_discover_tests(zimtohrli_test)
 
@@ -37,4 +37,4 @@ add_executable(zimtohrli_benchmark
     cpp/zimt/distance_benchmark_test.cc
 )
 target_include_directories(zimtohrli_benchmark PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cpp)
-target_link_libraries(zimtohrli_benchmark gtest gmock benchmark_main PkgConfig::soxr)
+target_link_libraries(zimtohrli_benchmark zimtohrli_lib gtest gmock benchmark_main PkgConfig::soxr)

@@ -32,8 +32,21 @@ setup(
     ext_modules=[
         Extension(
             name='_pyohrli',
-            sources=['cpp/zimt/pyohrli.cc'],
-            include_dirs=['cpp'],
+            sources=[
+                'cpp/zimt/pyohrli.cc',
+                'cpp/zimt/zimtohrli.cc',
+                'third_party/highway/hwy/abort.cc',
+                'third_party/highway/hwy/aligned_allocator.cc',
+                'third_party/highway/hwy/nanobenchmark.cc',
+                'third_party/highway/hwy/per_target.cc',
+                'third_party/highway/hwy/perf_counters.cc',
+                'third_party/highway/hwy/print.cc',
+                'third_party/highway/hwy/profiler.cc',
+                'third_party/highway/hwy/stats.cc',
+                'third_party/highway/hwy/targets.cc',
+                'third_party/highway/hwy/timer.cc',
+            ],
+            include_dirs=['cpp', 'third_party/highway'],
         ),
     ],
     cmdclass={'build_ext': PyohrliBuildExt},

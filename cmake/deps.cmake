@@ -25,6 +25,7 @@ FetchContent_Declare(googletest
 FetchContent_MakeAvailable(googletest)
 
 include(cmake/benchmark.cmake)
+include(cmake/highway.cmake)
 include(cmake/pffft.cmake)
 include(cmake/libsvm.cmake)
 include(cmake/armadillo.cmake)

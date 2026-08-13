@@ -1,2 +1,4 @@
 include cpp/zimt/mos.h
 include cpp/zimt/zimtohrli.h
+include cpp/zimt/zimtohrli.cc
+graft third_party/highway
