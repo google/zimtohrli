@@ -200,19 +200,23 @@ HWY_ATTR float SpectrogramMax(const float* values, const size_t count) {
   HWY_FULL(float) d;
   using V = hn::Vec<decltype(d)>;
   V max = hn::Zero(d);
-  hn::Foreach(d, values, count, hn::Zero(d), [&max](auto d, auto vec) HWY_ATTR {
-    max = hn::Max(max, hn::Abs(vec));
-  });
+  size_t i;
+  for (i = 0; i + Lanes(d) <= count; i += Lanes(d)) {
+    max = hn::Max(max, hn::Abs(hn::LoadU(d, &values[i])));
+  }
+  if (HWY_LIKELY(i != count)) {
+    const size_t remaining = count - i;
+    max = hn::Max(max,
+                  hn::Abs(hn::LoadNOr(hn::Zero(d), d, &values[i], remaining)));
+  }
   return hn::ReduceMax(d, max);
 }
 
 HWY_ATTR void RescaleSpectrogram(float* values, const size_t count,
                                  const float factor) {
   HWY_FULL(float) d;
-  using V = hn::Vec<decltype(d)>;
-  V mul = hn::Set(d, factor);
-  hn::Transform(d, values, count, [&mul](auto d, auto vec) HWY_ATTR {
-    return hn::Mul(vec, mul);
+  hn::Transform(d, values, count, [factor](auto d, auto vec) HWY_ATTR {
+    return hn::Mul(vec, hn::Set(d, factor));
   });
 }
 
