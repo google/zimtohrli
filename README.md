@@ -2,6 +2,8 @@
 
 # Zimtohrli: A New Psychoacoustic Perceptual Metric for Audio Compression
 
+_Zimtohrli (swiss cinnamon bun), from zimt (cinnamon), ohrli (little ear)_
+
 Zimtohrli is a psychoacoustic perceptual metric that quantifies the human
 observable difference in two audio signals in the proximity of
 just-noticeable-differences.
