@@ -16,7 +16,7 @@
 import numpy as np
 
 import unittest
-import pyohrli
+import cpp.zimt.zimtohrli as zimtohrli
 import functools
 
 
@@ -35,10 +35,10 @@ def parameterize(*kwargs):
 class PyohrliTest(unittest.TestCase):
 
     def test_num_rotators(self):
-      self.assertEqual(128, pyohrli.Pyohrli().num_rotators)
+      self.assertEqual(128, zimtohrli.Pyohrli().num_rotators)
 
     def test_sample_rate(self):
-      self.assertEqual(48000, pyohrli.Pyohrli().sample_rate)
+      self.assertEqual(48000, zimtohrli.Pyohrli().sample_rate)
 
     @parameterize(
         dict(
@@ -59,7 +59,7 @@ class PyohrliTest(unittest.TestCase):
     )
     def test_distance(self, a_hz: float, b_hz: float, distance: float):
         sample_rate = 48000.0
-        metric = pyohrli.Pyohrli()
+        metric = zimtohrli.Pyohrli()
         signal_a = np.sin(np.linspace(0.0, np.pi * 2 * a_hz, int(sample_rate)))
         signal_b = np.sin(np.linspace(0.0, np.pi * 2 * b_hz, int(sample_rate)))
         distance = metric.distance(signal_a, signal_b)
@@ -72,7 +72,7 @@ class PyohrliTest(unittest.TestCase):
     )
     def test_mos_from_zimtohrli(self, zimtohrli_distance: float, mos: float):
         self.assertAlmostEqual(
-            mos, pyohrli.mos_from_zimtohrli(zimtohrli_distance), places=3
+            mos, zimtohrli.mos_from_zimtohrli(zimtohrli_distance), places=3
         )
 
     # ----- C++ <-> Python equivalence -----
