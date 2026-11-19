@@ -16,6 +16,8 @@ package audio
 
 import (
 	"bytes"
+	"encoding/binary"
+	"fmt"
 	"math"
 	"testing"
 )
@@ -115,5 +117,128 @@ func readWAVTest(data []byte, wantChannels int) func(t *testing.T) {
 func TestReadWAV(t *testing.T) {
 	for _, w := range wavs {
 		t.Run(w.name, readWAVTest(w.data, w.channels))
+	}
+}
+
+// float32WAV returns a WAV file with an IEEE float (format 3) data chunk
+// containing the provided interleaved samples.
+func float32WAV(t *testing.T, samples []float32, numChannels int) []byte {
+	t.Helper()
+	buf := &bytes.Buffer{}
+	write := func(v any) {
+		if err := binary.Write(buf, binary.LittleEndian, v); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write(FixString{'R', 'I', 'F', 'F'})
+	write(int32(36 + 4*len(samples)))
+	write(FixString{'W', 'A', 'V', 'E'})
+	write(FixString{'f', 'm', 't', ' '})
+	write(int32(16))
+	write(uint16(3)) // IEEE float
+	write(int16(numChannels))
+	write(int32(48000))
+	write(int32(48000 * 4 * numChannels))
+	write(int16(4 * numChannels))
+	write(int16(32)) // bits per sample
+	write(FixString{'d', 'a', 't', 'a'})
+	write(int32(4 * len(samples)))
+	for _, sample := range samples {
+		write(sample)
+	}
+	return buf.Bytes()
+}
+
+// emptyDataWAV returns a 16-bit PCM WAV file with a zero-length data chunk.
+func emptyDataWAV(t *testing.T) []byte {
+	t.Helper()
+	buf := &bytes.Buffer{}
+	write := func(v any) {
+		if err := binary.Write(buf, binary.LittleEndian, v); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write(FixString{'R', 'I', 'F', 'F'})
+	write(int32(36))
+	write(FixString{'W', 'A', 'V', 'E'})
+	write(FixString{'f', 'm', 't', ' '})
+	write(int32(16))
+	write(uint16(1)) // PCM
+	write(int16(1))  // mono
+	write(int32(48000))
+	write(int32(48000 * 2))
+	write(int16(2))  // block align
+	write(int16(16)) // bits per sample
+	write(FixString{'d', 'a', 't', 'a'})
+	write(int32(0)) // zero-length data chunk
+	return buf.Bytes()
+}
+
+func readFloat32WAVTest(numChannels int) func(t *testing.T) {
+	return func(t *testing.T) {
+		t.Helper()
+		samples := make([]float32, 48000)
+		for index := range samples {
+			samples[index] = float32(math.Sin(2 * math.Pi * 1000 * float64(index) / 48000))
+		}
+		interleaved := make([]float32, len(samples)*numChannels)
+		for sampleIndex := range samples {
+			for channelIndex := 0; channelIndex < numChannels; channelIndex++ {
+				interleaved[sampleIndex*numChannels+channelIndex] = samples[sampleIndex]
+			}
+		}
+		w, err := ReadWAV(bytes.NewBuffer(float32WAV(t, interleaved, numChannels)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if w.FormatChunk.AudioFormat != 3 {
+			t.Errorf("got audio format %v, want 3 (IEEE float)", w.FormatChunk.AudioFormat)
+		}
+		audio, err := w.Audio()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(audio.Samples) != numChannels {
+			t.Fatalf("got %v channels, want %v", len(audio.Samples), numChannels)
+		}
+		for channelIndex, channel := range audio.Samples {
+			if len(channel) != len(samples) {
+				t.Fatalf("got %v samples in channel %v, want %v", len(channel), channelIndex, len(samples))
+			}
+			for sampleIndex, sample := range channel {
+				wantSample := math.Sin(2 * math.Pi * 1000 * float64(sampleIndex) / 48000)
+				if math.Abs(wantSample-float64(sample)) > 1e-4 {
+					t.Errorf("got sample %v %v, want %v", sampleIndex, sample, wantSample)
+				}
+			}
+		}
+		if math.Abs(float64(audio.MaxAbsAmplitude)-1.0) > 1e-4 {
+			t.Errorf("got max abs amplitude %v, want 1.0", audio.MaxAbsAmplitude)
+		}
+	}
+}
+
+func TestReadFloat32WAV(t *testing.T) {
+	for _, numChannels := range []int{1, 2} {
+		t.Run(fmt.Sprintf("%vch", numChannels), readFloat32WAVTest(numChannels))
+	}
+}
+
+func TestReadWAVEmptyData(t *testing.T) {
+	w, err := ReadWAV(bytes.NewBuffer(emptyDataWAV(t)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := w.Audio(); err == nil {
+		t.Error("Audio() on a WAV with an empty data chunk should return an error, not panic")
+	}
+}
+
+func TestReadWAVRejectsUnsupportedFormat(t *testing.T) {
+	wavData := float32WAV(t, []float32{0.5, -0.5}, 1)
+	// Corrupt the audio format field from 3 to 4.
+	copy(wavData[20:22], []byte{4, 0})
+	if _, err := ReadWAV(bytes.NewBuffer(wavData)); err == nil {
+		t.Error("ReadWAV should reject WAV files with an unsupported audio format")
 	}
 }

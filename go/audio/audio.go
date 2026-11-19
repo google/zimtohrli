@@ -109,11 +109,18 @@ func (a *Audio) Amplify(amplification float32) {
 
 // Audio returns the audio in a WAV file.
 func (w *WAV) Audio() (*Audio, error) {
+	if len(w.Data) == 0 {
+		return nil, fmt.Errorf("no samples in data chunk")
+	}
+	if w.FormatChunk.NumChannels <= 0 {
+		return nil, fmt.Errorf("no channels in format chunk")
+	}
 	result := &Audio{
 		Samples: make([][]float32, w.FormatChunk.NumChannels),
 		Rate:    float64(w.FormatChunk.SampleRate),
 	}
-	if w.FormatChunk.AudioFormat == 1 {
+	switch w.FormatChunk.AudioFormat {
+	case 1:
 		pcmSamples := unsafe.Slice((*int16)(unsafe.Pointer(&w.Data[0])), len(w.Data)/2)
 		numFrames := len(pcmSamples) / int(w.FormatChunk.NumChannels)
 		for channelIndex := 0; channelIndex < int(w.FormatChunk.NumChannels); channelIndex++ {
@@ -131,9 +138,23 @@ func (w *WAV) Audio() (*Audio, error) {
 			}
 			result.Samples[sampleIndex%int(w.FormatChunk.NumChannels)][sampleIndex/int(w.FormatChunk.NumChannels)] = scaledSample
 		}
-	} else if w.FormatChunk.AudioFormat == 3 {
-		return nil, fmt.Errorf("blah")
-	} else {
+	case 3:
+		floatSamples := unsafe.Slice((*float32)(unsafe.Pointer(&w.Data[0])), len(w.Data)/4)
+		numFrames := len(floatSamples) / int(w.FormatChunk.NumChannels)
+		for channelIndex := 0; channelIndex < int(w.FormatChunk.NumChannels); channelIndex++ {
+			result.Samples[channelIndex] = make([]float32, numFrames)
+		}
+		for sampleIndex, sample := range floatSamples {
+			absSample := sample
+			if absSample < 0 {
+				absSample = -absSample
+			}
+			if absSample > result.MaxAbsAmplitude {
+				result.MaxAbsAmplitude = absSample
+			}
+			result.Samples[sampleIndex%int(w.FormatChunk.NumChannels)][sampleIndex/int(w.FormatChunk.NumChannels)] = sample
+		}
+	default:
 		return nil, fmt.Errorf("not audio format 1 (PCM) or 3 (IEEE float)")
 	}
 	return result, nil
@@ -164,14 +185,17 @@ func ReadWAV(r io.Reader) (*WAV, error) {
 			if result.FormatChunk, err = ReadFormatChunk(r); err != nil {
 				return nil, fmt.Errorf("while reading format chunk: %v", err)
 			}
-			if result.FormatChunk.AudioFormat != 1 {
-				return nil, fmt.Errorf("not audio format 1 (PCM): %x", result.FormatChunk.AudioFormat)
+			if result.FormatChunk.AudioFormat != 1 && result.FormatChunk.AudioFormat != 3 {
+				return nil, fmt.Errorf("not audio format 1 (PCM) or 3 (IEEE float): %x", result.FormatChunk.AudioFormat)
 			}
 			if result.FormatChunk.NumChannels != 1 && result.FormatChunk.NumChannels != 2 {
 				return nil, fmt.Errorf("not 1 or 2 channels: %v", result.FormatChunk.NumChannels)
 			}
-			if result.FormatChunk.BitsPerSample != 16 {
+			if result.FormatChunk.AudioFormat == 1 && result.FormatChunk.BitsPerSample != 16 {
 				return nil, fmt.Errorf("not 16 bits: %v", result.FormatChunk.BitsPerSample)
+			}
+			if result.FormatChunk.AudioFormat == 3 && result.FormatChunk.BitsPerSample != 32 {
+				return nil, fmt.Errorf("not 32 bits: %v", result.FormatChunk.BitsPerSample)
 			}
 		} else if chunkHeader.SubChunkID.String() == "data" {
 			if result.Data, err = io.ReadAll(r); err != nil {
